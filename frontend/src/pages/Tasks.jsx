@@ -1,12 +1,21 @@
 /**
  * 任務管理頁面 / Task Management Page
- * 本地 CRUD 操作、篩選、匯出 Markdown
- * Local CRUD operations, filtering, and Markdown export.
+ * 間距參考 Dcard / Instagram
  */
 import { useEffect, useState } from 'react';
 import useTaskStore from '../stores/taskStore';
+import {
+    IconCheckSquare, IconPlus, IconEdit, IconTrash,
+    IconCheck, IconDownload, IconStar,
+    IconFolder, IconBook, IconCalendar, IconUser,
+} from '../components/Icons';
 
-// ── 新增/編輯表單 / Add/Edit Form ──
+const categoryIcons = {
+    general: IconFolder, homework: IconEdit, exam: IconBook,
+    project: IconCheckSquare, personal: IconUser,
+};
+
+// ── 表單 / Form ──
 function TaskForm({ editTask, onClose }) {
     const addTask = useTaskStore((s) => s.addTask);
     const updateTask = useTaskStore((s) => s.updateTask);
@@ -20,145 +29,121 @@ function TaskForm({ editTask, onClose }) {
     const handleSubmit = async (e) => {
         e.preventDefault();
         if (!title.trim()) return;
-
         const data = { title, description, category, priority, due_date: dueDate || null };
-
-        if (editTask) {
-            await updateTask(editTask.id, data);
-        } else {
-            await addTask(data);
-        }
+        if (editTask) { await updateTask(editTask.id, data); }
+        else { await addTask(data); }
         onClose();
     };
 
     return (
-        <form onSubmit={handleSubmit} className="glass-card p-4 space-y-3 animate-fade-in-up">
-            <h3 className="text-sm font-semibold text-text-secondary">
-                {editTask ? '✏️ 編輯任務 / Edit Task' : '➕ 新增任務 / New Task'}
+        <form onSubmit={handleSubmit} className="card animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            <h3 style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                {editTask ? '編輯任務 Edit Task' : '新增任務 New Task'}
             </h3>
 
-            <input
-                type="text"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="任務標題 / Task title..."
-                className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-text-primary placeholder-text-muted outline-none focus:border-primary-light transition-colors"
-                autoFocus
-            />
+            <input type="text" value={title} onChange={(e) => setTitle(e.target.value)}
+                placeholder="任務標題 Task title..." className="input" autoFocus />
 
-            <textarea
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="描述（選填）/ Description (optional)..."
-                rows={2}
-                className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-text-primary placeholder-text-muted outline-none focus:border-primary-light transition-colors resize-none"
-            />
+            <textarea value={description} onChange={(e) => setDescription(e.target.value)}
+                placeholder="描述（選填）Description (optional)..."
+                rows={2} className="input" style={{ resize: 'none' }} />
 
-            <div className="flex gap-3">
-                <select
-                    value={category}
-                    onChange={(e) => setCategory(e.target.value)}
-                    className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-text-primary outline-none focus:border-primary-light"
-                >
-                    <option value="general">📁 一般 / General</option>
-                    <option value="homework">📝 作業 / Homework</option>
-                    <option value="exam">📖 考試 / Exam</option>
-                    <option value="project">🚀 專案 / Project</option>
-                    <option value="personal">👤 個人 / Personal</option>
+            <div style={{ display: 'flex', gap: '12px' }}>
+                <select value={category} onChange={(e) => setCategory(e.target.value)} className="input" style={{ flex: 1 }}>
+                    <option value="general">一般 General</option>
+                    <option value="homework">作業 Homework</option>
+                    <option value="exam">考試 Exam</option>
+                    <option value="project">專案 Project</option>
+                    <option value="personal">個人 Personal</option>
                 </select>
-
-                <select
-                    value={priority}
-                    onChange={(e) => setPriority(Number(e.target.value))}
-                    className="w-32 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-text-primary outline-none focus:border-primary-light"
-                >
-                    <option value={0}>普通 / Normal</option>
-                    <option value={1}>⭐ 重要</option>
-                    <option value={2}>⭐⭐ 緊急</option>
-                    <option value={3}>⭐⭐⭐ 最高</option>
+                <select value={priority} onChange={(e) => setPriority(Number(e.target.value))} className="input" style={{ width: '130px' }}>
+                    <option value={0}>普通 Normal</option>
+                    <option value={1}>重要 High</option>
+                    <option value={2}>緊急 Urgent</option>
+                    <option value={3}>最高 Critical</option>
                 </select>
             </div>
 
-            <input
-                type="date"
-                value={dueDate}
-                onChange={(e) => setDueDate(e.target.value)}
-                className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-text-primary outline-none focus:border-primary-light"
-            />
+            <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} className="input" />
 
-            <div className="flex gap-2 justify-end">
-                <button
-                    type="button"
-                    onClick={onClose}
-                    className="px-3 py-1.5 text-sm text-text-muted hover:text-text-primary transition-colors"
-                >
-                    取消 / Cancel
-                </button>
-                <button
-                    type="submit"
-                    className="px-4 py-1.5 text-sm bg-primary hover:bg-primary-dark text-white rounded-lg transition-colors"
-                >
-                    {editTask ? '更新 / Update' : '新增 / Add'}
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', paddingTop: '4px' }}>
+                <button type="button" onClick={onClose} className="btn btn-ghost" style={{ fontSize: '13px' }}>取消 Cancel</button>
+                <button type="submit" className="btn btn-primary" style={{ fontSize: '13px' }}>
+                    {editTask ? '更新 Update' : '新增 Add'}
                 </button>
             </div>
         </form>
     );
 }
 
-// ── 單一任務項目 / Task Item ──
+// ── 任務項目 / Task Item ──
 function TaskItem({ task, onEdit }) {
     const toggleTask = useTaskStore((s) => s.toggleTask);
     const deleteTask = useTaskStore((s) => s.deleteTask);
-
-    const categoryIcons = {
-        general: '📁', homework: '📝', exam: '📖', project: '🚀', personal: '👤',
-    };
+    const CatIcon = categoryIcons[task.category] || IconFolder;
 
     return (
-        <div className={`glass-card glass-card-hover p-3 flex items-start gap-3 ${task.completed ? 'opacity-60' : ''}`}>
-            {/* 完成勾選 / Completion toggle */}
+        <div
+            className="card card-hover"
+            style={{
+                display: 'flex', alignItems: 'flex-start', gap: '14px',
+                opacity: task.completed ? 0.5 : 1,
+            }}
+        >
+            {/* 完成勾選 */}
             <button
                 onClick={() => toggleTask(task.id)}
-                className={`w-5 h-5 mt-0.5 rounded-md border-2 flex items-center justify-center transition-all flex-shrink-0 ${task.completed
-                        ? 'bg-success border-success text-white'
-                        : 'border-text-muted hover:border-primary-light'
-                    }`}
+                style={{
+                    width: '22px', height: '22px', marginTop: '2px', borderRadius: '7px',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    flexShrink: 0, cursor: 'pointer',
+                    border: `2px solid ${task.completed ? 'var(--color-success)' : 'var(--border)'}`,
+                    background: task.completed ? 'var(--color-success)' : 'transparent',
+                    color: task.completed ? 'white' : 'transparent',
+                }}
             >
-                {task.completed && <span className="text-xs">✓</span>}
+                {task.completed && <IconCheck size={12} />}
             </button>
 
-            {/* 內容 / Content */}
-            <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                    <span className="text-sm">{categoryIcons[task.category] || '📁'}</span>
-                    <p className={`text-sm font-medium truncate ${task.completed ? 'line-through text-text-muted' : 'text-text-primary'}`}>
+            {/* 內容 */}
+            <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <CatIcon size={14} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+                    <p style={{
+                        fontSize: '14px', fontWeight: 500, color: task.completed ? 'var(--text-muted)' : 'var(--text)',
+                        textDecoration: task.completed ? 'line-through' : 'none',
+                        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                    }}>
                         {task.title}
                     </p>
-                    {'⭐'.repeat(task.priority || 0) && (
-                        <span className="text-xs flex-shrink-0">{'⭐'.repeat(Math.min(task.priority || 0, 3))}</span>
+                    {task.priority > 0 && (
+                        <span style={{ display: 'flex', gap: '2px', flexShrink: 0 }}>
+                            {Array.from({ length: Math.min(task.priority, 3) }, (_, i) => (
+                                <IconStar key={i} size={10} style={{ color: 'var(--color-warning)', fill: 'var(--color-warning)' }} />
+                            ))}
+                        </span>
                     )}
                 </div>
                 {task.description && (
-                    <p className="text-xs text-text-muted mt-0.5 truncate">{task.description}</p>
+                    <p style={{ fontSize: '12px', marginTop: '4px', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{task.description}</p>
                 )}
                 {task.due_date && (
-                    <p className="text-xs text-secondary mt-0.5">📅 {task.due_date}</p>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '6px' }}>
+                        <IconCalendar size={11} style={{ color: 'var(--color-warning)' }} />
+                        <span style={{ fontSize: '12px', color: 'var(--color-warning)' }}>{task.due_date}</span>
+                    </div>
                 )}
             </div>
 
-            {/* 操作按鈕 / Actions */}
-            <div className="flex gap-1 flex-shrink-0">
-                <button
-                    onClick={() => onEdit(task)}
-                    className="w-7 h-7 flex items-center justify-center text-xs rounded-md hover:bg-white/10 text-text-muted hover:text-text-primary transition-colors"
-                >
-                    ✏️
+            {/* 操作 */}
+            <div style={{ display: 'flex', gap: '4px', flexShrink: 0 }}>
+                <button onClick={() => onEdit(task)}
+                    style={{ width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '8px', border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--text-muted)' }}>
+                    <IconEdit size={14} />
                 </button>
-                <button
-                    onClick={() => deleteTask(task.id)}
-                    className="w-7 h-7 flex items-center justify-center text-xs rounded-md hover:bg-danger/20 text-text-muted hover:text-danger transition-colors"
-                >
-                    🗑️
+                <button onClick={() => deleteTask(task.id)}
+                    style={{ width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '8px', border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--text-muted)' }}>
+                    <IconTrash size={14} />
                 </button>
             </div>
         </div>
@@ -167,110 +152,93 @@ function TaskItem({ task, onEdit }) {
 
 // ── 主頁面 / Main Page ──
 export default function Tasks() {
-    const {
-        isLoading,
-        filter,
-        setFilter,
-        loadTasks,
-        getFilteredTasks,
-        exportToMarkdown,
-    } = useTaskStore();
-
+    const { isLoading, filter, setFilter, loadTasks, getFilteredTasks, exportToMarkdown } = useTaskStore();
     const [showForm, setShowForm] = useState(false);
     const [editTask, setEditTask] = useState(null);
 
-    useEffect(() => {
-        loadTasks();
-    }, [loadTasks]);
-
+    useEffect(() => { loadTasks(); }, [loadTasks]);
     const filteredTasks = getFilteredTasks();
 
     const filters = [
-        { key: 'all', label: '全部 / All' },
-        { key: 'active', label: '進行中 / Active' },
-        { key: 'completed', label: '已完成 / Done' },
+        { key: 'all', label: '全部 All' },
+        { key: 'active', label: '進行中 Active' },
+        { key: 'completed', label: '已完成 Done' },
     ];
 
     return (
-        <div className="space-y-4">
-            {/* 標題與操作 / Header & actions */}
-            <div className="flex items-center justify-between">
-                <h2 className="text-xl font-bold text-text-primary">✅ 任務管理 / Tasks</h2>
-                <div className="flex gap-2">
-                    <button
-                        onClick={exportToMarkdown}
-                        className="text-sm bg-secondary/20 hover:bg-secondary/30 text-secondary px-3 py-1.5 rounded-lg transition-colors"
-                        title="匯出為 Markdown / Export as Markdown"
-                    >
-                        📄 MD
+        <div className="section-stack animate-fade-in">
+            {/* 標題 */}
+            <div className="page-header">
+                <div className="page-title-group">
+                    <IconCheckSquare size={22} style={{ color: 'var(--text-muted)' }} />
+                    <h2 className="page-title">任務管理</h2>
+                    <span className="page-subtitle">Tasks</span>
+                </div>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                    <button onClick={exportToMarkdown} className="btn btn-ghost" style={{ fontSize: '13px' }}>
+                        <IconDownload size={15} /> MD
                     </button>
-                    <button
-                        onClick={() => { setEditTask(null); setShowForm(true); }}
-                        className="text-sm bg-primary hover:bg-primary-dark text-white px-3 py-1.5 rounded-lg transition-colors"
-                    >
-                        ➕ 新增
+                    <button onClick={() => { setEditTask(null); setShowForm(true); }} className="btn btn-primary" style={{ fontSize: '13px' }}>
+                        <IconPlus size={15} /> 新增
                     </button>
                 </div>
             </div>
 
-            {/* 篩選器 / Filters */}
-            <div className="flex gap-2">
+            {/* 篩選器 */}
+            <div style={{ display: 'flex', gap: '8px' }}>
                 {filters.map((f) => (
                     <button
                         key={f.key}
                         onClick={() => setFilter(f.key)}
-                        className={`text-xs px-3 py-1.5 rounded-full transition-all ${filter === f.key
-                                ? 'bg-primary/30 text-primary-light border border-primary/30'
-                                : 'bg-white/5 text-text-muted hover:bg-white/10 border border-transparent'
-                            }`}
+                        style={{
+                            fontSize: '12px', padding: '8px 16px', borderRadius: '999px',
+                            fontWeight: 500, cursor: 'pointer', border: 'none',
+                            transition: 'all 0.15s',
+                            background: filter === f.key ? 'var(--color-brand-subtle)' : 'var(--bg-secondary)',
+                            color: filter === f.key ? 'var(--color-brand)' : 'var(--text-muted)',
+                            outline: filter === f.key ? '1.5px solid var(--color-brand)' : 'none',
+                        }}
                     >
                         {f.label}
                     </button>
                 ))}
             </div>
 
-            {/* 新增/編輯表單 / Form */}
+            {/* 表單 */}
             {showForm && (
-                <TaskForm
-                    editTask={editTask}
-                    onClose={() => { setShowForm(false); setEditTask(null); }}
-                />
+                <TaskForm editTask={editTask} onClose={() => { setShowForm(false); setEditTask(null); }} />
             )}
 
-            {/* 任務列表 / Task list */}
+            {/* 任務列表 */}
             {isLoading ? (
-                <div className="space-y-3">
+                <div className="card-stack">
                     {[1, 2, 3].map((i) => (
-                        <div key={i} className="glass-card p-3">
-                            <div className="skeleton h-5 w-3/4 mb-2" />
-                            <div className="skeleton h-3 w-1/2" />
+                        <div key={i} className="card" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                            <div className="skeleton" style={{ height: '20px', width: '75%' }} />
+                            <div className="skeleton" style={{ height: '14px', width: '50%' }} />
                         </div>
                     ))}
                 </div>
             ) : filteredTasks.length === 0 ? (
-                <div className="glass-card p-8 text-center animate-fade-in-up">
-                    <p className="text-4xl mb-3">📝</p>
-                    <p className="text-text-secondary">沒有任務 / No tasks</p>
-                    <p className="text-sm text-text-muted mt-1">按「新增」建立第一個任務 / Click "+" to create one</p>
+                <div className="card animate-fade-in" style={{ textAlign: 'center', padding: '40px 20px' }}>
+                    <IconCheckSquare size={36} style={{ color: 'var(--text-muted)', margin: '0 auto 16px' }} />
+                    <p style={{ color: 'var(--text-secondary)', fontSize: '15px' }}>沒有任務</p>
+                    <p style={{ fontSize: '13px', marginTop: '6px', color: 'var(--text-muted)' }}>按「新增」建立第一個任務</p>
                 </div>
             ) : (
-                <div className="space-y-2">
+                <div className="card-stack">
                     {filteredTasks.map((task, i) => (
-                        <div key={task.id} className="animate-fade-in-up" style={{ animationDelay: `${i * 0.05}s` }}>
-                            <TaskItem
-                                task={task}
-                                onEdit={(t) => { setEditTask(t); setShowForm(true); }}
-                            />
+                        <div key={task.id} className="animate-fade-in" style={{ animationDelay: `${i * 0.04}s` }}>
+                            <TaskItem task={task} onEdit={(t) => { setEditTask(t); setShowForm(true); }} />
                         </div>
                     ))}
                 </div>
             )}
 
-            {/* 底部統計 / Bottom stats */}
             {filteredTasks.length > 0 && (
-                <div className="text-center text-xs text-text-muted pt-2">
-                    📊 {filteredTasks.filter((t) => t.completed).length}/{filteredTasks.length} 已完成 / completed
-                </div>
+                <p style={{ textAlign: 'center', fontSize: '12px', color: 'var(--text-muted)', paddingTop: '4px' }}>
+                    {filteredTasks.filter((t) => t.completed).length}/{filteredTasks.length} 已完成 completed
+                </p>
             )}
         </div>
     );

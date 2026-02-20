@@ -26,17 +26,24 @@ class LoginResponse(BaseModel):
 class Course(BaseModel):
     """單一課程 / Single Course"""
     name: str = Field(..., description="課程名稱 / Course name")
+    name_en: Optional[str] = Field(None, description="英文名稱 / English name")
     day: int = Field(..., description="星期幾 (0=日, 1=一, ...) / Day of week (0=Sun, 1=Mon, ...)")
     period: int = Field(..., description="節次 / Period number")
     startMinute: int = Field(0, description="開始分鐘 (從午夜算起) / Start minute from midnight")
     location: Optional[str] = Field(None, description="教室位置 / Classroom location")
     teacher: Optional[str] = Field(None, description="授課教師 / Instructor")
     time: Optional[str] = Field(None, description="時間字串 / Time string")
+    course_type: Optional[str] = Field(None, description="修別 / Course type (必修/通識)")
+    credits: Optional[int] = Field(None, description="學分數 / Credits")
 
 
 class TimetableResponse(BaseModel):
     """課表回應 / Timetable Response"""
     courses: list[Course] = []
+    total_credits: int = 0
+    semester: Optional[str] = None
+    student_name: Optional[str] = None
+    class_name: Optional[str] = None
 
 
 # ── 成績模型 / Grades Models ──
@@ -45,14 +52,17 @@ class GradeCourse(BaseModel):
     """成績課程 / Grade Course"""
     name: str = Field(..., description="課程名稱 / Course name")
     score: Optional[float] = Field(None, description="分數 / Score")
+    score_text: Optional[str] = Field(None, description="分數文字 / Score text (e.g. 通過)")
     credits: int = Field(0, description="學分數 / Credits")
     grade: Optional[str] = Field(None, description="等第 / Letter grade")
+    course_type: Optional[str] = Field(None, description="修別 / Course type")
 
 
 class Semester(BaseModel):
     """學期成績 / Semester Grades"""
     name: str = Field(..., description="學期名稱 / Semester name")
     courses: list[GradeCourse] = []
+    total_credits: int = 0
 
 
 class GradesResponse(BaseModel):

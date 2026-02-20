@@ -1,0 +1,91 @@
+{
+  "semesters": [
+    {
+      "name": "113-1 上學期",
+      "courses": [
+        {
+          "name": "英文(一)FRESHMAN ENGLISH 1",
+          "score": 85.0,
+          "score_text": null,
+          "credits": 2,
+          "grade": "A",
+          "course_type": "必修(Required)"
+        },
+        {
+          "name": "數位設計基礎BASIS OF DIGITAL DESIGN",
+          "score": 92.0,
+          "score_text": null,
+          "credits": 3,
+          "grade": "A+",
+          "course_type": "必修(Required)"
+        },
+        {
+          "name": "計算機概論(一)INTRODUCTION TO COMPUTER SCIENCE(1)",
+          "score": 98.0,
+          "score_text": null,
+          "credits": 2,
+          "grade": "A+",
+          "course_type": "必修(Required)"
+        },
+        {
+          "name": "程式設計COMPUTER PROGRAMMING",
+          "score": 99.0,
+          "score_text": null,
+          "credits": 3,
+          "grade": "A+",
+          "course_type": "必修(Required)"
+        },
+        {
+          "name": "閱讀與書寫(一)READING AND WRITING 1",
+          "score": 94.0,
+          "score_text": null,
+          "credits": 2,
+          "grade": "A+",
+          "course_type": "必修(Required)"
+        },
+        {
+          "name": "運動健康與素養(基礎體育)EXERCISE HEALTH AND LITERACY (PHYSICAL EDUCATION)",
+          "score": 86.0,
+          "score_text": null,
+          "credits": 1,
+          "grade": "A",
+          "course_type": "必修(Required)"
+        },
+        {
+          "name": "人工智慧概論INTRODUCTION TO ARTIFICIAL INTELLIGENCE",
+          "score": 91.0,
+          "score_text": null,
+          "credits": 3,
+          "grade": "A+",
+          "course_type": "必修(Required)"
+        },
+        {
+          "name": "自我轉化與人際溝通(跨域與設計)SELF TRANSFORMATION AND INTERPERSONAL COMMUNICATION",
+          "score": 98.0,
+          "score_text": null,
+          "credits": 2,
+          "grade": "A+",
+          "course_type": "通識(General)"
+        },
+        {
+          "name": "化學與生活應用(科技與服務)CHEMISTRY AND LIFE",
+          "score": 96.0,
+          "score_text": null,
+          "credits": 2,
+          "grade": "A+",
+          "course_type": "通識(General)"
+        },
+        {
+          "name": "跨域微學分(一)(跨域與設計)INTER-DISCIPLINARY LEARNING 1(MICRO CREDITS)",
+          "score": null,
+          "score_text": "通過(Pass)",
+          "credits": 1,
+          "grade": "Pass",
+          "course_type": "通識(General)"
+        }
+      ],
+      "total_credits": 21
+    }
+  ],
+  "_cached_at": 1771571109.8811746
+}

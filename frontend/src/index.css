@@ -1,33 +1,107 @@
 @import "tailwindcss";
 
-/* ── Piyou Campus Theme ── */
+/* ══════════════════════════════════════════════════════
+   披呦 Piyou — 簡約現代主題系統 / Minimalist Modern Theme
+   參考 Dcard, Instagram, YouTube 等現代 App 間距比例
+   Spacing inspired by Dcard, IG, YouTube modern App layouts.
+   ══════════════════════════════════════════════════════ */
+
 @theme {
-  --color-primary: #4f46e5;
-  --color-primary-light: #818cf8;
-  --color-primary-dark: #3730a3;
-  --color-secondary: #f59e0b;
-  --color-secondary-light: #fbbf24;
-  --color-accent: #06b6d4;
-  --color-surface: #1e1b4b;
-  --color-surface-light: #312e81;
-  --color-surface-card: rgba(49, 46, 129, 0.6);
-  --color-danger: #ef4444;
+  /* ── 品牌色 / Brand colors ── */
+  --color-brand: #6366f1;
+  --color-brand-light: #818cf8;
+  --color-brand-dark: #4f46e5;
+  --color-brand-subtle: #eef2ff;
+
+  /* ── 語意色 / Semantic colors ── */
   --color-success: #22c55e;
+  --color-danger: #ef4444;
   --color-warning: #f59e0b;
-  --color-text-primary: #f1f5f9;
-  --color-text-secondary: #a5b4fc;
-  --color-text-muted: #6366f1;
-  --font-sans: 'Inter', 'Noto Sans TC', system-ui, sans-serif;
+  --color-info: #3b82f6;
+
+  /* ── 字型 / Typography ── */
+  --font-sans: 'Inter', 'Noto Sans TC', system-ui, -apple-system, sans-serif;
 }
 
-/* ── Global Reset & Base ── */
+/* ══════════════════════════════════════════════════════
+   淺色模式（預設）/ Light Mode (default)
+   ══════════════════════════════════════════════════════ */
+:root {
+  --bg: #f5f5f5;
+  --bg-secondary: #ebebeb;
+  --bg-card: #ffffff;
+  --bg-card-hover: #fafafa;
+  --bg-input: #f5f5f5;
+  --bg-nav: rgba(255, 255, 255, 0.92);
+  --text: #0a0a0a;
+  --text-secondary: #525252;
+  --text-muted: #a3a3a3;
+  --text-inverse: #ffffff;
+  --border: #e5e5e5;
+  --border-light: #f5f5f5;
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.08);
+  --ring-brand: rgba(99, 102, 241, 0.2);
+  --skeleton-from: #e5e5e5;
+  --skeleton-via: #f5f5f5;
+
+  /* ── 間距語彙 / Spacing tokens ── */
+  --space-page: 1.25rem;
+  /* 頁面外距 20px */
+  --space-section: 1.5rem;
+  /* 段落間距 24px */
+  --space-card-padding: 1.25rem;
+  /* 卡片內距 20px */
+  --space-card-gap: 0.875rem;
+  /* 卡片間距 14px */
+}
+
+/* ══════════════════════════════════════════════════════
+   深色模式 / Dark Mode
+   ══════════════════════════════════════════════════════ */
+.dark {
+  --bg: #0a0a0a;
+  --bg-secondary: #171717;
+  --bg-card: #171717;
+  --bg-card-hover: #1f1f1f;
+  --bg-input: #171717;
+  --bg-nav: rgba(10, 10, 10, 0.92);
+  --text: #fafafa;
+  --text-secondary: #a3a3a3;
+  --text-muted: #737373;
+  --text-inverse: #0a0a0a;
+  --border: #262626;
+  --border-light: #171717;
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.5);
+  --ring-brand: rgba(99, 102, 241, 0.3);
+  --skeleton-from: #262626;
+  --skeleton-via: #404040;
+}
+
+/* ══════════════════════════════════════════════════════
+   全域基礎 / Global Base
+   ══════════════════════════════════════════════════════ */
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
 }
 
-html, body, #root {
+html {
+  height: 100%;
+  color-scheme: light;
+}
+
+.dark html,
+html:has(.dark) {
+  color-scheme: dark;
+}
+
+body,
+#root {
   height: 100%;
   width: 100%;
   overflow: hidden;
@@ -35,61 +109,292 @@ html, body, #root {
 
 body {
   font-family: var(--font-sans);
-  background: linear-gradient(135deg, #0f0a2e 0%, #1e1b4b 50%, #1a1650 100%);
-  color: var(--color-text-primary);
+  background: var(--bg);
+  color: var(--text);
   -webkit-font-smoothing: antialiased;
+  transition: background-color 0.3s ease, color 0.3s ease;
+  line-height: 1.6;
+  letter-spacing: -0.01em;
 }
 
-/* ── Scrollbar ── */
-::-webkit-scrollbar { width: 4px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--color-primary); border-radius: 999px; }
+/* ── 捲軸 / Scrollbar ── */
+::-webkit-scrollbar {
+  width: 4px;
+}
 
-/* ── Glass Card Utility ── */
-.glass-card {
-  background: rgba(49, 46, 129, 0.45);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(129, 140, 248, 0.15);
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--text-muted);
+  border-radius: 999px;
+}
+
+/* ══════════════════════════════════════════════════════
+   卡片 / Card
+   ══════════════════════════════════════════════════════ */
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
   border-radius: 1rem;
+  box-shadow: var(--shadow-sm);
+  transition: all 0.2s ease;
+  padding: var(--space-card-padding);
 }
 
-.glass-card-hover {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-.glass-card-hover:hover {
-  background: rgba(49, 46, 129, 0.65);
-  border-color: rgba(129, 140, 248, 0.3);
-  transform: translateY(-2px);
-  box-shadow: 0 8px 32px rgba(79, 70, 229, 0.2);
+.card-hover:hover {
+  background: var(--bg-card-hover);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
 }
 
-/* ── Shimmer Loading ── */
+/* ══════════════════════════════════════════════════════
+   表單元素 / Form Elements
+   ══════════════════════════════════════════════════════ */
+.input {
+  width: 100%;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  padding: 0.75rem 1rem;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--text);
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.input::placeholder {
+  color: var(--text-muted);
+}
+
+.input:focus {
+  border-color: var(--color-brand);
+  box-shadow: 0 0 0 3px var(--ring-brand);
+}
+
+/* ══════════════════════════════════════════════════════
+   按鈕 / Buttons
+   ══════════════════════════════════════════════════════ */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1.25rem;
+  border-radius: 0.75rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  border: none;
+}
+
+.btn-primary {
+  background: var(--color-brand);
+  color: white;
+}
+
+.btn-primary:hover {
+  background: var(--color-brand-dark);
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--text-secondary);
+}
+
+.btn-ghost:hover {
+  background: var(--bg-secondary);
+}
+
+.btn-soft {
+  background: var(--color-brand-subtle);
+  color: var(--color-brand);
+}
+
+.dark .btn-soft {
+  background: rgba(99, 102, 241, 0.15);
+  color: var(--color-brand-light);
+}
+
+.btn-soft:hover {
+  opacity: 0.85;
+}
+
+/* ══════════════════════════════════════════════════════
+   標籤 / Badge
+   ══════════════════════════════════════════════════════ */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+/* ══════════════════════════════════════════════════════
+   頁面標題 / Page Heading
+   ══════════════════════════════════════════════════════ */
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 0.5rem;
+}
+
+.page-title-group {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+}
+
+.page-title {
+  font-size: 1.375rem;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.02em;
+}
+
+.page-subtitle {
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+}
+
+/* ══════════════════════════════════════════════════════
+   段落容器 / Section spacing
+   ══════════════════════════════════════════════════════ */
+.section-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-section);
+}
+
+.card-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-card-gap);
+}
+
+/* ══════════════════════════════════════════════════════
+   骨架屏 / Skeleton Loading
+   ══════════════════════════════════════════════════════ */
 @keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
+  0% {
+    background-position: -200% 0;
+  }
+
+  100% {
+    background-position: 200% 0;
+  }
 }
+
 .skeleton {
-  background: linear-gradient(90deg, rgba(49,46,129,0.4) 25%, rgba(99,102,241,0.2) 50%, rgba(49,46,129,0.4) 75%);
+  background: linear-gradient(90deg, var(--skeleton-from) 25%, var(--skeleton-via) 50%, var(--skeleton-from) 75%);
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
   border-radius: 0.5rem;
 }
 
-/* ── Fade-in Animation ── */
+/* ══════════════════════════════════════════════════════
+   動畫 / Animations
+   ══════════════════════════════════════════════════════ */
 @keyframes fadeInUp {
-  from { opacity: 0; transform: translateY(16px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-.animate-fade-in-up {
-  animation: fadeInUp 0.5s ease-out forwards;
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
-/* ── Pulse Glow ── */
-@keyframes pulseGlow {
-  0%, 100% { box-shadow: 0 0 8px rgba(79, 70, 229, 0.4); }
-  50% { box-shadow: 0 0 24px rgba(79, 70, 229, 0.8); }
+.animate-fade-in {
+  animation: fadeInUp 0.4s ease-out forwards;
 }
-.pulse-glow {
-  animation: pulseGlow 2s ease-in-out infinite;
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.animate-slide-in {
+  animation: slideIn 0.3s ease-out forwards;
+}
+
+/* ══════════════════════════════════════════════════════
+   RWD 響應式佈局 / Responsive Layout
+   ══════════════════════════════════════════════════════ */
+
+/* 桌面端側邊欄容器 / Desktop sidebar container */
+@media (min-width: 768px) {
+  :root {
+    --space-page: 2rem;
+    /* 32px for desktop */
+    --space-section: 1.75rem;
+    /* 28px for desktop */
+    --space-card-padding: 1.5rem;
+    /* 24px for desktop */
+    --space-card-gap: 1rem;
+    /* 16px for desktop */
+  }
+
+  .app-shell {
+    display: grid;
+    grid-template-columns: 260px 1fr;
+    grid-template-rows: auto 1fr;
+    height: 100%;
+  }
+
+  .app-header {
+    grid-column: 1 / -1;
+  }
+
+  .app-sidebar {
+    display: flex !important;
+    grid-row: 2;
+  }
+
+  .app-main {
+    grid-row: 2;
+    padding-bottom: 2rem !important;
+  }
+
+  .app-bottom-nav {
+    display: none !important;
+  }
+}
+
+@media (max-width: 767px) {
+  .app-shell {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+  }
+
+  .app-sidebar {
+    display: none !important;
+  }
+}
+
+/* 兩欄佈局 / 2-column layout on md+ */
+@media (min-width: 768px) {
+  .grid-responsive-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.25rem;
+  }
 }

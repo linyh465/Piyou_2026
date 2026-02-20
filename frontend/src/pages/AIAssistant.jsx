@@ -1,208 +1,133 @@
 /**
  * AI 助理頁面 / AI Assistant Page
- * 語意解析使用者輸入，判斷意圖並觸發對應 UI 元件或導航
- * Parses user input semantically to detect intent and trigger corresponding UI or navigation.
  */
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import {
+    IconBot, IconSend, IconCalendar, IconChartBar,
+    IconBus, IconCheckSquare,
+} from '../components/Icons';
 
-// ── 意圖規則 / Intent Rules ──
 const INTENT_RULES = [
-    {
-        keywords: ['課表', '課程', 'schedule', 'timetable', 'class', '上課'],
-        intent: 'timetable',
-        response: '📅 好的，幫你開啟課表！ / Opening your timetable!',
-        action: '/timetable',
-    },
-    {
-        keywords: ['成績', '分數', 'grade', 'score', 'GPA'],
-        intent: 'grades',
-        response: '📊 幫你查詢成績！ / Fetching your grades!',
-        action: '/grades',
-    },
-    {
-        keywords: ['任務', '待辦', 'task', 'todo', '作業', 'homework', '新增'],
-        intent: 'tasks',
-        response: '✅ 開啟任務管理！ / Opening task manager!',
-        action: '/tasks',
-    },
-    {
-        keywords: ['公車', 'bus', '到站', '幾分鐘', '交通'],
-        intent: 'bus',
-        response: '🚌 查看公車即時資訊！ / Checking bus arrivals!',
-        action: '/',
-    },
-    {
-        keywords: ['你好', 'hello', 'hi', '嗨', '哈囉'],
-        intent: 'greeting',
-        response: '🐾 你好！我是披呦 AI 助理，有什麼我可以幫忙的嗎？\nHi! I\'m Piyou AI assistant, how can I help?',
-        action: null,
-    },
-    {
-        keywords: ['謝謝', 'thanks', 'thank', '感謝'],
-        intent: 'thanks',
-        response: '😊 不客氣！還需要什麼幫助嗎？\nYou\'re welcome! Need anything else?',
-        action: null,
-    },
+    { keywords: ['課表', 'schedule', 'timetable', 'class'], response: '好的，幫你開啟課表！', action: '/timetable' },
+    { keywords: ['成績', 'grade', 'score', 'GPA'], response: '幫你查詢成績！', action: '/grades' },
+    { keywords: ['任務', 'task', 'todo', '作業'], response: '開啟任務管理！', action: '/tasks' },
+    { keywords: ['公車', 'bus', '到站'], response: '查看公車即時資訊！', action: '/' },
+    { keywords: ['你好', 'hello', 'hi', '嗨'], response: '你好！我是披呦 AI 助理，有什麼可以幫忙的？', action: null },
+    { keywords: ['謝謝', 'thanks'], response: '不客氣！還需要什麼幫助嗎？', action: null },
 ];
 
-/**
- * 語意解析 / Semantic parser
- * 比對使用者輸入與意圖關鍵字
- * Matches user input against intent keywords.
- */
 function parseIntent(input) {
-    const normalized = input.toLowerCase().trim();
-
-    for (const rule of INTENT_RULES) {
-        if (rule.keywords.some((kw) => normalized.includes(kw))) {
-            return rule;
-        }
+    const n = input.toLowerCase().trim();
+    for (const r of INTENT_RULES) {
+        if (r.keywords.some((k) => n.includes(k))) return r;
     }
-
-    return {
-        intent: 'unknown',
-        response: `🤔 我還不太理解「${input}」，但我可以幫你查課表、成績、任務或公車資訊！\nI'm not sure about "${input}", but I can help with timetable, grades, tasks, or bus info!`,
-        action: null,
-    };
+    return { response: `我還不太理解「${input}」，但我可以幫你查課表、成績、任務或公車資訊！`, action: null };
 }
 
-// ── 訊息氣泡 / Message Bubble ──
 function MessageBubble({ message }) {
     const isUser = message.role === 'user';
-
     return (
-        <div className={`flex ${isUser ? 'justify-end' : 'justify-start'} animate-fade-in-up`}>
-            <div
-                className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-sm whitespace-pre-line ${isUser
-                        ? 'bg-primary text-white rounded-br-sm'
-                        : 'glass-card rounded-bl-sm'
-                    }`}
-            >
+        <div style={{ display: 'flex', justifyContent: isUser ? 'flex-end' : 'flex-start' }} className="animate-fade-in">
+            {!isUser && (
+                <div style={{
+                    width: '32px', height: '32px', borderRadius: '50%', flexShrink: 0,
+                    marginRight: '10px', marginTop: '4px',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    background: 'var(--color-brand-subtle)', color: 'var(--color-brand)',
+                }}>
+                    <IconBot size={16} />
+                </div>
+            )}
+            <div style={{
+                maxWidth: '72%', borderRadius: '20px', padding: '12px 18px',
+                fontSize: '14px', lineHeight: 1.6, whiteSpace: 'pre-line',
+                background: isUser ? 'var(--color-brand)' : 'var(--bg-card)',
+                color: isUser ? 'white' : 'var(--text)',
+                border: isUser ? 'none' : '1px solid var(--border)',
+                borderBottomRightRadius: isUser ? '6px' : undefined,
+                borderBottomLeftRadius: !isUser ? '6px' : undefined,
+            }}>
                 {message.content}
-
-                {/* 快速動作按鈕 / Quick action button */}
                 {message.action && (
-                    <a
-                        href={`#${message.action}`}
-                        className="mt-2 block text-xs bg-white/10 hover:bg-white/20 rounded-lg px-3 py-1.5 text-center transition-colors"
-                    >
-                        👉 前往 / Go there →
-                    </a>
+                    <a href={`#${message.action}`} style={{
+                        display: 'block', marginTop: '10px', fontSize: '12px',
+                        borderRadius: '10px', padding: '8px 0', textAlign: 'center',
+                        fontWeight: 500, textDecoration: 'none',
+                        background: isUser ? 'rgba(255,255,255,0.15)' : 'var(--color-brand-subtle)',
+                        color: isUser ? 'white' : 'var(--color-brand)',
+                    }}>前往 →</a>
                 )}
             </div>
         </div>
     );
 }
 
-// ── 快速建議 / Quick Suggestions ──
 function QuickSuggestions({ onSelect }) {
-    const suggestions = [
-        { icon: '📅', text: '查課表' },
-        { icon: '📊', text: '看成績' },
-        { icon: '🚌', text: '公車到站' },
-        { icon: '✅', text: '管理任務' },
+    const items = [
+        { icon: IconCalendar, text: '查課表' },
+        { icon: IconChartBar, text: '看成績' },
+        { icon: IconBus, text: '公車到站' },
+        { icon: IconCheckSquare, text: '管理任務' },
     ];
-
     return (
-        <div className="flex flex-wrap gap-2 justify-center">
-            {suggestions.map((s) => (
-                <button
-                    key={s.text}
-                    onClick={() => onSelect(s.text)}
-                    className="glass-card glass-card-hover px-3 py-1.5 text-sm text-text-secondary hover:text-text-primary transition-colors"
-                >
-                    {s.icon} {s.text}
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', justifyContent: 'center' }}>
+            {items.map((s) => (
+                <button key={s.text} onClick={() => onSelect(s.text)} className="card card-hover"
+                    style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 16px', fontSize: '13px', cursor: 'pointer', border: '1px solid var(--border)', color: 'var(--text-secondary)' }}>
+                    <s.icon size={16} style={{ color: 'var(--color-brand)' }} />{s.text}
                 </button>
             ))}
         </div>
     );
 }
 
-// ── 主頁面 / Main Page ──
 export default function AIAssistant() {
     const navigate = useNavigate();
-    const [messages, setMessages] = useState([
-        {
-            role: 'assistant',
-            content: '🐾 嗨！我是披呦 AI 助理。\n你可以問我課表、成績、任務或公車資訊！\n\nHi! I\'m the Piyou AI Assistant.\nAsk me about timetable, grades, tasks, or bus info!',
-            action: null,
-        },
-    ]);
+    const [messages, setMessages] = useState([{
+        role: 'assistant',
+        content: '嗨！我是披呦 AI 助理。\n你可以問我課表、成績、任務或公車資訊！',
+        action: null,
+    }]);
     const [input, setInput] = useState('');
-    const messagesEndRef = useRef(null);
+    const endRef = useRef(null);
 
-    useEffect(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, [messages]);
+    useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
 
     const handleSend = (text) => {
         const msg = text || input.trim();
         if (!msg) return;
-
-        // 加入使用者訊息 / Add user message
-        const userMsg = { role: 'user', content: msg, action: null };
-
-        // 語意解析 / Semantic parsing
         const result = parseIntent(msg);
-        const aiMsg = { role: 'assistant', content: result.response, action: result.action };
-
-        setMessages((prev) => [...prev, userMsg, aiMsg]);
+        setMessages((p) => [...p, { role: 'user', content: msg }, { role: 'assistant', content: result.response, action: result.action }]);
         setInput('');
-
-        // 延遲導航 / Delayed navigation
-        if (result.action) {
-            setTimeout(() => navigate(result.action), 1500);
-        }
-    };
-
-    const handleKeyDown = (e) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
-            handleSend();
-        }
+        if (result.action) setTimeout(() => navigate(result.action), 1500);
     };
 
     return (
-        <div className="flex flex-col h-full -m-4">
-            {/* 標題 / Header */}
-            <div className="px-5 py-3">
-                <h2 className="text-xl font-bold text-text-primary">🤖 AI 助理 / Assistant</h2>
-                <p className="text-xs text-text-muted mt-0.5">語意辨識 · 智慧導航 / Semantic AI · Smart Navigation</p>
-            </div>
-
-            {/* 訊息區 / Messages area */}
-            <div className="flex-1 overflow-y-auto px-4 space-y-3 pb-4">
-                {messages.map((msg, i) => (
-                    <MessageBubble key={i} message={msg} />
-                ))}
-                <div ref={messagesEndRef} />
-            </div>
-
-            {/* 快速建議 / Quick suggestions */}
-            {messages.length <= 2 && (
-                <div className="px-4 pb-3">
-                    <QuickSuggestions onSelect={handleSend} />
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', margin: 'calc(-1 * var(--space-page))' }}>
+            <div style={{ padding: '16px 20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <IconBot size={22} style={{ color: 'var(--text-muted)' }} />
+                <div>
+                    <h2 style={{ fontSize: '1.375rem', fontWeight: 700, color: 'var(--text)' }}>AI 助理</h2>
+                    <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>語意辨識 · 智慧導航</p>
                 </div>
-            )}
+            </div>
 
-            {/* 輸入框 / Input area */}
-            <div className="p-4 glass-card rounded-none" style={{ borderRadius: 0 }}>
-                <div className="flex gap-2">
-                    <input
-                        type="text"
-                        value={input}
-                        onChange={(e) => setInput(e.target.value)}
-                        onKeyDown={handleKeyDown}
-                        placeholder="問我任何問題... / Ask me anything..."
-                        className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-text-primary placeholder-text-muted outline-none focus:border-primary-light transition-colors"
-                    />
-                    <button
-                        onClick={() => handleSend()}
-                        disabled={!input.trim()}
-                        className="bg-primary hover:bg-primary-dark text-white px-4 py-2.5 rounded-xl transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-                    >
-                        <span className="text-lg">↑</span>
+            <div style={{ flex: 1, overflowY: 'auto', padding: '0 20px', display: 'flex', flexDirection: 'column', gap: '14px', paddingBottom: '16px' }}>
+                {messages.map((m, i) => <MessageBubble key={i} message={m} />)}
+                <div ref={endRef} />
+            </div>
+
+            {messages.length <= 2 && <div style={{ padding: '0 20px 12px' }}><QuickSuggestions onSelect={handleSend} /></div>}
+
+            <div style={{ padding: '14px 20px', borderTop: '1px solid var(--border)', background: 'var(--bg-card)' }}>
+                <div style={{ display: 'flex', gap: '10px' }}>
+                    <input type="text" value={input} onChange={(e) => setInput(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
+                        placeholder="問我任何問題..." className="input" style={{ flex: 1 }} />
+                    <button onClick={() => handleSend()} disabled={!input.trim()} className="btn btn-primary"
+                        style={{ padding: '0 14px', opacity: input.trim() ? 1 : 0.3 }}>
+                        <IconSend size={18} />
                     </button>
                 </div>
             </div>

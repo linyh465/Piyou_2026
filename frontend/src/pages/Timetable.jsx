@@ -1,23 +1,22 @@
 /**
  * 課表頁面 / Timetable Page
- * 每週課表格格視圖，含 Loading 骨架與 Timeout 錯誤顯示
- * Weekly grid view of classes with loading skeleton and timeout error display.
+ * 間距參考 Dcard / Instagram
  */
 import { useEffect } from 'react';
 import useTimetableStore from '../stores/timetableStore';
+import { IconCalendar, IconRefresh } from '../components/Icons';
 
-const DAYS = ['日 Sun', '一 Mon', '二 Tue', '三 Wed', '四 Thu', '五 Fri', '六 Sat'];
+const DAYS = ['一', '二', '三', '四', '五', '六'];
 const PERIODS = Array.from({ length: 13 }, (_, i) => i + 1);
 
-// 課表格色彩 / Course color palette
 const COLORS = [
-    'bg-indigo-500/30 border-indigo-400/40 text-indigo-200',
-    'bg-amber-500/30 border-amber-400/40 text-amber-200',
-    'bg-cyan-500/30 border-cyan-400/40 text-cyan-200',
-    'bg-rose-500/30 border-rose-400/40 text-rose-200',
-    'bg-emerald-500/30 border-emerald-400/40 text-emerald-200',
-    'bg-violet-500/30 border-violet-400/40 text-violet-200',
-    'bg-orange-500/30 border-orange-400/40 text-orange-200',
+    { bg: 'rgba(99,102,241,0.1)', border: 'rgba(99,102,241,0.25)', text: '#6366f1' },
+    { bg: 'rgba(245,158,11,0.1)', border: 'rgba(245,158,11,0.25)', text: '#f59e0b' },
+    { bg: 'rgba(20,184,166,0.1)', border: 'rgba(20,184,166,0.25)', text: '#14b8a6' },
+    { bg: 'rgba(244,63,94,0.1)', border: 'rgba(244,63,94,0.25)', text: '#f43f5e' },
+    { bg: 'rgba(34,197,94,0.1)', border: 'rgba(34,197,94,0.25)', text: '#22c55e' },
+    { bg: 'rgba(139,92,246,0.1)', border: 'rgba(139,92,246,0.25)', text: '#8b5cf6' },
+    { bg: 'rgba(249,115,22,0.1)', border: 'rgba(249,115,22,0.25)', text: '#f97316' },
 ];
 
 function getColorForCourse(name) {
@@ -27,67 +26,51 @@ function getColorForCourse(name) {
 }
 
 export default function Timetable() {
-    const {
-        timetable,
-        isLoadingTimetable,
-        timetableError,
-        isTimeout,
-        fetchTimetable,
-    } = useTimetableStore();
+    const { timetable, isLoadingTimetable, timetableError, isTimeout, fetchTimetable } = useTimetableStore();
 
-    useEffect(() => {
-        fetchTimetable();
-    }, [fetchTimetable]);
+    useEffect(() => { fetchTimetable(); }, [fetchTimetable]);
 
-    // 建立課表矩陣 / Build timetable matrix
     const matrix = {};
-    timetable.forEach((course) => {
-        const key = `${course.day}-${course.period}`;
-        matrix[key] = course;
-    });
+    timetable.forEach((course) => { matrix[`${course.day}-${course.period}`] = course; });
 
     return (
-        <div className="space-y-4">
-            <div className="flex items-center justify-between">
-                <h2 className="text-xl font-bold text-text-primary">📅 每週課表 / Weekly Schedule</h2>
-                <button
-                    onClick={fetchTimetable}
-                    disabled={isLoadingTimetable}
-                    className="text-sm bg-primary/20 hover:bg-primary/40 text-primary-light px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50"
-                >
-                    {isLoadingTimetable ? '載入中...' : '🔄 重新整理'}
+        <div className="section-stack animate-fade-in">
+            {/* 標題 */}
+            <div className="page-header">
+                <div className="page-title-group">
+                    <IconCalendar size={22} style={{ color: 'var(--text-muted)' }} />
+                    <h2 className="page-title">每週課表</h2>
+                    <span className="page-subtitle">Weekly Schedule</span>
+                </div>
+                <button onClick={fetchTimetable} disabled={isLoadingTimetable} className="btn btn-ghost" style={{ fontSize: '13px' }}>
+                    <IconRefresh size={15} className={isLoadingTimetable ? 'animate-spin' : ''} />
+                    {isLoadingTimetable ? '載入中...' : '重新整理'}
                 </button>
             </div>
 
-            {/* 逾時錯誤 / Timeout error */}
+            {/* 逾時錯誤 */}
             {isTimeout && (
-                <div className="glass-card p-4 border-danger/30 bg-danger/10 animate-fade-in-up">
-                    <p className="text-danger font-medium">⏱ 請求逾時 / Request Timeout</p>
-                    <p className="text-sm text-text-muted mt-1">{timetableError}</p>
-                    <button
-                        onClick={fetchTimetable}
-                        className="mt-2 text-sm bg-danger/20 hover:bg-danger/30 text-danger px-3 py-1 rounded-lg transition-colors"
-                    >
-                        重試 / Retry
-                    </button>
+                <div className="card" style={{ borderColor: 'var(--color-danger)', background: 'rgba(239,68,68,0.04)' }}>
+                    <p style={{ fontWeight: 600, color: 'var(--color-danger)' }}>⏱ 請求逾時 Request Timeout</p>
+                    <p style={{ fontSize: '14px', marginTop: '6px', color: 'var(--text-muted)' }}>{timetableError}</p>
+                    <button onClick={fetchTimetable} className="btn btn-soft" style={{ marginTop: '12px', fontSize: '13px' }}>重試 Retry</button>
                 </div>
             )}
 
-            {/* 一般錯誤 / General error */}
             {timetableError && !isTimeout && (
-                <div className="glass-card p-4 border-warning/30 bg-warning/10 animate-fade-in-up">
-                    <p className="text-warning text-sm">⚠️ {timetableError}</p>
+                <div className="card" style={{ borderColor: 'var(--color-warning)', background: 'rgba(245,158,11,0.04)' }}>
+                    <p style={{ fontSize: '14px', color: 'var(--color-warning)' }}>⚠️ {timetableError}</p>
                 </div>
             )}
 
-            {/* 課表格子 / Timetable grid */}
-            <div className="glass-card p-3 overflow-x-auto animate-fade-in-up">
-                <table className="w-full text-xs min-w-[600px]">
+            {/* 課表格子 */}
+            <div className="card" style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', fontSize: '12px', minWidth: '560px', borderCollapse: 'separate', borderSpacing: '2px' }}>
                     <thead>
                         <tr>
-                            <th className="w-10 py-2 text-text-muted font-normal">#</th>
-                            {DAYS.slice(1, 7).map((day) => (
-                                <th key={day} className="py-2 text-text-secondary font-medium text-center">
+                            <th style={{ width: '36px', padding: '10px 0', fontWeight: 400, color: 'var(--text-muted)' }}>#</th>
+                            {DAYS.map((day) => (
+                                <th key={day} style={{ padding: '10px 0', fontWeight: 500, color: 'var(--text-secondary)', textAlign: 'center' }}>
                                     {day}
                                 </th>
                             ))}
@@ -95,30 +78,34 @@ export default function Timetable() {
                     </thead>
                     <tbody>
                         {PERIODS.map((period) => (
-                            <tr key={period} className="border-t border-white/5">
-                                <td className="py-2 text-text-muted text-center font-mono">{period}</td>
+                            <tr key={period}>
+                                <td style={{ padding: '6px 0', textAlign: 'center', fontFamily: 'monospace', color: 'var(--text-muted)', fontSize: '11px' }}>{period}</td>
                                 {[1, 2, 3, 4, 5, 6].map((day) => {
                                     const course = matrix[`${day}-${period}`];
                                     if (isLoadingTimetable) {
-                                        return (
-                                            <td key={day} className="p-1">
-                                                <div className="skeleton h-8 w-full" />
-                                            </td>
-                                        );
+                                        return <td key={day} style={{ padding: '3px' }}><div className="skeleton" style={{ height: '36px', width: '100%' }} /></td>;
                                     }
                                     return (
-                                        <td key={day} className="p-1">
-                                            {course && (
-                                                <div
-                                                    className={`${getColorForCourse(course.name)} border rounded-md px-1.5 py-1 text-center truncate cursor-pointer hover:scale-105 transition-transform`}
-                                                    title={`${course.name}\n${course.location || ''}`}
-                                                >
-                                                    <div className="font-medium truncate">{course.name}</div>
-                                                    {course.location && (
-                                                        <div className="text-[10px] opacity-70 truncate">{course.location}</div>
-                                                    )}
-                                                </div>
-                                            )}
+                                        <td key={day} style={{ padding: '3px' }}>
+                                            {course && (() => {
+                                                const c = getColorForCourse(course.name);
+                                                return (
+                                                    <div
+                                                        style={{
+                                                            borderRadius: '10px', padding: '6px', textAlign: 'center',
+                                                            cursor: 'pointer', transition: 'transform 0.15s',
+                                                            background: c.bg, border: `1px solid ${c.border}`, color: c.text,
+                                                            overflow: 'hidden',
+                                                        }}
+                                                        title={`${course.name}\n${course.location || ''}`}
+                                                    >
+                                                        <div style={{ fontWeight: 600, fontSize: '11px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{course.name}</div>
+                                                        {course.location && (
+                                                            <div style={{ fontSize: '9px', opacity: 0.7, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{course.location}</div>
+                                                        )}
+                                                    </div>
+                                                );
+                                            })()}
                                         </td>
                                     );
                                 })}
@@ -128,14 +115,11 @@ export default function Timetable() {
                 </table>
             </div>
 
-            {/* 課程總覽 / Course summary */}
+            {/* 課程總覽 */}
             {!isLoadingTimetable && timetable.length > 0 && (
-                <div className="glass-card p-4 animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
-                    <p className="text-sm text-text-muted mb-2">
-                        📊 本學期共 {new Set(timetable.map((c) => c.name)).size} 門課，
-                        {timetable.length} 節 / {new Set(timetable.map((c) => c.name)).size} courses, {timetable.length} periods
-                    </p>
-                </div>
+                <p style={{ fontSize: '13px', color: 'var(--text-muted)', textAlign: 'center', paddingTop: '4px' }}>
+                    本學期共 {new Set(timetable.map((c) => c.name)).size} 門課，{timetable.length} 節
+                </p>
             )}
         </div>
     );
