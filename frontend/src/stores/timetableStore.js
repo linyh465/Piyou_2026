@@ -11,8 +11,9 @@ const REQUEST_TIMEOUT = 10000;
 
 const useTimetableStore = create((set) => ({
     // 課表狀態 / Timetable state
-    timetable: [],
-    grades: [],
+    // 課表狀態 / Timetable state
+    timetable: JSON.parse(localStorage.getItem('piyou_timetable') || '[]'),
+    grades: JSON.parse(localStorage.getItem('piyou_grades') || '[]'),
     isLoadingTimetable: false,
     isLoadingGrades: false,
     timetableError: null,
@@ -38,8 +39,10 @@ const useTimetableStore = create((set) => ({
         try {
             const res = await api.get('/data/timetable', { timeout: REQUEST_TIMEOUT });
             clearTimeout(timeoutId);
+            const data = res.data.courses || [];
+            localStorage.setItem('piyou_timetable', JSON.stringify(data));
             set({
-                timetable: res.data.courses || [],
+                timetable: data,
                 isLoadingTimetable: false,
                 timetableError: null,
                 isTimeout: false,
@@ -51,6 +54,12 @@ const useTimetableStore = create((set) => ({
                     isLoadingTimetable: false,
                     isTimeout: true,
                     timetableError: '請求逾時，請稍後再試 / Request timed out, please try again',
+                });
+            } else if (err.response?.status === 401) {
+                // Ignore 401, user is just using local data
+                set({
+                    isLoadingTimetable: false,
+                    timetableError: null,
                 });
             } else {
                 set({
@@ -70,16 +79,22 @@ const useTimetableStore = create((set) => ({
         set({ isLoadingGrades: true, gradesError: null });
         try {
             const res = await api.get('/data/grades', { timeout: REQUEST_TIMEOUT });
+            const data = res.data.semesters || [];
+            localStorage.setItem('piyou_grades', JSON.stringify(data));
             set({
-                grades: res.data.semesters || [],
+                grades: data,
                 isLoadingGrades: false,
                 gradesError: null,
             });
         } catch (err) {
-            set({
-                isLoadingGrades: false,
-                gradesError: err.response?.data?.detail || '載入成績失敗 / Failed to load grades',
-            });
+            if (err.response?.status === 401) {
+                set({ isLoadingGrades: false, gradesError: null }); // Ignore 401
+            } else {
+                set({
+                    isLoadingGrades: false,
+                    gradesError: err.response?.data?.detail || '載入成績失敗 / Failed to load grades',
+                });
+            }
         }
     },
 

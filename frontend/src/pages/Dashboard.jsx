@@ -6,6 +6,7 @@
 import { useEffect } from 'react';
 import useDashboardStore from '../stores/dashboardStore';
 import useTimetableStore from '../stores/timetableStore';
+import { busRoutes } from '../data/transportData';
 import {
     IconBook, IconMapPin, IconClock, IconBus,
     IconChartBar, IconPlus, IconBot, IconCalendar,
@@ -92,24 +93,37 @@ function NextClassCard() {
     );
 }
 
-// ── 公車倒數卡片 / Bus Countdown Card ──
+// ── 公車動態卡片 / Bus Dynamics Card ──
 function BusCountdownCard() {
-    const { busArrivals, isBusLoading, busError, busCountdown, startAutoRefresh, stopAutoRefresh } = useDashboardStore();
+    const { busArrivals, isBusLoading, busError, startAutoRefresh, stopAutoRefresh } = useDashboardStore();
 
     useEffect(() => { startAutoRefresh(); return () => stopAutoRefresh(); }, [startAutoRefresh, stopAutoRefresh]);
 
-    const formatCountdown = (seconds) => {
-        if (seconds === null || seconds === undefined) return '--:--';
-        const m = Math.floor(seconds / 60);
-        const s = seconds % 60;
-        return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+    // 從 transportData 的路線資訊中找到對應的說明
+    const getRouteDesc = (routeName) => {
+        const route = busRoutes.find((r) => routeName && routeName.includes(r.name));
+        return route ? route.description : '';
     };
+
+    // 取前 3 筆最近到站的資料
+    const topArrivals = busArrivals.slice(0, 3);
 
     return (
         <div className="card card-hover animate-fade-in" style={{ animationDelay: '0.1s' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-muted)', marginBottom: '16px' }}>
-                <IconBus size={16} />
-                <span style={{ fontSize: '13px' }}>公車即時倒數 Bus Countdown</span>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-muted)' }}>
+                    <IconBus size={16} />
+                    <span style={{ fontSize: '13px' }}>公車動態 Bus Status</span>
+                </div>
+                <a
+                    href="#/transport"
+                    style={{
+                        fontSize: '12px', color: 'var(--color-brand)', textDecoration: 'none',
+                        display: 'flex', alignItems: 'center', gap: '2px',
+                    }}
+                >
+                    查看更多 →
+                </a>
             </div>
 
             {isBusLoading && !busArrivals.length ? (
@@ -122,44 +136,49 @@ function BusCountdownCard() {
                     <p style={{ fontSize: '14px', color: 'var(--color-danger)' }}>{busError}</p>
                     <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '4px' }}>使用模擬資料 Using mock data</p>
                 </div>
+            ) : topArrivals.length > 0 ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                    {topArrivals.map((bus, i) => {
+                        const desc = getRouteDesc(bus.routeName);
+                        return (
+                            <div
+                                key={i}
+                                style={{
+                                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                                    fontSize: '14px', padding: '10px 8px', borderRadius: '10px',
+                                    borderBottom: i < topArrivals.length - 1 ? '1px solid var(--border-light)' : 'none',
+                                }}
+                            >
+                                <span style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, minWidth: 0 }}>
+                                    <span className="badge" style={{
+                                        background: 'var(--color-brand-subtle)', color: 'var(--color-brand)',
+                                        fontWeight: 700, flexShrink: 0,
+                                    }}>
+                                        {bus.routeName || `#${i + 1}`}
+                                    </span>
+                                    <span style={{
+                                        color: 'var(--text-secondary)', fontSize: '13px',
+                                        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                                    }}>
+                                        {desc || bus.direction || ''}
+                                    </span>
+                                </span>
+                                <span style={{ fontWeight: 600, color: 'var(--text)', flexShrink: 0, marginLeft: '8px' }}>
+                                    {bus.estimatedMinutes != null ? `${bus.estimatedMinutes} min` : '進站中'}
+                                </span>
+                            </div>
+                        );
+                    })}
+                </div>
             ) : (
-                <>
-                    <div style={{ display: 'flex', alignItems: 'baseline', gap: '12px' }}>
-                        <span style={{ fontSize: '2rem', fontFamily: 'monospace', fontWeight: 700, color: 'var(--color-brand)' }}>
-                            {formatCountdown(busCountdown)}
-                        </span>
-                        <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>預估到站 ETA</span>
-                    </div>
-
-                    {busArrivals.length > 0 && (
-                        <div style={{ marginTop: '20px', display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                            {busArrivals.slice(0, 3).map((bus, i) => (
-                                <div
-                                    key={i}
-                                    style={{
-                                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                                        fontSize: '14px', padding: '10px 8px', borderRadius: '10px',
-                                        borderBottom: '1px solid var(--border-light)',
-                                    }}
-                                >
-                                    <span style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                        <span className="badge" style={{ background: 'var(--color-brand-subtle)', color: 'var(--color-brand)', fontWeight: 700 }}>
-                                            {bus.routeName || `Route ${i + 1}`}
-                                        </span>
-                                        <span style={{ color: 'var(--text-secondary)' }}>{bus.direction || ''}</span>
-                                    </span>
-                                    <span style={{ fontWeight: 600, color: 'var(--text)' }}>
-                                        {bus.estimatedMinutes != null ? `${bus.estimatedMinutes} min` : '進站中'}
-                                    </span>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-                </>
+                <p style={{ fontSize: '14px', color: 'var(--text-muted)' }}>
+                    目前無公車資訊 No bus data
+                </p>
             )}
         </div>
     );
 }
+
 
 // ── 快速入口 / Quick Access Grid ──
 function QuickAccess() {

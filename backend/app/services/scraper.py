@@ -87,11 +87,6 @@ class SchoolScraper:
             
             # Debug: Check where we landed
             print(f"📍 Login redirected to: {response.url}")
-            
-            # Save login landing page
-            with open("debug_login_result.html", "w", encoding="utf-8") as f:
-                f.write(response.text)
-            print(f"📄 已儲存登入後頁面到 debug_login_result.html")
 
             # 驗證登入狀態 / Verify login status
             soup = BeautifulSoup(response.text, "html.parser")
@@ -279,10 +274,6 @@ class SchoolScraper:
             if "尚未登入" in response.text or "Not yet logged in" in response.text:
                 logger.warning("Grades page: not authenticated")
                 return None
-
-            # Save for debugging
-            with open("debug_grades.html", "w", encoding="utf-8") as f:
-                f.write(response.text)
 
             soup = BeautifulSoup(response.text, "html.parser")
 

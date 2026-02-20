@@ -20,12 +20,16 @@ from fastapi import APIRouter, HTTPException, Depends, Header
 from typing import Optional
 from app.models.schemas import LoginRequest, LoginResponse
 from app.services.scraper import SchoolScraper
+from app.services.scraper_cache import cache_scraper_session
 
 router = APIRouter(prefix="/auth", tags=["認證 / Auth"])
 logger = logging.getLogger(__name__)
 
 # JWT 設定 / JWT Configuration
-JWT_SECRET = os.getenv("JWT_SECRET", "dev-secret-change-in-production")
+JWT_SECRET = os.getenv("JWT_SECRET")
+if not JWT_SECRET:
+    raise ValueError("JWT_SECRET is missing. Please set it in .env file. / 請在 .env 中設定 JWT_SECRET")
+
 JWT_ALGORITHM = "HS256"
 JWT_EXPIRE_HOURS = 24
 
@@ -119,6 +123,11 @@ async def login(request: LoginRequest):
 
     # ── 快取帳密 / Cache credentials ──
     _cache_credentials(request.student_id, request.password)
+
+    # ── 快取 scraper session / Cache scraper session ──
+    # 讓後續 /data/timetable、/data/grades 重用此 session，不再重複登入校網
+    # Allow subsequent /data/* endpoints to reuse this session (no double login)
+    cache_scraper_session(request.student_id, scraper)
 
     # ── 簽發 JWT / Issue JWT ──
     payload = {

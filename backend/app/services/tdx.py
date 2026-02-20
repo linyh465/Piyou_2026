@@ -9,6 +9,7 @@ import os
 import time
 import logging
 import requests
+from datetime import datetime, timezone, timedelta
 from typing import Optional
 
 logger = logging.getLogger(__name__)
@@ -16,9 +17,23 @@ logger = logging.getLogger(__name__)
 TDX_AUTH_URL = "https://tdx.transportdata.tw/auth/realms/TDXConnect/protocol/openid-connect/token"
 TDX_API_BASE = "https://tdx.transportdata.tw/api/basic"
 
-# 靜宜大學附近站牌 / Bus stops near Providence University
+# 目標路線 / Target bus routes
+TARGET_ROUTES = ["301", "368", "162"]
+
+# 靜宜大學附近站牌關鍵字 / Keywords for stops near Providence University
+STOP_KEYWORDS = ["靜宜"]
+
 DEFAULT_CITY = "Taichung"
-DEFAULT_STOP_NAME = "靜宜大學"
+
+# 公車到站狀態碼 / Bus stop status codes
+# 0: 正常, 1: 尚未發車, 2: 交管不停, 3: 末班已過, 4: 今日未營運
+STOP_STATUS_MAP = {
+    0: "正常",
+    1: "尚未發車",
+    2: "交管不停靠",
+    3: "末班車已過",
+    4: "今日未營運",
+}
 
 
 class TDXService:
@@ -34,7 +49,7 @@ class TDXService:
         self._token: Optional[str] = None
         self._token_expires: float = 0
 
-    def _get_token(self) -> str:
+    def _get_token(self) -> Optional[str]:
         """
         取得或刷新 OAuth2 Access Token
         Get or refresh OAuth2 access token.
@@ -61,11 +76,51 @@ class TDXService:
             self._token = data["access_token"]
             self._token_expires = time.time() + data.get("expires_in", 3600) - 60
 
+            logger.info("TDX token acquired successfully")
             return self._token
 
         except requests.RequestException as e:
             logger.warning(f"TDX auth failed: {type(e).__name__}")
             raise
+
+    def _api_get(self, path: str, params: Optional[dict] = None) -> list:
+        """
+        通用 TDX API GET 請求 / Generic TDX API GET request
+        """
+        token = self._get_token()
+        url = f"{TDX_API_BASE}{path}"
+        response = requests.get(
+            url,
+            headers={"Authorization": f"Bearer {token}"},
+            params=params or {},
+            timeout=10,
+        )
+        response.raise_for_status()
+        return response.json()
+
+    def _format_status(self, item: dict) -> str:
+        """
+        格式化到站狀態文字 / Format arrival status text
+        """
+        stop_status = item.get("StopStatus", -1)
+
+        if stop_status == 1:
+            return "尚未發車"
+        elif stop_status == 2:
+            return "交管不停靠"
+        elif stop_status == 3:
+            return "末班車已過"
+        elif stop_status == 4:
+            return "今日未營運"
+
+        est_time = item.get("EstimateTime")
+        if est_time is not None:
+            minutes = est_time // 60
+            if minutes <= 1:
+                return "進站中"
+            return f"{minutes} 分"
+
+        return "未知"
 
     def _get_mock_arrivals(self) -> list:
         """
@@ -74,67 +129,100 @@ class TDXService:
         """
         import random
         routes = [
-            {"routeName": "300", "direction": "去程"},
-            {"routeName": "300", "direction": "返程"},
-            {"routeName": "301", "direction": "去程"},
-            {"routeName": "323", "direction": "去程"},
-            {"routeName": "325", "direction": "返程"},
+            {"routeName": "301", "direction": "去程", "destination": "新民高中"},
+            {"routeName": "301", "direction": "返程", "destination": "靜宜大學"},
+            {"routeName": "368", "direction": "去程", "destination": "巨業沙鹿站"},
+            {"routeName": "368", "direction": "返程", "destination": "靜宜大學"},
+            {"routeName": "162", "direction": "去程", "destination": "嘉陽高中"},
+            {"routeName": "162", "direction": "返程", "destination": "靜宜大學"},
         ]
         arrivals = []
-        for route in random.sample(routes, min(3, len(routes))):
+        for route in random.sample(routes, min(4, len(routes))):
             minutes = random.randint(2, 25)
             arrivals.append({
                 **route,
                 "estimatedSeconds": minutes * 60,
                 "estimatedMinutes": minutes,
-                "stopName": DEFAULT_STOP_NAME,
+                "stopName": "靜宜大學",
+                "stopStatus": f"{minutes} 分",
+                "plateNumb": None,
             })
         arrivals.sort(key=lambda x: x["estimatedSeconds"])
         return arrivals
 
-    def get_bus_arrivals(self, stop_name: str = DEFAULT_STOP_NAME, city: str = DEFAULT_CITY) -> Optional[list]:
+    def get_routes_eta(self, city: str = DEFAULT_CITY) -> dict:
         """
-        查詢公車預估到站時間 / Query estimated bus arrival times
-        若 TDX 憑證未設定，自動回傳模擬資料。
-        Returns mock data if TDX credentials are not configured.
+        查詢目標路線預估到站時間 / Query ETA for target bus routes
+        針對每條路線呼叫 TDX API，篩選靜宜大學附近站牌
+        Calls TDX API per route and filters for stops near Providence University.
+
+        Returns:
+            dict with "arrivals" list and "updatedAt" timestamp
         """
         # 若憑證未設定，回傳模擬資料 / Return mock data if no credentials
         if not self.client_id or not self.client_secret:
-            logger.info("TDX credentials not set, returning mock data / TDX 憑證未設定，使用模擬資料")
-            return self._get_mock_arrivals()
+            logger.info("TDX credentials not set, returning mock data")
+            return {
+                "arrivals": self._get_mock_arrivals(),
+                "updatedAt": datetime.now(
+                    timezone(timedelta(hours=8))
+                ).strftime("%H:%M:%S"),
+            }
 
-        try:
-            token = self._get_token()
-            url = (
-                f"{TDX_API_BASE}/v2/Bus/EstimatedTimeOfArrival/City/{city}"
-                f"?$filter=StopName/Zh_tw eq '{stop_name}'"
-                f"&$top=10"
-                f"&$format=JSON"
-            )
+        all_arrivals = []
 
-            response = requests.get(
-                url,
-                headers={"Authorization": f"Bearer {token}"},
-                timeout=10,
-            )
-            response.raise_for_status()
-            data = response.json()
+        for route_name in TARGET_ROUTES:
+            try:
+                data = self._api_get(
+                    f"/v2/Bus/EstimatedTimeOfArrival/City/{city}/{route_name}",
+                    params={"$format": "JSON"},
+                )
 
-            arrivals = []
-            for item in data:
-                est_seconds = item.get("EstimateTime")
-                if est_seconds is not None:
-                    arrivals.append({
-                        "routeName": item.get("RouteName", {}).get("Zh_tw", ""),
+                for item in data:
+                    stop_zh = item.get("StopName", {}).get("Zh_tw", "")
+
+                    # 篩選靜宜大學相關站牌 / Filter for Providence University stops
+                    if not any(kw in stop_zh for kw in STOP_KEYWORDS):
+                        continue
+
+                    est_seconds = item.get("EstimateTime")
+                    est_minutes = est_seconds // 60 if est_seconds is not None else None
+                    stop_status_code = item.get("StopStatus", -1)
+
+                    all_arrivals.append({
+                        "routeName": item.get("RouteName", {}).get("Zh_tw", route_name),
                         "direction": "去程" if item.get("Direction") == 0 else "返程",
                         "estimatedSeconds": est_seconds,
-                        "estimatedMinutes": est_seconds // 60,
-                        "stopName": stop_name,
+                        "estimatedMinutes": est_minutes,
+                        "stopName": stop_zh,
+                        "stopStatus": self._format_status(item),
+                        "plateNumb": item.get("PlateNumb"),
+                        "stopStatusCode": stop_status_code,
                     })
 
-            arrivals.sort(key=lambda x: x["estimatedSeconds"])
-            return arrivals if arrivals else None
+            except Exception as e:
+                logger.warning(f"TDX query failed for route {route_name}: {type(e).__name__}: {e}")
 
-        except Exception as e:
-            logger.warning(f"TDX bus query failed: {type(e).__name__}")
-            return self._get_mock_arrivals()  # Fallback to mock
+        # 按到站時間排序（沒有預估時間的排最後）/ Sort by ETA
+        all_arrivals.sort(
+            key=lambda x: x["estimatedSeconds"] if x["estimatedSeconds"] is not None else 99999
+        )
+
+        now_str = datetime.now(
+            timezone(timedelta(hours=8))
+        ).strftime("%H:%M:%S")
+
+        if all_arrivals:
+            return {"arrivals": all_arrivals, "updatedAt": now_str}
+
+        # Fallback to mock if no data
+        logger.info("No real arrivals found, returning mock data")
+        return {"arrivals": self._get_mock_arrivals(), "updatedAt": now_str}
+
+    # ── 保留舊方法相容性 / Keep old method for backward compatibility ──
+    def get_bus_arrivals(self, stop_name: str = "靜宜大學", city: str = DEFAULT_CITY) -> Optional[list]:
+        """
+        舊版方法，委派給 get_routes_eta / Legacy method, delegates to get_routes_eta.
+        """
+        result = self.get_routes_eta(city)
+        return result.get("arrivals")

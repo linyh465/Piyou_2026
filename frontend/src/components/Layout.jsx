@@ -10,7 +10,7 @@ import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import useThemeStore from '../stores/themeStore';
 import {
     IconHome, IconCalendar, IconCheckSquare, IconBot,
-    IconSettings, IconChartBar, IconCloudLightning, IconCloudOff,
+    IconSettings, IconChartBar, IconCloudLightning, IconCloudOff, IconBus
 } from './Icons';
 
 // ── 側邊欄群組 / Sidebar Menu Groups ──
@@ -32,6 +32,7 @@ const menuGroups = [
         label: '生活',
         items: [
             { to: '/tasks', icon: IconCheckSquare, label: '任務' },
+            { to: '/transport', icon: IconBus, label: '交通' },
         ],
     },
 ];
@@ -98,7 +99,8 @@ export default function Layout() {
                                 <IconBot size={20} />
                                 <span>AI 助理</span>
                             </div>
-                            <div className="sidebar-ai-pulse" />
+                            {/* 通知點先移除 */}
+                            {/* <div className="sidebar-ai-pulse" /> */}
                         </NavLink>
                     </div>
                 </nav>

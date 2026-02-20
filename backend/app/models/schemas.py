@@ -79,8 +79,12 @@ class BusArrival(BaseModel):
     estimatedSeconds: Optional[int] = Field(None, description="預估到站秒數 / Estimated arrival seconds")
     estimatedMinutes: Optional[int] = Field(None, description="預估到站分鐘 / Estimated arrival minutes")
     stopName: Optional[str] = Field(None, description="站牌名稱 / Stop name")
+    stopStatus: Optional[str] = Field(None, description="到站狀態 / Arrival status (e.g. 進站中、3 分)")
+    plateNumb: Optional[str] = Field(None, description="車牌號碼 / Plate number")
+    stopStatusCode: Optional[int] = Field(None, description="狀態碼 / Status code")
 
 
 class BusResponse(BaseModel):
     """公車回應 / Bus Response"""
     arrivals: list[BusArrival] = []
+    updatedAt: Optional[str] = Field(None, description="最後更新時間 / Last updated time")

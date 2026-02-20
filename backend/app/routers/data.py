@@ -23,6 +23,7 @@ from app.models.schemas import (
 )
 from app.services.scraper import SchoolScraper
 from app.services.tdx import TDXService
+from app.services.scraper_cache import get_cached_scraper, cache_scraper_session
 from app.routers.auth import get_current_user, get_cached_credentials
 
 router = APIRouter(prefix="/data", tags=["資料 / Data"])
@@ -32,11 +33,6 @@ logger = logging.getLogger(__name__)
 # ══════════════════════════════════════════
 #  快取系統 / Cache System
 # ══════════════════════════════════════════
-
-# ── 爬蟲 Session 快取 / Scraper Session Cache ──
-# { student_id: { "scraper": SchoolScraper, "login_time": float } }
-_scraper_cache: dict[str, dict] = {}
-SCRAPER_SESSION_TTL = 30 * 60  # 30 分鐘 / 30 minutes
 
 # ── 本地資料快取目錄 / Local Data Cache Directory ──
 CACHE_DIR = Path(__file__).resolve().parent.parent.parent / "cache"
@@ -86,20 +82,15 @@ def _write_data_cache(student_id: str, data_type: str, data: dict):
 def _get_authenticated_scraper(user: dict) -> SchoolScraper:
     """
     取得已登入的爬蟲 / Get an authenticated scraper instance.
-    重用現有 session（30 分鐘內不重新登入）
-    Reuses existing session (no re-login within 30 minutes).
+    優先重用 auth login 端點快取的 session，避免重複登入校網
+    Prioritizes reuse of session cached by auth login endpoint to avoid double-login.
     """
     student_id = user.get("sub", "")
 
-    # 檢查快取 / Check cache
-    cached = _scraper_cache.get(student_id)
-    if cached:
-        age = time.time() - cached["login_time"]
-        if age < SCRAPER_SESSION_TTL:
-            logger.info(f"Reusing cached scraper session (age: {int(age)}s)")
-            return cached["scraper"]
-        else:
-            logger.info("Scraper session expired, will re-login")
+    # 檢查共用快取（含 auth login 快取的 session）/ Check shared cache
+    cached_scraper = get_cached_scraper(student_id)
+    if cached_scraper:
+        return cached_scraper
 
     # 需要新登入 / Need fresh login
     creds = get_cached_credentials(student_id)
@@ -112,11 +103,8 @@ def _get_authenticated_scraper(user: dict) -> SchoolScraper:
     scraper = SchoolScraper()
     scraper.login(creds[0], creds[1])
 
-    # 存入快取 / Store in cache
-    _scraper_cache[student_id] = {
-        "scraper": scraper,
-        "login_time": time.time(),
-    }
+    # 存入共用快取 / Store in shared cache
+    cache_scraper_session(student_id, scraper)
     logger.info("Created new scraper session and cached it (30min TTL)")
     return scraper
 
@@ -246,10 +234,10 @@ MOCK_GRADES = GradesResponse(semesters=[
 ])
 
 MOCK_BUS = BusResponse(arrivals=[
-    BusArrival(routeName="300", direction="往台中車站", estimatedSeconds=180, estimatedMinutes=3, stopName="靜宜大學"),
-    BusArrival(routeName="301", direction="往新民高中", estimatedSeconds=420, estimatedMinutes=7, stopName="靜宜大學"),
-    BusArrival(routeName="308", direction="往梧棲", estimatedSeconds=600, estimatedMinutes=10, stopName="靜宜大學"),
-])
+    BusArrival(routeName="301", direction="去程", estimatedSeconds=180, estimatedMinutes=3, stopName="靜宜大學", stopStatus="3 分"),
+    BusArrival(routeName="368", direction="去程", estimatedSeconds=420, estimatedMinutes=7, stopName="靜宜大學", stopStatus="7 分"),
+    BusArrival(routeName="162", direction="去程", estimatedSeconds=600, estimatedMinutes=10, stopName="靜宜大學", stopStatus="10 分"),
+], updatedAt="--:--:--")
 
 
 # ══════════════════════════════════════════
@@ -349,9 +337,25 @@ async def get_bus():
     """取得公車資訊 / Get Bus Info"""
     try:
         tdx = TDXService()
-        arrivals = tdx.get_bus_arrivals()
+        result = tdx.get_routes_eta()
+        arrivals_raw = result.get("arrivals", [])
+        updated_at = result.get("updatedAt")
+
+        arrivals = []
+        for a in arrivals_raw:
+            arrivals.append(BusArrival(
+                routeName=a.get("routeName", ""),
+                direction=a.get("direction"),
+                estimatedSeconds=a.get("estimatedSeconds"),
+                estimatedMinutes=a.get("estimatedMinutes"),
+                stopName=a.get("stopName"),
+                stopStatus=a.get("stopStatus"),
+                plateNumb=a.get("plateNumb"),
+                stopStatusCode=a.get("stopStatusCode"),
+            ))
+
         if arrivals:
-            return BusResponse(arrivals=arrivals)
+            return BusResponse(arrivals=arrivals, updatedAt=updated_at)
     except Exception as e:
-        logger.warning(f"TDX API failed, using mock data: {type(e).__name__}")
+        logger.warning(f"TDX API failed, using mock data: {type(e).__name__}: {e}")
     return MOCK_BUS

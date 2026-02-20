@@ -14,6 +14,7 @@ const useAuthStore = create((set, get) => ({
     isAuthenticated: false,
     isLoading: false,
     error: null,
+    loginErrorCount: 0,
 
     /**
      * 登入 / Login
@@ -22,6 +23,12 @@ const useAuthStore = create((set, get) => ({
      */
     login: async (studentId, password) => {
         set({ isLoading: true, error: null });
+
+        const currentErrors = get().loginErrorCount;
+        if (currentErrors >= 2) {
+            set({ isLoading: false, error: '登入錯誤次數過多，請稍後再試 / Too many failed attempts' });
+            return false;
+        }
         try {
             const res = await api.post('/auth/login', {
                 student_id: studentId,
@@ -33,8 +40,8 @@ const useAuthStore = create((set, get) => ({
             // 儲存 Token 至 Session / Store token in session
             sessionStorage.setItem('piyou_token', token);
 
-            // 安全儲存帳密供自動重新登入 / Securely store credentials for auto re-login
-            await secureStorage.set('credentials', { studentId, password });
+            // 我們不再自動將帳號密碼存入 Secure Storage
+            // await secureStorage.set('credentials', { studentId, password });
 
             set({
                 user,
@@ -42,12 +49,17 @@ const useAuthStore = create((set, get) => ({
                 isAuthenticated: true,
                 isLoading: false,
                 error: null,
+                loginErrorCount: 0, // Reset on success
             });
 
             return true;
         } catch (err) {
             const message = err.response?.data?.detail || '登入失敗，請確認帳號密碼 / Login failed, please check credentials';
-            set({ isLoading: false, error: message });
+            set((state) => ({
+                isLoading: false,
+                error: message,
+                loginErrorCount: state.loginErrorCount + 1
+            }));
             return false;
         }
     },
@@ -74,9 +86,12 @@ const useAuthStore = create((set, get) => ({
      * Attempts re-login from securely stored credentials.
      */
     tryAutoLogin: async () => {
-        const creds = await secureStorage.get('credentials');
-        if (creds) {
-            return get().login(creds.studentId, creds.password);
+        // 從 sessionStorage 讀取 token 來判斷是否已經有 token
+        const token = sessionStorage.getItem('piyou_token');
+        if (token) {
+            // (可選) 驗證 token 或直接標記為 true
+            set({ isAuthenticated: true, token });
+            return true;
         }
         return false;
     },
