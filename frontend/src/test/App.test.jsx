@@ -3,7 +3,7 @@
  * 驗證主要頁面是否正確渲染。
  */
 import { describe, it, expect } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import App from '../App';
 
 describe('App', () => {

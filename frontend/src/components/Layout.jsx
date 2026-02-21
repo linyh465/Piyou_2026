@@ -6,8 +6,7 @@
  * 側邊欄設計參考用戶提供之範本
  * Sidebar design based on user-provided template.
  */
-import { NavLink, Outlet, useNavigate } from 'react-router-dom';
-import useThemeStore from '../stores/themeStore';
+import { NavLink, Outlet } from 'react-router-dom';
 import {
     IconHome, IconCalendar, IconCheckSquare, IconBot,
     IconSettings, IconChartBar, IconCloudLightning, IconCloudOff, IconBus
@@ -46,7 +45,6 @@ const mobileNavItems = [
 ];
 
 export default function Layout() {
-    const navigate = useNavigate();
     // 同步狀態：可之後接到真實邏輯 / Sync status: can wire to real logic later
     const syncStatus = 'synced'; // 'synced' | 'error'
 
