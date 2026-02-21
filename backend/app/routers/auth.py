@@ -11,6 +11,7 @@ Proxies school portal authentication and returns JWT.
 """
 import jwt
 import time
+import asyncio
 import logging
 import os
 import base64
@@ -111,8 +112,11 @@ async def login(request: LoginRequest):
     scraper = SchoolScraper()
 
     try:
-        # 嘗試登入校務系統 / Try logging into school portal
-        user_info = scraper.login(request.student_id, request.password)
+        # 嘗試登入校務系統（在執行緒池中執行，避免阻塞事件迴圈）
+        # Try logging into school portal (run in thread pool to avoid blocking event loop)
+        user_info = await asyncio.to_thread(
+            scraper.login, request.student_id, request.password
+        )
     except Exception:
         # ⚠️ 不記錄詳細錯誤（可能洩漏帳密） / Don't log details (may leak credentials)
         logger.info("Login attempt failed for a user")  # 僅記錄失敗事件 / Log only the event

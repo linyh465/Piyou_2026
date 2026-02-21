@@ -99,7 +99,10 @@ export default function Settings() {
 
         const success = await login(studentId.trim(), password);
         if (success) {
-            await Promise.all([fetchTimetable(), fetchGrades()]);
+            // 序列化執行，避免同一 session 被並行存取的競爭條件
+            // Sequential fetch to avoid race condition on shared scraper session
+            await fetchTimetable();
+            await fetchGrades();
             setSyncSuccess(true);
             setTimeout(() => {
                 setShowSyncModal(false);

@@ -10,10 +10,15 @@ import os
 import logging
 import re
 import requests
+import urllib3
 import time
 import random
 from bs4 import BeautifulSoup
 from typing import Optional, Dict
+
+# 校務系統 SSL 憑證缺少 Subject Key Identifier，停用 SSL 警告
+# School portal SSL cert missing Subject Key Identifier; suppress warnings
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 logger = logging.getLogger(__name__)
 
@@ -36,6 +41,9 @@ class SchoolScraper:
 
     def __init__(self):
         self.session = requests.Session()
+        # 校務系統 SSL 憑證缺少 Subject Key Identifier，必須停用驗證
+        # School portal SSL cert missing Subject Key Identifier; must disable verify
+        self.session.verify = False
         self.session.headers.update({
             "User-Agent": random.choice(USER_AGENTS),
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",

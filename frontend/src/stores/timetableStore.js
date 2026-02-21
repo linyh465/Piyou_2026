@@ -7,7 +7,8 @@ import { create } from 'zustand';
 import { api } from '../services/apiClient';
 
 // 請求超時時間 / Request timeout duration
-const REQUEST_TIMEOUT = 10000;
+const REQUEST_TIMEOUT = 25000;
+const SYNC_TIMEOUT = 30000; // 同步操作允許更長時間 / Sync operations allow more time
 
 const useTimetableStore = create((set) => ({
     // 課表狀態 / Timetable state
@@ -28,17 +29,8 @@ const useTimetableStore = create((set) => ({
     fetchTimetable: async () => {
         set({ isLoadingTimetable: true, timetableError: null, isTimeout: false });
 
-        const timeoutId = setTimeout(() => {
-            set({
-                isLoadingTimetable: false,
-                isTimeout: true,
-                timetableError: '請求逾時，請稍後再試 / Request timed out, please try again',
-            });
-        }, REQUEST_TIMEOUT);
-
         try {
-            const res = await api.get('/data/timetable', { timeout: REQUEST_TIMEOUT });
-            clearTimeout(timeoutId);
+            const res = await api.get('/data/timetable', { timeout: SYNC_TIMEOUT });
             const data = res.data.courses || [];
             localStorage.setItem('piyou_timetable', JSON.stringify(data));
             set({
@@ -48,7 +40,6 @@ const useTimetableStore = create((set) => ({
                 isTimeout: false,
             });
         } catch (err) {
-            clearTimeout(timeoutId);
             if (err.code === 'ECONNABORTED' || err.message?.includes('timeout')) {
                 set({
                     isLoadingTimetable: false,
@@ -78,7 +69,7 @@ const useTimetableStore = create((set) => ({
     fetchGrades: async () => {
         set({ isLoadingGrades: true, gradesError: null });
         try {
-            const res = await api.get('/data/grades', { timeout: REQUEST_TIMEOUT });
+            const res = await api.get('/data/grades', { timeout: SYNC_TIMEOUT });
             const data = res.data.semesters || [];
             localStorage.setItem('piyou_grades', JSON.stringify(data));
             set({

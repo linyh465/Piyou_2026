@@ -3,10 +3,11 @@
  * 路由配置與佈局組合 / Route configuration and layout composition.
  * 登入/同步功能已移至系統設定 / Login/sync moved to Settings page.
  */
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useEffect } from 'react';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Layout from './components/Layout';
 import ErrorBoundary from './components/ErrorBoundary';
+import useAuthStore from './stores/authStore';
 
 // ── Lazy-loaded 頁面 / Lazy-loaded pages ──
 const Dashboard = lazy(() => import('./pages/Dashboard'));
@@ -31,6 +32,10 @@ function PageLoader() {
 }
 
 export default function App() {
+  useEffect(() => {
+    useAuthStore.getState().tryAutoLogin();
+  }, []);
+
   return (
     <HashRouter>
       <ErrorBoundary>

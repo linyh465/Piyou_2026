@@ -27,6 +27,9 @@ const useThemeStore = create((set, get) => ({
     /** 解析後的實際主題 / Resolved active theme */
     resolvedTheme: saved === 'system' ? getSystemTheme() : saved,
 
+    /** 是否為深色模式 / Whether dark mode is active */
+    isDarkMode: (saved === 'system' ? getSystemTheme() : saved) === 'dark',
+
     /**
      * 設定主題 / Set theme
      * @param {'light' | 'dark' | 'system'} theme
@@ -34,9 +37,11 @@ const useThemeStore = create((set, get) => ({
     setTheme: (theme) => {
         localStorage.setItem(STORAGE_KEY, theme);
         applyTheme(theme);
+        const resolved = theme === 'system' ? getSystemTheme() : theme;
         set({
             theme,
-            resolvedTheme: theme === 'system' ? getSystemTheme() : theme,
+            resolvedTheme: resolved,
+            isDarkMode: resolved === 'dark',
         });
     },
 
@@ -55,7 +60,8 @@ window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () 
     const { theme } = useThemeStore.getState();
     if (theme === 'system') {
         applyTheme('system');
-        useThemeStore.setState({ resolvedTheme: getSystemTheme() });
+        const resolved = getSystemTheme();
+        useThemeStore.setState({ resolvedTheme: resolved, isDarkMode: resolved === 'dark' });
     }
 });
 

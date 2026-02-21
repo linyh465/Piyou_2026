@@ -36,7 +36,7 @@ apiClient.interceptors.response.use(
     (error) => {
         if (error.response?.status === 401) {
             sessionStorage.removeItem('piyou_token');
-            window.location.hash = '#/login';
+            // 僅清除 token，不強制跳轉，避免首頁 API 呼叫失敗時被導回設定頁
         }
         return Promise.reject(error);
     }

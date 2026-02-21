@@ -48,7 +48,7 @@ const useAuthStore = create((set, get) => ({
             const res = await api.post('/auth/login', {
                 student_id: studentId,
                 password: password,
-            });
+            }, { timeout: 30000 }); // 登入校務系統較慢，給 30 秒
 
             const { token, user } = res.data;
 

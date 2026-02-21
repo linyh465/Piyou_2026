@@ -1,3 +1,53 @@
+🔴 嚴重問題（需優先修復）- 👌Finished
+#	問題	檔案
+1	成績快取反序列化遺漏 3 個欄位 — 從 JSON 讀回 Semester 時缺少 weighted_average、gpa、rank，第二次請求命中快取會得到 None	data.py:378-383
+2	401 重導到不存在的 /login 路由 — 被 catch-all 帶回首頁，用戶不知道要去設定頁重新登入	apiClient.js:39
+3	isDarkMode 在 themeStore 未定義 — Transport.jsx 讀取 s.isDarkMode 永遠為 undefined，深色模式下樣式錯誤	themeStore.js ← 使用處：Transport.jsx:5
+4	tryAutoLogin 從未被呼叫 — 頁面重整後即使 sessionStorage 有有效 JWT，用戶仍需重新登入	authStore.js:98
+5	HTTPS Redirect 在反向代理後會無限迴圈 — 未檢查 X-Forwarded-Proto header	security.py:76
+🟠 中等問題
+#	問題	檔案
+6	slideUp CSS 動畫未定義，PWA 更新提示無入場動畫	PWAReloadPrompt.jsx:49
+7	Layout.jsx 同步狀態 hardcoded 'synced'，未連結 authStore	Layout.jsx:56
+8	通知開關（busNotify/taskNotify）為 useState 本地狀態，離開頁面即遺失	Settings.jsx:86
+9	行動版底部導航只有 4 項（首頁/課表/任務/AI），缺少成績、交通、設定入口	Layout.jsx:47
+10	scoreToGPA 邏輯重複三處（前端 Grades.jsx、AIAssistant.jsx、後端 data.py）	應抽出共用
+11	Bus 節流 docstring 寫「20 秒」，實際常數為 60 秒	data.py:424
+12	_credential_cache 和 _scraper_cache 無大小上限，長期運行會記憶體洩漏	auth.py、scraper_cache.py
+🟡 低等問題
+#	問題	檔案
+13	未使用的 import：useNavigate、useThemeStore（Layout.jsx）、IconPlus（Dashboard.jsx）	Layout.jsx / Dashboard.jsx
+14	lucide-react 列為依賴但整個專案未使用，增加打包體積	package.json:15
+15	pydantic-settings 列為依賴但後端未使用	requirements.txt:9
+16	Dockerfile 以 root 身份執行 uvicorn，不符安全最佳實踐	Dockerfile
+17	scraper.py 中 department 寫死為 "靜宜大學"（校名非系所）	scraper.py
+18	多數互動按鈕缺少 aria-label，Toggle 元件缺 role/aria-checked	各頁面
+📝 測試覆蓋狀況
+區域	現有測試	覆蓋缺口
+Backend (64 案例)	scraper mock、TDX、transform、schema 驗證、API 冒煙	🔴 auth 成功登入流程、data 端點完整流程、middleware 三大模組零測試
+Frontend (54 案例)	所有頁面 smoke test、各 store 基礎測試	🔴 authStore.login、taskStore CRUD、ErrorBoundary、Dashboard 元件、apiClient/secureStorage/localDb/retryWithBackoff 零測試
+📋 對照 更新.txt 已完成項目
+根據檔案中規劃的第一～四階段，以下項目已完成：
+
+✅ 新增 Dockerfile + docker-compose
+✅ pyproject.toml 加入 ruff/mypy
+✅ /api/v1 路由前綴
+✅ React Error Boundary
+✅ React.lazy() + Suspense
+✅ package-lock.json 存在
+✅ 大幅擴展前後端測試（從 11 + 4 → 64 + 54）
+仍待處理：
+
+多學期成績動態解析（學期名稱硬編碼問題仍存在）
+AI 助理仍為關鍵字引擎
+通知有 UI 但無實際推播
+根目錄 README.md 缺失
+結論：專案架構清晰、模組化良好，前後端對接完整。最需要優先處理的是上述 5 個 🔴 嚴重問題（成績快取欄位遺漏、401 路由錯誤、isDarkMode 未定義、tryAutoLogin 未呼叫、HTTPS 重導迴圈），這些會直接影響使用者體驗。需要我逐一修復嗎？
+
+
+
+# 0221 皆已更新完成
+
 🔴 高優先 — 測試覆蓋不足
 目前後端只有 11 個測試（多為冒煙測試），前端只有 4 個測試。這是最需要補強的部分：
 
@@ -48,3 +98,4 @@ AI 助理升級	目前只是關鍵字規則引擎，未接 LLM
 PWA 離線支援
 AI 助理頁面功能實作
 sql.js WASM 改為本地 bundle（離線可用）
+

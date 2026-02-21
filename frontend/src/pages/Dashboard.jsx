@@ -6,7 +6,6 @@
 import { useEffect, useRef } from 'react';
 import useDashboardStore from '../stores/dashboardStore';
 import useTimetableStore from '../stores/timetableStore';
-import useBusStore from '../stores/busStore';
 import {
     IconBook, IconMapPin, IconClock, IconBus,
     IconChartBar, IconPlus, IconBot, IconCalendar,
@@ -98,72 +97,6 @@ function NextClassCard() {
     );
 }
 
-// ── 公車動態卡片 / Bus Dynamics Card ──
-function BusCountdownCard() {
-    const { arrivals, isLoading, error, startAutoRefresh, stopAutoRefresh } = useBusStore();
-    const hasFetched = useRef(false);
-
-    useEffect(() => {
-        if (!hasFetched.current) { hasFetched.current = true; startAutoRefresh(); }
-        return () => stopAutoRefresh();
-    }, [startAutoRefresh, stopAutoRefresh]);
-
-    // 只取有到站時間的前 3 筆
-    const topArrivals = arrivals
-        .filter(a => a.estimatedMinutes != null || a.stopStatus === '進站中')
-        .slice(0, 3);
-
-    return (
-        <div className="card card-hover">
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-muted)' }}>
-                    <IconBus size={16} />
-                    <span style={{ fontSize: '13px' }}>公車動態</span>
-                </div>
-                <a href="#/transport" style={{ fontSize: '12px', color: 'var(--color-brand)', textDecoration: 'none' }}>
-                    查看更多 →
-                </a>
-            </div>
-
-            {isLoading && !arrivals.length ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    <div className="skeleton" style={{ height: '40px', width: '100%' }} />
-                    <div className="skeleton" style={{ height: '16px', width: '75%' }} />
-                </div>
-            ) : error && !arrivals.length ? (
-                <p style={{ fontSize: '14px', color: 'var(--color-danger)' }}>{error}</p>
-            ) : topArrivals.length > 0 ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                    {topArrivals.map((bus, i) => (
-                        <div key={i} style={{
-                            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                            fontSize: '14px', padding: '10px 8px', borderRadius: '10px',
-                            borderBottom: i < topArrivals.length - 1 ? '1px solid var(--border-light)' : 'none',
-                        }}>
-                            <span style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, minWidth: 0 }}>
-                                <span className="badge" style={{
-                                    background: 'var(--color-brand-subtle)', color: 'var(--color-brand)',
-                                    fontWeight: 700, flexShrink: 0,
-                                }}>
-                                    {bus.routeName}
-                                </span>
-                                <span style={{ color: 'var(--text-secondary)', fontSize: '13px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                    {bus.stopName || bus.direction || ''}
-                                </span>
-                            </span>
-                            <span style={{ fontWeight: 600, color: 'var(--text)', flexShrink: 0, marginLeft: '8px' }}>
-                                {bus.stopStatus || '進站中'}
-                            </span>
-                        </div>
-                    ))}
-                </div>
-            ) : (
-                <p style={{ fontSize: '14px', color: 'var(--text-muted)' }}>目前無即將到站公車</p>
-            )}
-        </div>
-    );
-}
-
 
 // ── 快速入口 / Quick Access Grid ──
 function QuickAccess() {
@@ -195,7 +128,6 @@ export default function Dashboard() {
             <Greeting />
             <div className="dash-cards-grid">
                 <NextClassCard />
-                <BusCountdownCard />
             </div>
             <QuickAccess />
         </div>

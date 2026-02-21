@@ -70,7 +70,8 @@ class HTTPSRedirectMiddleware(BaseHTTPMiddleware):
         host = request.headers.get("host", "")
         is_local = "localhost" in host or "127.0.0.1" in host
 
-        if not is_local and request.url.scheme == "http":
+        forwarded_proto = request.headers.get("x-forwarded-proto", "")
+        if not is_local and forwarded_proto != "https" and request.url.scheme == "http":
             url = request.url.replace(scheme="https")
             return RedirectResponse(url=str(url), status_code=301)
 

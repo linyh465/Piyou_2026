@@ -13,6 +13,7 @@
 import os
 import json
 import time
+import asyncio
 import logging
 from pathlib import Path
 from fastapi import APIRouter, HTTPException, Depends
@@ -341,10 +342,11 @@ async def get_timetable(user: dict = Depends(get_current_user)):
         except Exception as e:
             logger.warning(f"Cache parse error, will re-fetch: {e}")
 
-    # 2. 爬蟲抓取 / Scraper fetch
+    # 2. 爬蟲抓取（在執行緒池中執行，避免阻塞事件迴圈）
+    # Scraper fetch (run in thread pool to avoid blocking event loop)
     try:
         scraper = _get_authenticated_scraper(user)
-        raw_data = scraper.fetch_timetable()
+        raw_data = await asyncio.to_thread(scraper.fetch_timetable)
         if raw_data and raw_data.get("courses"):
             result = transform_timetable(raw_data)
             logger.info(f"Fetched {len(result.courses)} real course periods")
@@ -379,15 +381,19 @@ async def get_grades(user: dict = Depends(get_current_user)):
                 name=s["name"],
                 courses=[GradeCourse(**c) for c in s.get("courses", [])],
                 total_credits=s.get("total_credits", 0),
+                weighted_average=s.get("weighted_average"),
+                gpa=s.get("gpa"),
+                rank=s.get("rank"),
             ) for s in semesters_data]
             return GradesResponse(semesters=semesters)
         except Exception as e:
             logger.warning(f"Cache parse error, will re-fetch: {e}")
 
-    # 2. 爬蟲抓取 / Scraper fetch
+    # 2. 爬蟲抓取（在執行緒池中執行，避免阻塞事件迴圈）
+    # Scraper fetch (run in thread pool to avoid blocking event loop)
     try:
         scraper = _get_authenticated_scraper(user)
-        raw_data = scraper.fetch_grades()
+        raw_data = await asyncio.to_thread(scraper.fetch_grades)
         if raw_data and (raw_data.get("semesters") or raw_data.get("rows")):
             result = transform_grades(raw_data)
             logger.info(f"Fetched {sum(len(s.courses) for s in result.semesters)} grade rows across {len(result.semesters)} semesters")
