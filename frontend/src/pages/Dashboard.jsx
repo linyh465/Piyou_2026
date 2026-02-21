@@ -6,6 +6,7 @@
 import { useEffect } from 'react';
 import useDashboardStore from '../stores/dashboardStore';
 import useTimetableStore from '../stores/timetableStore';
+import useBusStore from '../stores/busStore';
 import { busRoutes } from '../data/transportData';
 import {
     IconBook, IconMapPin, IconClock, IconBus,
@@ -95,7 +96,7 @@ function NextClassCard() {
 
 // ── 公車動態卡片 / Bus Dynamics Card ──
 function BusCountdownCard() {
-    const { busArrivals, isBusLoading, busError, startAutoRefresh, stopAutoRefresh } = useDashboardStore();
+    const { arrivals, isLoading, error, startAutoRefresh, stopAutoRefresh } = useBusStore();
 
     useEffect(() => { startAutoRefresh(); return () => stopAutoRefresh(); }, [startAutoRefresh, stopAutoRefresh]);
 
@@ -106,7 +107,7 @@ function BusCountdownCard() {
     };
 
     // 取前 3 筆最近到站的資料
-    const topArrivals = busArrivals.slice(0, 3);
+    const topArrivals = arrivals.slice(0, 3);
 
     return (
         <div className="card card-hover animate-fade-in" style={{ animationDelay: '0.1s' }}>
@@ -126,14 +127,14 @@ function BusCountdownCard() {
                 </a>
             </div>
 
-            {isBusLoading && !busArrivals.length ? (
+            {isLoading && !arrivals.length ? (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                     <div className="skeleton" style={{ height: '40px', width: '100%' }} />
                     <div className="skeleton" style={{ height: '16px', width: '75%' }} />
                 </div>
-            ) : busError ? (
+            ) : error ? (
                 <div>
-                    <p style={{ fontSize: '14px', color: 'var(--color-danger)' }}>{busError}</p>
+                    <p style={{ fontSize: '14px', color: 'var(--color-danger)' }}>{error}</p>
                     <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '4px' }}>使用模擬資料 Using mock data</p>
                 </div>
             ) : topArrivals.length > 0 ? (

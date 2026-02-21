@@ -332,18 +332,50 @@ async def get_grades(user: dict = Depends(get_current_user)):
     return MOCK_GRADES
 
 
+# ── 記憶體內 TDX 節流 / In-memory TDX throttle ──
+_bus_mem_cache: dict | None = None
+_bus_mem_cache_at: float = 0
+BUS_THROTTLE_SECONDS = 20  # 最少 20 秒才呼叫一次 TDX
+
+
 @router.get("/bus", response_model=BusResponse)
 async def get_bus():
-    """取得公車資訊 / Get Bus Info"""
+    """
+    取得公車資訊 / Get Bus Info
+    節流策略：20 秒內重複請求直接回傳記憶體快取，避免 TDX 429。
+    Throttle: returns in-memory cache if called within 20s to avoid TDX 429.
+    """
+    global _bus_mem_cache, _bus_mem_cache_at
+
+    # ── 節流檢查：20 秒內不重新呼叫 TDX ──
+    if _bus_mem_cache and (time.time() - _bus_mem_cache_at < BUS_THROTTLE_SECONDS):
+        logger.info(f"Bus throttle: returning mem cache (age {int(time.time() - _bus_mem_cache_at)}s)")
+        return BusResponse(**_bus_mem_cache)
+
     try:
+        # 讀取磁碟快取備用 / Read disk cache as fallback
+        disk_cached = _read_data_cache("global", "bus")
+
         tdx = TDXService()
         result = tdx.get_routes_eta()
         arrivals_raw = result.get("arrivals", [])
         updated_at = result.get("updatedAt")
 
-        arrivals = []
-        for a in arrivals_raw:
-            arrivals.append(BusArrival(
+        # 檢查 TDX 是否傳回有效資料
+        has_real_data = any(
+            a.get("estimatedSeconds") is not None or a.get("stopStatus") == "進站中"
+            for a in arrivals_raw
+        )
+
+        # 若 TDX 無有效資料，而磁碟/記憶體有快取 → 回傳快取
+        if not has_real_data:
+            fallback = _bus_mem_cache or disk_cached
+            if fallback:
+                logger.info("TDX returned no real data, falling back to cache.")
+                return BusResponse(**fallback)
+
+        arrivals = [
+            BusArrival(
                 routeName=a.get("routeName", ""),
                 direction=a.get("direction"),
                 estimatedSeconds=a.get("estimatedSeconds"),
@@ -352,10 +384,25 @@ async def get_bus():
                 stopStatus=a.get("stopStatus"),
                 plateNumb=a.get("plateNumb"),
                 stopStatusCode=a.get("stopStatusCode"),
-            ))
+            )
+            for a in arrivals_raw
+        ]
 
         if arrivals:
-            return BusResponse(arrivals=arrivals, updatedAt=updated_at)
+            response_data = BusResponse(arrivals=arrivals, updatedAt=updated_at)
+            dump = response_data.model_dump()
+            # 存入記憶體與磁碟快取
+            _bus_mem_cache = dump
+            _bus_mem_cache_at = time.time()
+            if has_real_data:
+                _write_data_cache("global", "bus", dump)
+            return response_data
+
     except Exception as e:
-        logger.warning(f"TDX API failed, using mock data: {type(e).__name__}: {e}")
+        logger.warning(f"TDX API failed: {type(e).__name__}: {e}")
+        # 依次嘗試記憶體 → 磁碟 → mock
+        fallback = _bus_mem_cache or _read_data_cache("global", "bus")
+        if fallback:
+            return BusResponse(**fallback)
+
     return MOCK_BUS

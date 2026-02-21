@@ -27,12 +27,22 @@ const useDashboardStore = create((set, get) => ({
         return useTimetableStore.getState().getNextClass();
     },
 
-    /**
-     * 取得公車到站資訊 / Fetch bus arrival data
-     * 呼叫 TDX API 介接端點
-     * Calls TDX API integration endpoint.
-     */
     fetchBusArrivals: async () => {
+        // 先嘗試從本地快取讀取 / Try to read from local cache first
+        try {
+            const { localDb } = await import('../services/localDb');
+            const cachedBus = await localDb.getCache('bus_data');
+            if (cachedBus && cachedBus.arrivals && get().busArrivals.length === 0) {
+                let countdown = null;
+                if (cachedBus.arrivals.length > 0) {
+                    countdown = cachedBus.arrivals[0].estimatedSeconds || null;
+                }
+                set({ busArrivals: cachedBus.arrivals, busCountdown: countdown });
+            }
+        } catch (e) {
+            console.warn("Failed to read local bus cache", e);
+        }
+
         set({ isBusLoading: true, busError: null });
         try {
             const res = await api.get('/data/bus');
@@ -45,6 +55,14 @@ const useDashboardStore = create((set, get) => ({
                 countdown = nearest.estimatedSeconds || null;
             }
 
+            // 儲存到本地快取 / Save to local cache
+            try {
+                const { localDb } = await import('../services/localDb');
+                await localDb.setCache('bus_data', res.data, 600); // 10 minutes TTL
+            } catch (e) {
+                console.warn("Failed to save local bus cache", e);
+            }
+
             set({
                 busArrivals: arrivals,
                 isBusLoading: false,
@@ -53,7 +71,8 @@ const useDashboardStore = create((set, get) => ({
         } catch (err) {
             set({
                 isBusLoading: false,
-                busError: err.response?.data?.detail || '載入公車資訊失敗 / Failed to load bus info',
+                // Only show error if no arrivals are available from cache
+                busError: get().busArrivals.length === 0 ? (err.response?.data?.detail || '載入公車資訊失敗 / Failed to load bus info') : null,
             });
         }
     },
