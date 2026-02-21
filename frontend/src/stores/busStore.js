@@ -4,9 +4,9 @@
  * Transport 頁面和 Dashboard BusCard 共用同一份資料。
  *
  * 節流策略 / Throttle:
- * - 手動刷新冷卻 20 秒 (UI 按鈕鎖定)
- * - 全域每分鐘最多 5 次 API 呼叫 (含自動 + 手動)
- * - 自動輪詢每 30 秒
+ * - 手動刷新冷卻 60 秒 (UI 按鈕鎖定)
+ * - 全域每分鐘最多 2 次 API 呼叫 (含自動 + 手動)
+ * - 自動輪詢每 120 秒
  */
 import { create } from 'zustand';
 import { api } from '../services/apiClient';
@@ -18,6 +18,8 @@ const MAX_CALLS_PER_MINUTE = 2;
 
 const useBusStore = create((set, get) => ({
     arrivals: [],
+    routeStops: {},      // { "301": { "去程": [...], "返程": [...] }, ... }
+    busPositions: [],     // 即時公車位置
     isLoading: false,
     error: null,
     updatedAt: null,
@@ -34,11 +36,47 @@ const useBusStore = create((set, get) => ({
     // 倒數 timer
     _cooldownTimer: null,
 
+    // 路線站牌是否已載入 / Whether route stops have been loaded
+    _routeStopsLoaded: false,
+
+    /**
+     * 取得路線站牌列表 / Fetch route stops (StopOfRoute)
+     * 只在首次載入時呼叫一次（資料變動頻率低）
+     */
+    fetchRouteStops: async () => {
+        if (get()._routeStopsLoaded) return;
+        try {
+            // 先讀本地快取
+            const { localDb } = await import('../services/localDb');
+            const cached = await localDb.getCache('bus_route_stops');
+            if (cached && cached.routes) {
+                set({ routeStops: cached.routes, _routeStopsLoaded: true });
+                return;
+            }
+        } catch (e) {
+            console.warn('Failed to read route stops cache', e);
+        }
+        try {
+            const res = await api.get('/data/bus/stops');
+            const routes = res.data?.routes || {};
+            set({ routeStops: routes, _routeStopsLoaded: true });
+            // 存入本地快取 (24 小時)
+            try {
+                const { localDb } = await import('../services/localDb');
+                await localDb.setCache('bus_route_stops', res.data, 86400);
+            } catch (e) {
+                console.warn('Failed to save route stops cache', e);
+            }
+        } catch (err) {
+            console.warn('Failed to fetch route stops', err);
+        }
+    },
+
     /**
      * 核心資料抓取 / Core fetch
      * @param {boolean} isManual — 是否為手動觸發
      */
-    fetchBus: async (isManual = false) => {
+    fetchBus: async (/* isManual = false */) => {
         const state = get();
 
         // ── 全域節流：每分鐘最多 MAX_CALLS_PER_MINUTE 次 ──
@@ -73,13 +111,6 @@ const useBusStore = create((set, get) => ({
             const data = res.data;
             const arrivals = data.arrivals || [];
 
-            // 排序：按到站時間
-            arrivals.sort((a, b) => {
-                if (a.estimatedSeconds === null) return 1;
-                if (b.estimatedSeconds === null) return -1;
-                return a.estimatedSeconds - b.estimatedSeconds;
-            });
-
             set({
                 arrivals,
                 updatedAt: data.updatedAt || null,
@@ -106,7 +137,7 @@ const useBusStore = create((set, get) => ({
 
     /**
      * 手動刷新（按鈕觸發）/ Manual refresh (button click)
-     * 觸發 20 秒冷卻倒數
+     * 觸發 60 秒冷卻倒數
      */
     manualRefresh: () => {
         const state = get();
@@ -133,12 +164,14 @@ const useBusStore = create((set, get) => ({
     },
 
     /**
-     * 啟動自動輪詢 / Start auto polling (30s)
+     * 啟動自動輪詢 / Start auto polling
      */
     startAutoRefresh: () => {
         const state = get();
         if (state._autoInterval) clearInterval(state._autoInterval);
 
+        // 同時取得路線站牌資料
+        get().fetchRouteStops();
         get().fetchBus();
         const interval = setInterval(() => get().fetchBus(), AUTO_POLL_INTERVAL);
         set({ _autoInterval: interval });
@@ -146,12 +179,13 @@ const useBusStore = create((set, get) => ({
 
     /**
      * 停止自動輪詢 / Stop auto polling
+     * 同時重設冷卻計時，避免跳頁後倒數繼續 / Reset cooldown to avoid stale timer on navigation
      */
     stopAutoRefresh: () => {
         const { _autoInterval, _cooldownTimer } = get();
         if (_autoInterval) clearInterval(_autoInterval);
         if (_cooldownTimer) clearInterval(_cooldownTimer);
-        set({ _autoInterval: null, _cooldownTimer: null });
+        set({ _autoInterval: null, _cooldownTimer: null, manualCooldown: 0 });
     },
 }));
 

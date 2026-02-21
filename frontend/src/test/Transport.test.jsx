@@ -21,8 +21,26 @@ vi.mock('../stores/themeStore', () => {
 vi.mock('../stores/busStore', () => {
   const store = {
     arrivals: [
-      { routeName: '300', stopName: '靜宜大學', direction: '去程', estimatedMinutes: 3, stopStatus: '3 分', stopStatusCode: 0 },
+      { routeName: '301', stopName: '靜宜大學', direction: '去程', estimatedMinutes: 3, estimatedSeconds: 180, stopStatus: '3 分', stopStatusCode: 0, stopSequence: 21 },
+      { routeName: '301', stopName: '弘光科技大學', direction: '去程', estimatedMinutes: 7, estimatedSeconds: 420, stopStatus: '7 分', stopStatusCode: 0, stopSequence: 19 },
     ],
+    routeStops: {
+      '301': {
+        '去程': [
+          { stopName: '新民高中', stopSequence: 1 },
+          { stopName: '弘光科技大學', stopSequence: 19 },
+          { stopName: '靜宜大學', stopSequence: 21 },
+          { stopName: '新光里(新福路)', stopSequence: 22 },
+        ],
+        '返程': [
+          { stopName: '新光里(新福路)', stopSequence: 1 },
+          { stopName: '靜宜大學', stopSequence: 2 },
+          { stopName: '弘光科技大學', stopSequence: 4 },
+          { stopName: '新民高中', stopSequence: 22 },
+        ],
+      },
+    },
+    busPositions: [],
     isLoading: false,
     error: null,
     updatedAt: '12:00',
@@ -59,27 +77,32 @@ describe('Transport Page', () => {
         <Transport />
       </MemoryRouter>
     );
-    expect(screen.getByText('300')).toBeInTheDocument();
-    // "靜宜大學" 出現在 header 和 arrival 列表中，用 getAllByText
-    const matches = screen.getAllByText(/靜宜大學/);
+    // 301 路線名稱出現在路線選擇 chip 中
+    const matches301 = screen.getAllByText('301');
+    expect(matches301.length).toBeGreaterThanOrEqual(1);
+    // 靜宜大學出現在站牌列表
+    const matchesPU = screen.getAllByText(/靜宜大學/);
+    expect(matchesPU.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('renders direction tabs', () => {
+    render(
+      <MemoryRouter>
+        <Transport />
+      </MemoryRouter>
+    );
+    expect(screen.getByText('去程')).toBeInTheDocument();
+    expect(screen.getByText('返程')).toBeInTheDocument();
+  });
+
+  it('renders route selector', () => {
+    render(
+      <MemoryRouter>
+        <Transport />
+      </MemoryRouter>
+    );
+    // 所有路線描述都出現在選擇器中
+    const matches = screen.getAllByText(/新民高中/);
     expect(matches.length).toBeGreaterThanOrEqual(1);
-  });
-
-  it('renders filter selects', () => {
-    render(
-      <MemoryRouter>
-        <Transport />
-      </MemoryRouter>
-    );
-    expect(screen.getByText('即將進站')).toBeInTheDocument();
-  });
-
-  it('renders bus stops section', () => {
-    render(
-      <MemoryRouter>
-        <Transport />
-      </MemoryRouter>
-    );
-    expect(screen.getByText('靜宜校園周邊站牌')).toBeInTheDocument();
   });
 });

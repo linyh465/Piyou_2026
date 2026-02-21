@@ -60,9 +60,9 @@ class TestTDXMockData:
         assert "arrivals" in result
         assert "updatedAt" in result
         assert len(result["arrivals"]) > 0
-        # mock arrivals should be sorted by estimatedSeconds
-        seconds = [a["estimatedSeconds"] for a in result["arrivals"]]
-        assert seconds == sorted(seconds)
+        # mock arrivals now include all stops, sorted by route+direction+sequence
+        routes = [a["routeName"] for a in result["arrivals"]]
+        assert "301" in routes
 
     def test_mock_arrivals_have_required_fields(self):
         """Mock 資料應包含所有必要欄位"""
@@ -77,7 +77,8 @@ class TestTDXMockData:
             assert "estimatedSeconds" in arrival
             assert "estimatedMinutes" in arrival
             assert "stopName" in arrival
-            assert arrival["stopName"] == "靜宜大學"
+            assert "stopSequence" in arrival
+            assert arrival["routeName"] in ["301", "368", "162"]
 
 
 class TestTDXTokenAuth:
@@ -191,9 +192,10 @@ class TestTDXGetRoutesETA:
         result = svc.get_routes_eta()
 
         assert len(result["arrivals"]) >= 1
-        # 只保留靜宜大學站
-        for a in result["arrivals"]:
-            assert "靜宜" in a["stopName"]
+        # Now returns ALL stops (no keyword filter)
+        stop_names = [a["stopName"] for a in result["arrivals"]]
+        assert "靜宜大學" in stop_names
+        assert "沙鹿站" in stop_names
 
     @patch("app.services.tdx.requests.get")
     @patch("app.services.tdx.requests.post")

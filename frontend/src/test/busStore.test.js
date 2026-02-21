@@ -67,8 +67,7 @@ describe('busStore', () => {
     const state = useBusStore.getState();
     expect(state.arrivals.length).toBe(2);
     expect(state.isLoading).toBe(false);
-    // 按 estimatedSeconds 排序: 60 < 120
-    expect(state.arrivals[0].routeName).toBe('301');
+    expect(state.arrivals[0].routeName).toBe('300');
   });
 
   it('manualRefresh starts cooldown', async () => {

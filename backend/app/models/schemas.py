@@ -85,9 +85,45 @@ class BusArrival(BaseModel):
     stopStatus: Optional[str] = Field(None, description="到站狀態 / Arrival status (e.g. 進站中、3 分)")
     plateNumb: Optional[str] = Field(None, description="車牌號碼 / Plate number")
     stopStatusCode: Optional[int] = Field(None, description="狀態碼 / Status code")
+    stopSequence: Optional[int] = Field(None, description="站序 / Stop sequence number")
+
+
+class BusStopInfo(BaseModel):
+    """路線站牌基本資訊 / Route Stop Info"""
+    stopName: str = Field(..., description="站牌名稱 / Stop name")
+    stopSequence: int = Field(..., description="站序 / Stop sequence")
+
+
+class BusRouteStops(BaseModel):
+    """單一路線的站牌列表 / Stops for a single route"""
+    去程: list[BusStopInfo] = Field(default_factory=list, alias="去程")
+    返程: list[BusStopInfo] = Field(default_factory=list, alias="返程")
+
+    model_config = {"populate_by_name": True}
+
+
+class BusPosition(BaseModel):
+    """即時公車位置 / Real-time bus position"""
+    routeName: str = Field(..., description="路線名稱 / Route name")
+    direction: str = Field(..., description="方向 / Direction")
+    stopName: str = Field(..., description="站牌名稱 / Stop name")
+    stopSequence: int = Field(0, description="站序 / Stop sequence")
+    plateNumb: str = Field("", description="車牌號碼 / Plate number")
+    eventType: str = Field("", description="事件類型 / Event type (進站/離站)")
 
 
 class BusResponse(BaseModel):
     """公車回應 / Bus Response"""
     arrivals: list[BusArrival] = []
+    updatedAt: Optional[str] = Field(None, description="最後更新時間 / Last updated time")
+
+
+class BusRouteStopsResponse(BaseModel):
+    """路線站牌回應 / Route Stops Response"""
+    routes: dict[str, BusRouteStops] = Field(default_factory=dict)
+
+
+class BusPositionsResponse(BaseModel):
+    """即時公車位置回應 / Bus Positions Response"""
+    positions: list[BusPosition] = Field(default_factory=list)
     updatedAt: Optional[str] = Field(None, description="最後更新時間 / Last updated time")

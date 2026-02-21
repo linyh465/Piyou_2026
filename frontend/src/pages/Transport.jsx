@@ -1,108 +1,198 @@
 /**
  * 交通頁面 / Transport Page
- * 使用下拉式選單篩選路線與方向，方便規劃往返路程
+ * 下拉選單選路線，左右滑動切換去程/返程
+ * 顯示整條路線所有站牌的即時到站資訊
  */
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef, useCallback } from 'react';
 import useThemeStore from '../stores/themeStore';
 import useBusStore from '../stores/busStore';
-import { busRoutes, busStops } from '../data/transportData';
-import { IconBus, IconMapPin, IconClock, IconRefresh } from '../components/Icons';
-
-// ── 下拉式選單元件 ──
-function Select({ label, value, onChange, options, allLabel = '全部' }) {
-    return (
-        <div className="transport-select-group">
-            <label className="transport-select-label">{label}</label>
-            <select className="transport-select" value={value} onChange={e => onChange(e.target.value)}>
-                <option value="">{allLabel}</option>
-                {options.map(opt => (
-                    <option key={opt.value} value={opt.value}>{opt.label}</option>
-                ))}
-            </select>
-        </div>
-    );
-}
+import { busRoutes } from '../data/transportData';
+import { IconBus, IconMapPin, IconClock, IconRefresh, IconChevronRight } from '../components/Icons';
 
 // ── 到站狀態色 ──
 function getStatusColor(arrival) {
+    if (!arrival) return 'var(--text-muted)';
     const mins = arrival.estimatedMinutes;
     const code = arrival.stopStatusCode;
     if (code !== undefined && code !== null && code !== 0) return 'var(--text-muted)';
     if (mins === null || mins === undefined) return 'var(--text-muted)';
     if (mins <= 1) return 'var(--color-danger)';
-    if (mins <= 5) return '#f97316';
+    if (mins <= 3) return '#f97316';
+    if (mins <= 10) return '#eab308';
     return 'var(--text-secondary)';
+}
+
+// ── 到站狀態背景色（用於即將進站的高亮）──
+function getStatusBg(arrival) {
+    if (!arrival) return 'transparent';
+    const mins = arrival.estimatedMinutes;
+    const code = arrival.stopStatusCode;
+    if (code !== undefined && code !== null && code !== 0) return 'transparent';
+    if (mins === null || mins === undefined) return 'transparent';
+    if (mins <= 1) return 'rgba(239,68,68,0.06)';
+    if (mins <= 3) return 'rgba(249,115,22,0.04)';
+    return 'transparent';
+}
+
+// ── 格式化到站時間（顯示分秒）──
+function formatArrivalTime(arrival) {
+    if (!arrival) return { main: '--', sub: '' };
+    const code = arrival.stopStatusCode;
+    if (code === 1) return { main: '尚未發車', sub: '' };
+    if (code === 2) return { main: '交管不停靠', sub: '' };
+    if (code === 3) return { main: '末班已過', sub: '' };
+    if (code === 4) return { main: '今日未營運', sub: '' };
+
+    const secs = arrival.estimatedSeconds;
+    if (secs === null || secs === undefined) return { main: '--', sub: '' };
+    if (secs <= 60) return { main: '進站中', sub: '' };
+    const mins = Math.floor(secs / 60);
+    const remainSecs = secs % 60;
+    return {
+        main: `${mins} 分`,
+        sub: remainSecs > 0 ? `${remainSecs} 秒` : '',
+    };
 }
 
 export default function Transport() {
     const isDarkMode = useThemeStore((s) => s.isDarkMode);
     const {
-        arrivals, isLoading, error, updatedAt,
+        arrivals, routeStops, isLoading, error, updatedAt,
         manualCooldown, manualRefresh,
         startAutoRefresh, stopAutoRefresh,
     } = useBusStore();
 
-    // ── 篩選狀態 ──
-    const [selectedRoute, setSelectedRoute] = useState('');
-    const [selectedDir, setSelectedDir] = useState('');
-    const [selectedStop, setSelectedStop] = useState('');
+    // ── 路線選擇 ──
+    const [selectedRoute, setSelectedRoute] = useState('301');
+    // ── 方向：0 = 去程, 1 = 返程 ──
+    const [dirIndex, setDirIndex] = useState(0);
+    const direction = dirIndex === 0 ? '去程' : '返程';
+
+    // ── 觸控滑動 ──
+    const touchRef = useRef({ startX: 0, startY: 0, startTime: 0 });
+    const containerRef = useRef(null);
 
     useEffect(() => {
         startAutoRefresh();
         return () => stopAutoRefresh();
     }, [startAutoRefresh, stopAutoRefresh]);
 
-    // 路線選項
-    const routeOptions = busRoutes.map(r => ({
-        value: r.name,
-        label: `${r.name} ${r.description}`,
-    }));
+    // 路線切換時重設方向
+    const handleRouteChange = useCallback((routeId) => {
+        setSelectedRoute(routeId);
+        setDirIndex(0);
+    }, []);
 
-    // 方向選項
-    const dirOptions = [
-        { value: '去程', label: '去程（往目的地）' },
-        { value: '返程', label: '返程（回程）' },
-    ];
+    // ── 手勢處理 ──
+    const handleTouchStart = useCallback((e) => {
+        touchRef.current = {
+            startX: e.touches[0].clientX,
+            startY: e.touches[0].clientY,
+            startTime: Date.now(),
+        };
+    }, []);
 
-    // 站牌選項 — 從實際到站資料動態產生
-    const stopOptions = useMemo(() => {
-        const names = [...new Set(arrivals.map(a => a.stopName).filter(Boolean))];
-        return names.map(n => ({ value: n, label: n }));
-    }, [arrivals]);
+    const handleTouchEnd = useCallback((e) => {
+        const { startX, startY, startTime } = touchRef.current;
+        const endX = e.changedTouches[0].clientX;
+        const endY = e.changedTouches[0].clientY;
+        const diffX = endX - startX;
+        const diffY = endY - startY;
+        const elapsed = Date.now() - startTime;
 
-    // 篩選後的資料
-    const filtered = useMemo(() => {
-        return arrivals.filter(a => {
-            if (selectedRoute && a.routeName !== selectedRoute) return false;
-            if (selectedDir && a.direction !== selectedDir) return false;
-            if (selectedStop && a.stopName !== selectedStop) return false;
+        // 必須是水平滑動（水平距離 > 垂直距離）且距離 > 50px 且時間 < 500ms
+        if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 50 && elapsed < 500) {
+            if (diffX > 0) {
+                // 右滑 → 去程
+                setDirIndex(0);
+            } else {
+                // 左滑 → 返程
+                setDirIndex(1);
+            }
+        }
+    }, []);
+
+    // 取得當前路線資訊
+    const routeInfo = useMemo(() => {
+        return busRoutes.find(r => r.id === selectedRoute) || busRoutes[0];
+    }, [selectedRoute]);
+
+    // 取得當前方向的站牌列表（從 routeStops API 或 arrivals 推斷）
+    const currentStops = useMemo(() => {
+        // 優先使用 StopOfRoute API 的站牌資料
+        const stopsData = routeStops[selectedRoute];
+        if (stopsData && stopsData[direction]) {
+            const apiStops = stopsData[direction];
+            // 若 API 回傳的是物件陣列
+            if (apiStops.length > 0) {
+                return apiStops.map(s => ({
+                    stopName: s.stopName,
+                    stopSequence: s.stopSequence,
+                })).sort((a, b) => a.stopSequence - b.stopSequence);
+            }
+        }
+
+        // fallback: 從 arrivals 中提取此路線此方向的站牌
+        const fromArrivals = arrivals
+            .filter(a => a.routeName === selectedRoute && a.direction === direction)
+            .sort((a, b) => (a.stopSequence || 0) - (b.stopSequence || 0));
+
+        // 去重
+        const seen = new Set();
+        return fromArrivals.filter(a => {
+            if (seen.has(a.stopName)) return false;
+            seen.add(a.stopName);
             return true;
-        });
-    }, [arrivals, selectedRoute, selectedDir, selectedStop]);
+        }).map(a => ({
+            stopName: a.stopName,
+            stopSequence: a.stopSequence || 0,
+        }));
+    }, [routeStops, arrivals, selectedRoute, direction]);
 
-    // 取得路線描述
-    const getRouteInfo = (routeName) => {
-        return busRoutes.find(r => r.name === routeName);
-    };
+    // 建立站牌 → 到站資料的映射
+    const arrivalMap = useMemo(() => {
+        const map = {};
+        arrivals
+            .filter(a => a.routeName === selectedRoute && a.direction === direction)
+            .forEach(a => {
+                // 以站名為 key（同一站可能有多筆，取最近的）
+                if (!map[a.stopName] || (a.estimatedSeconds !== null &&
+                    (map[a.stopName].estimatedSeconds === null || a.estimatedSeconds < map[a.stopName].estimatedSeconds))) {
+                    map[a.stopName] = a;
+                }
+            });
+        return map;
+    }, [arrivals, selectedRoute, direction]);
+
+    // 計算統計資訊
+    const stats = useMemo(() => {
+        const arriving = Object.values(arrivalMap).filter(
+            a => a.estimatedMinutes !== null && a.estimatedMinutes <= 3 && (a.stopStatusCode === 0 || a.stopStatusCode === undefined)
+        ).length;
+        const total = currentStops.length;
+        return { arriving, total };
+    }, [arrivalMap, currentStops]);
 
     return (
-        <div className="page-container" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-            {/* ── 頂部 ── */}
+        <div className="page-container" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            {/* ── 頂部標題 ── */}
             <header className="page-header" style={{ flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                     <div style={{
                         width: 40, height: 40, borderRadius: 12,
-                        background: 'rgba(249,115,22,0.1)', display: 'flex',
-                        alignItems: 'center', justifyContent: 'center', color: '#f97316',
+                        background: `${routeInfo.color}15`, display: 'flex',
+                        alignItems: 'center', justifyContent: 'center', color: routeInfo.color,
                     }}>
                         <IconBus size={24} />
                     </div>
                     <div>
                         <h1 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text)' }}>公車動態</h1>
                         <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>
-                            靜宜大學站點 即時到站
+                            即時到站資訊
                             {updatedAt && (
-                                <span style={{ marginLeft: 8, fontSize: '0.75rem', opacity: 0.6 }}>更新 {updatedAt}</span>
+                                <span style={{ marginLeft: 8, fontSize: '0.75rem', opacity: 0.6 }}>
+                                    更新 {updatedAt}
+                                </span>
                             )}
                         </p>
                     </div>
@@ -122,29 +212,84 @@ export default function Transport() {
                 </button>
             </header>
 
-            {/* ── 篩選選單 ── */}
-            <div className="transport-filters">
-                <Select
-                    label="路線"
-                    value={selectedRoute}
-                    onChange={setSelectedRoute}
-                    options={routeOptions}
-                    allLabel="所有路線"
-                />
-                <Select
-                    label="方向"
-                    value={selectedDir}
-                    onChange={setSelectedDir}
-                    options={dirOptions}
-                    allLabel="去程 / 返程"
-                />
-                <Select
-                    label="站牌"
-                    value={selectedStop}
-                    onChange={setSelectedStop}
-                    options={stopOptions}
-                    allLabel="所有站牌"
-                />
+            {/* ── 路線選擇下拉 ── */}
+            <div className="transport-route-selector">
+                {busRoutes.map(route => (
+                    <button
+                        key={route.id}
+                        onClick={() => handleRouteChange(route.id)}
+                        className={`transport-route-chip ${selectedRoute === route.id ? 'active' : ''}`}
+                        style={{
+                            '--route-color': route.color,
+                            borderColor: selectedRoute === route.id ? route.color : 'var(--border)',
+                            background: selectedRoute === route.id
+                                ? `${route.color}12`
+                                : isDarkMode ? 'rgba(255,255,255,0.03)' : 'var(--bg-card)',
+                        }}
+                    >
+                        <span className="transport-route-chip-number" style={{
+                            color: selectedRoute === route.id ? route.color : 'var(--text-secondary)',
+                        }}>
+                            {route.name}
+                        </span>
+                        <span className="transport-route-chip-desc" style={{
+                            color: selectedRoute === route.id ? 'var(--text)' : 'var(--text-muted)',
+                        }}>
+                            {route.description}
+                        </span>
+                    </button>
+                ))}
+            </div>
+
+            {/* ── 方向切換 Tab ── */}
+            <div className="transport-dir-tabs">
+                <button
+                    className={`transport-dir-tab ${dirIndex === 0 ? 'active' : ''}`}
+                    onClick={() => setDirIndex(0)}
+                    style={{ '--tab-color': routeInfo.color }}
+                >
+                    <span style={{ fontSize: '0.75rem', opacity: 0.7 }}>去程</span>
+                    <span style={{ fontSize: '0.8125rem', fontWeight: 600 }}>
+                        往 {routeInfo.to}
+                    </span>
+                </button>
+                <button
+                    className={`transport-dir-tab ${dirIndex === 1 ? 'active' : ''}`}
+                    onClick={() => setDirIndex(1)}
+                    style={{ '--tab-color': routeInfo.color }}
+                >
+                    <span style={{ fontSize: '0.75rem', opacity: 0.7 }}>返程</span>
+                    <span style={{ fontSize: '0.8125rem', fontWeight: 600 }}>
+                        往 {routeInfo.from}
+                    </span>
+                </button>
+                <p style={{
+                    fontSize: '0.6875rem', color: 'var(--text-muted)', textAlign: 'center',
+                    width: '100%', marginTop: 4,
+                }}>
+                    ← 左滑返程 ｜ 右滑去程 →
+                </p>
+            </div>
+
+            {/* ── 統計列 ── */}
+            <div style={{
+                display: 'flex', alignItems: 'center', gap: 12,
+                padding: '0 4px',
+            }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <IconClock size={16} style={{ color: routeInfo.color }} />
+                    <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text)' }}>
+                        站牌一覽
+                    </span>
+                </div>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginLeft: 'auto' }}>
+                    {stats.arriving > 0 && (
+                        <span style={{ color: '#f97316', fontWeight: 600, marginRight: 8 }}>
+                            {stats.arriving} 站即將到站
+                        </span>
+                    )}
+                    共 {stats.total} 站
+                </span>
             </div>
 
             {/* ── 錯誤提示 ── */}
@@ -154,139 +299,153 @@ export default function Transport() {
                 </div>
             )}
 
-            {/* ── 到站列表 ── */}
-            <section>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16, paddingLeft: 4 }}>
-                    <IconClock size={18} style={{ color: '#f97316' }} />
-                    <h2 style={{ fontSize: '1.125rem', fontWeight: 600, color: 'var(--text)' }}>
-                        即將進站
-                    </h2>
-                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginLeft: 'auto' }}>
-                        共 {filtered.length} 筆
-                    </span>
-                </div>
+            {/* ── 站牌列表（可滑動切換方向）── */}
+            <div
+                ref={containerRef}
+                onTouchStart={handleTouchStart}
+                onTouchEnd={handleTouchEnd}
+                style={{ minHeight: 200 }}
+            >
+                {isLoading && currentStops.length === 0 ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                        {[1, 2, 3, 4, 5, 6].map(i => (
+                            <div key={i} className="skeleton" style={{ height: 56, borderRadius: 14 }} />
+                        ))}
+                    </div>
+                ) : currentStops.length > 0 ? (
+                    <div className="transport-stop-list">
+                        {currentStops.map((stop, idx) => {
+                            const arrival = arrivalMap[stop.stopName];
+                            const { main, sub } = formatArrivalTime(arrival);
+                            const isProvidence = stop.stopName.includes('靜宜');
+                            const statusColor = getStatusColor(arrival);
+                            const statusBg = getStatusBg(arrival);
+                            const isArriving = arrival?.estimatedMinutes !== null &&
+                                arrival?.estimatedMinutes !== undefined &&
+                                arrival?.estimatedMinutes <= 1 &&
+                                (arrival?.stopStatusCode === 0 || arrival?.stopStatusCode === undefined);
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                    {isLoading && arrivals.length === 0 ? (
-                        [1, 2, 3, 4].map(i => (
-                            <div key={i} className="skeleton" style={{ height: 72, borderRadius: 16 }} />
-                        ))
-                    ) : filtered.length > 0 ? (
-                        filtered.map((arrival, idx) => {
-                            const route = getRouteInfo(arrival.routeName);
                             return (
-                                <div key={idx} className="card card-hover" style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: 14, flex: 1, minWidth: 0 }}>
-                                        {/* 路線徽章 */}
-                                        <div style={{
-                                            width: 52, height: 52, borderRadius: 14,
-                                            background: 'rgba(249,115,22,0.1)', border: '1px solid rgba(249,115,22,0.2)',
-                                            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                                            color: '#f97316', flexShrink: 0,
-                                        }}>
-                                            <span style={{ fontSize: '1.125rem', fontWeight: 700, lineHeight: 1.1 }}>{arrival.routeName}</span>
-                                        </div>
-
-                                        {/* 詳情 */}
-                                        <div style={{ flex: 1, minWidth: 0 }}>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                                                <span style={{ fontWeight: 600, fontSize: '0.9375rem', color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                                    {arrival.stopName}
-                                                </span>
-                                                <span className="badge" style={{
-                                                    fontSize: '10px', padding: '2px 8px',
-                                                    background: isDarkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)',
-                                                    color: 'var(--text-secondary)',
-                                                }}>
-                                                    {arrival.direction}
-                                                </span>
-                                            </div>
-                                            <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 4 }}>
-                                                <IconMapPin size={12} />
-                                                {arrival.direction === '去程'
-                                                    ? `往 ${route?.to || '目的地'}`
-                                                    : `往 ${route?.from || '起點'}`
-                                                }
-                                            </p>
-                                        </div>
+                                <div
+                                    key={`${stop.stopName}-${idx}`}
+                                    className={`transport-stop-row ${isProvidence ? 'highlight' : ''}`}
+                                    style={{ background: statusBg }}
+                                >
+                                    {/* 左側：站序線 */}
+                                    <div className="transport-stop-line">
+                                        <div className="transport-stop-line-track" style={{
+                                            background: idx === 0 ? 'transparent' : (isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)'),
+                                        }} />
+                                        <div className="transport-stop-dot" style={{
+                                            background: isProvidence ? routeInfo.color : (isDarkMode ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.12)'),
+                                            boxShadow: isProvidence ? `0 0 0 3px ${routeInfo.color}30` : 'none',
+                                            width: isProvidence ? 14 : 10,
+                                            height: isProvidence ? 14 : 10,
+                                        }} />
+                                        <div className="transport-stop-line-track" style={{
+                                            background: idx === currentStops.length - 1 ? 'transparent' : (isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)'),
+                                        }} />
                                     </div>
 
-                                    {/* 到站時間 */}
-                                    <div style={{
-                                        flexShrink: 0, paddingLeft: 12, textAlign: 'right',
-                                        color: getStatusColor(arrival),
-                                    }}>
+                                    {/* 中間：站名 */}
+                                    <div className="transport-stop-info">
                                         <span style={{
-                                            fontSize: '1.25rem', fontWeight: 700, whiteSpace: 'nowrap',
-                                            ...(arrival.estimatedMinutes != null && arrival.estimatedMinutes <= 1
-                                                ? { animation: 'pulse 2s ease-in-out infinite' }
-                                                : {}),
+                                            fontWeight: isProvidence ? 700 : 500,
+                                            fontSize: isProvidence ? '0.9375rem' : '0.875rem',
+                                            color: isProvidence ? routeInfo.color : 'var(--text)',
                                         }}>
-                                            {arrival.stopStatus || '-- 分'}
+                                            {isProvidence && '📍 '}{stop.stopName}
                                         </span>
+                                        <span style={{
+                                            fontSize: '0.6875rem',
+                                            color: 'var(--text-muted)',
+                                        }}>
+                                            第 {stop.stopSequence} 站
+                                        </span>
+                                    </div>
+
+                                    {/* 右側：到站時間 */}
+                                    <div className="transport-stop-eta" style={{ color: statusColor }}>
+                                        <span style={{
+                                            fontSize: main === '進站中' || main === '尚未發車' ? '0.8125rem' : '1rem',
+                                            fontWeight: 700,
+                                            whiteSpace: 'nowrap',
+                                            ...(isArriving ? { animation: 'pulse 1.5s ease-in-out infinite' } : {}),
+                                        }}>
+                                            {main}
+                                        </span>
+                                        {sub && (
+                                            <span style={{ fontSize: '0.6875rem', opacity: 0.7 }}>
+                                                {sub}
+                                            </span>
+                                        )}
                                     </div>
                                 </div>
                             );
-                        })
-                    ) : (
-                        <div className="card" style={{
-                            display: 'flex', flexDirection: 'column', alignItems: 'center',
-                            justifyContent: 'center', padding: '40px 20px', textAlign: 'center',
-                            border: '1px dashed var(--border)', color: 'var(--text-muted)',
-                        }}>
-                            <IconBus size={32} style={{ opacity: 0.3, marginBottom: 12 }} />
-                            <span style={{ fontSize: '0.875rem' }}>
-                                {selectedRoute || selectedDir || selectedStop
-                                    ? '此篩選條件下無公車資訊'
-                                    : '目前無即將到站之公車資訊'
-                                }
-                            </span>
-                        </div>
+                        })}
+                    </div>
+                ) : (
+                    <div className="card" style={{
+                        display: 'flex', flexDirection: 'column', alignItems: 'center',
+                        justifyContent: 'center', padding: '48px 20px', textAlign: 'center',
+                        border: '1px dashed var(--border)', color: 'var(--text-muted)',
+                    }}>
+                        <IconBus size={36} style={{ opacity: 0.3, marginBottom: 12 }} />
+                        <span style={{ fontSize: '0.875rem' }}>
+                            目前無此路線的站牌資訊
+                        </span>
+                        <span style={{ fontSize: '0.75rem', marginTop: 4 }}>
+                            資料載入中或該路線今日未營運
+                        </span>
+                    </div>
+                )}
+            </div>
+
+            {/* ── 路線資訊卡 ── */}
+            <div className="card" style={{
+                padding: '14px 16px',
+                border: `1px solid ${routeInfo.color}30`,
+                background: `${routeInfo.color}08`,
+            }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+                    <div style={{
+                        width: 36, height: 36, borderRadius: 10,
+                        background: `${routeInfo.color}18`,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        color: routeInfo.color, fontWeight: 800, fontSize: '1rem',
+                    }}>
+                        {routeInfo.name}
+                    </div>
+                    <div>
+                        <p style={{ fontWeight: 600, fontSize: '0.875rem', color: 'var(--text)' }}>
+                            {routeInfo.description}
+                        </p>
+                        <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                            {direction === '去程'
+                                ? `${routeInfo.from} → ${routeInfo.to}`
+                                : `${routeInfo.to} → ${routeInfo.from}`
+                            }
+                        </p>
+                    </div>
+                </div>
+                <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                    <span className="badge" style={{ fontSize: '0.6875rem', padding: '3px 8px' }}>
+                        🕐 自動更新 2 分鐘
+                    </span>
+                    <span className="badge" style={{ fontSize: '0.6875rem', padding: '3px 8px' }}>
+                        📊 TDX 即時資料
+                    </span>
+                    {isLoading && (
+                        <span className="badge" style={{ fontSize: '0.6875rem', padding: '3px 8px', color: routeInfo.color }}>
+                            ⏳ 載入中...
+                        </span>
                     )}
                 </div>
-            </section>
+            </div>
 
-            {/* ── 站點一覽 ── */}
-            <section style={{ paddingTop: 8 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16, paddingLeft: 4 }}>
-                    <IconMapPin size={18} style={{ color: '#f97316' }} />
-                    <h2 style={{ fontSize: '1.125rem', fontWeight: 600, color: 'var(--text)' }}>
-                        靜宜校園周邊站牌
-                    </h2>
-                </div>
-
-                <div className="transport-stops-grid">
-                    {busStops.map((stop) => (
-                        <button
-                            key={stop.id}
-                            onClick={() => {
-                                setSelectedStop(prev => prev === stop.name ? '' : stop.name);
-                                setSelectedRoute('');
-                                setSelectedDir('');
-                            }}
-                            className={`card card-hover transport-stop-btn ${selectedStop === stop.name ? 'transport-stop-active' : ''}`}
-                        >
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                                <div style={{
-                                    width: 32, height: 32, borderRadius: '50%',
-                                    background: isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)',
-                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                    color: 'var(--text-secondary)',
-                                }}>
-                                    <IconMapPin size={14} />
-                                </div>
-                                <span style={{ fontSize: '0.875rem', fontWeight: 500, color: 'var(--text)' }}>
-                                    {stop.name}
-                                </span>
-                            </div>
-                        </button>
-                    ))}
-                </div>
-            </section>
-
-            {/* ── TDX 基礎會員提示 ── */}
-            <p style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', textAlign: 'center', padding: '8px 0' }}>
-                資料來源：TDX 運輸資料流通服務 ｜ 自動更新間隔 2 分鐘（配合基礎會員額度）
+            {/* ── 資料來源提示 ── */}
+            <p style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', textAlign: 'center', padding: '4px 0' }}>
+                資料來源：TDX 運輸資料流通服務（EstimatedTimeOfArrival + StopOfRoute）
             </p>
         </div>
     );

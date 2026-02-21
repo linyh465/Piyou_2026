@@ -16,11 +16,14 @@ import time
 import asyncio
 import logging
 from pathlib import Path
+from datetime import datetime, timezone, timedelta
 from fastapi import APIRouter, HTTPException, Depends
 from app.models.schemas import (
     TimetableResponse, GradesResponse,
     Course, GradeCourse, Semester,
     BusResponse, BusArrival,
+    BusRouteStopsResponse, BusRouteStops, BusStopInfo,
+    BusPositionsResponse, BusPosition,
 )
 from app.services.scraper import SchoolScraper
 from app.services.tdx import TDXService
@@ -307,9 +310,10 @@ MOCK_GRADES = GradesResponse(semesters=[
 ])
 
 MOCK_BUS = BusResponse(arrivals=[
-    BusArrival(routeName="301", direction="去程", estimatedSeconds=180, estimatedMinutes=3, stopName="靜宜大學", stopStatus="3 分"),
-    BusArrival(routeName="368", direction="去程", estimatedSeconds=420, estimatedMinutes=7, stopName="靜宜大學", stopStatus="7 分"),
-    BusArrival(routeName="162", direction="去程", estimatedSeconds=600, estimatedMinutes=10, stopName="靜宜大學", stopStatus="10 分"),
+    BusArrival(routeName="301", direction="去程", estimatedSeconds=180, estimatedMinutes=3, stopName="靜宜大學", stopStatus="3 分", stopSequence=21),
+    BusArrival(routeName="301", direction="去程", estimatedSeconds=420, estimatedMinutes=7, stopName="弘光科技大學", stopStatus="7 分", stopSequence=19),
+    BusArrival(routeName="368", direction="去程", estimatedSeconds=420, estimatedMinutes=7, stopName="靜宜大學", stopStatus="7 分", stopSequence=9),
+    BusArrival(routeName="162", direction="去程", estimatedSeconds=600, estimatedMinutes=10, stopName="靜宜大學", stopStatus="10 分", stopSequence=7),
 ], updatedAt="--:--:--")
 
 
@@ -484,3 +488,72 @@ async def get_bus():
             return BusResponse(**fallback)
 
     return MOCK_BUS
+
+
+# ── 路線站牌快取 / Route stops cache (changes rarely, cache 24h) ──
+_route_stops_cache: dict | None = None
+_route_stops_cache_at: float = 0
+ROUTE_STOPS_CACHE_TTL = 86400  # 24 小時
+
+
+@router.get("/bus/stops", response_model=BusRouteStopsResponse)
+async def get_bus_route_stops():
+    """
+    取得各路線站牌列表（含站序）/ Get stop list for each route
+    從 TDX StopOfRoute API 取得，快取 24 小時
+    Fetches from TDX StopOfRoute API, cached for 24 hours.
+    """
+    global _route_stops_cache, _route_stops_cache_at
+
+    if _route_stops_cache and (time.time() - _route_stops_cache_at < ROUTE_STOPS_CACHE_TTL):
+        return _route_stops_cache
+
+    try:
+        tdx = TDXService()
+        raw = tdx.get_stops_of_routes()
+
+        routes = {}
+        for route_name, dirs in raw.items():
+            go_stops = [BusStopInfo(stopName=s["stopName"], stopSequence=s["stopSequence"]) for s in dirs.get("去程", [])]
+            back_stops = [BusStopInfo(stopName=s["stopName"], stopSequence=s["stopSequence"]) for s in dirs.get("返程", [])]
+            routes[route_name] = BusRouteStops(**{"去程": go_stops, "返程": back_stops})
+
+        response = BusRouteStopsResponse(routes=routes)
+        _route_stops_cache = response
+        _route_stops_cache_at = time.time()
+        return response
+
+    except Exception as e:
+        logger.warning(f"Bus route stops fetch failed: {type(e).__name__}: {e}")
+        if _route_stops_cache:
+            return _route_stops_cache
+        return BusRouteStopsResponse(routes={})
+
+
+@router.get("/bus/positions", response_model=BusPositionsResponse)
+async def get_bus_positions():
+    """
+    取得即時公車位置 / Get real-time bus positions
+    從 TDX RealTimeNearStop API 取得公車目前所在站牌
+    """
+    try:
+        tdx = TDXService()
+        raw = tdx.get_realtime_near_stops()
+        positions = [
+            BusPosition(
+                routeName=p["routeName"],
+                direction=p["direction"],
+                stopName=p["stopName"],
+                stopSequence=p["stopSequence"],
+                plateNumb=p["plateNumb"],
+                eventType=p["eventType"],
+            )
+            for p in raw
+        ]
+        now_str = datetime.now(
+            timezone(timedelta(hours=8))
+        ).strftime("%H:%M:%S")
+        return BusPositionsResponse(positions=positions, updatedAt=now_str)
+    except Exception as e:
+        logger.warning(f"Bus positions fetch failed: {type(e).__name__}: {e}")
+        return BusPositionsResponse(positions=[])

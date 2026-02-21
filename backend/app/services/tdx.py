@@ -3,6 +3,11 @@ TDX 公車 API 服務 / TDX Bus API Service
 介接交通部 TDX (Transport Data eXchange) API 取得公車到站資訊
 Integrates with Taiwan TDX API for bus arrival information.
 
+支援 API：
+  - EstimatedTimeOfArrival  預估到站時間（全站牌）
+  - StopOfRoute             路線站牌列表（含站序）
+  - RealTimeNearStop        即時公車位置
+
 文件 / Documentation: https://tdx.transportdata.tw/
 """
 import os
@@ -19,9 +24,6 @@ TDX_API_BASE = "https://tdx.transportdata.tw/api/basic"
 
 # 目標路線 / Target bus routes
 TARGET_ROUTES = ["301", "368", "162"]
-
-# 靜宜大學附近站牌關鍵字 / Keywords for stops near Providence University
-STOP_KEYWORDS = ["靜宜"]
 
 DEFAULT_CITY = "Taichung"
 
@@ -126,35 +128,139 @@ class TDXService:
         """
         模擬公車到站資料（TDX 憑證未設定時使用）
         Mock bus arrivals when TDX credentials are not configured.
+        含全路線所有站牌 / Includes all stops for all routes.
         """
         import random
-        routes = [
-            {"routeName": "301", "direction": "去程", "destination": "新民高中"},
-            {"routeName": "301", "direction": "返程", "destination": "靜宜大學"},
-            {"routeName": "368", "direction": "去程", "destination": "巨業沙鹿站"},
-            {"routeName": "368", "direction": "返程", "destination": "靜宜大學"},
-            {"routeName": "162", "direction": "去程", "destination": "嘉陽高中"},
-            {"routeName": "162", "direction": "返程", "destination": "靜宜大學"},
-        ]
+        mock_routes = {
+            "301": {
+                "去程": [
+                    "新民高中", "臺中一中", "臺中公園(雙十路)", "民興街",
+                    "中友百貨", "國立臺灣體大", "五權路口", "臺中火車站(民族路口)",
+                    "忠明國小", "頂何厝", "市政府(文心)", "文心中港路口",
+                    "福安里(中港路)", "朝馬", "文心森林公園", "秋紅谷(朝陽橋)",
+                    "東海別墅", "中港澄清醫院", "弘光科技大學", "晉江寮",
+                    "靜宜大學", "新光里(新福路)",
+                ],
+                "返程": [
+                    "新光里(新福路)", "靜宜大學", "晉江寮", "弘光科技大學",
+                    "中港澄清醫院", "東海別墅", "秋紅谷(朝陽橋)", "文心森林公園",
+                    "朝馬", "福安里(中港路)", "文心中港路口", "市政府(文心)",
+                    "頂何厝", "忠明國小", "臺中火車站(民族路口)", "五權路口",
+                    "國立臺灣體大", "中友百貨", "民興街", "臺中公園(雙十路)",
+                    "臺中一中", "新民高中",
+                ],
+            },
+            "368": {
+                "去程": [
+                    "臺中火車站(東站)", "臺中公園(自由路)", "中正國小",
+                    "忠明國小", "文心森林公園(文心路)", "朝馬(中港路)",
+                    "東海別墅(東海街)", "弘光科技大學", "靜宜大學",
+                    "沙鹿",
+                ],
+                "返程": [
+                    "沙鹿", "靜宜大學", "弘光科技大學",
+                    "東海別墅(東海街)", "朝馬(中港路)", "文心森林公園(文心路)",
+                    "忠明國小", "中正國小", "臺中公園(自由路)",
+                    "臺中火車站(東站)",
+                ],
+            },
+            "162": {
+                "去程": [
+                    "嘉陽高中", "大甲車站", "大甲高中", "順天國中",
+                    "清水", "沙鹿高工", "靜宜大學", "靜宜大學(英才路)",
+                ],
+                "返程": [
+                    "靜宜大學(英才路)", "靜宜大學", "沙鹿高工",
+                    "清水", "順天國中", "大甲高中", "大甲車站", "嘉陽高中",
+                ],
+            },
+        }
         arrivals = []
-        for route in random.sample(routes, min(4, len(routes))):
-            minutes = random.randint(2, 25)
-            arrivals.append({
-                **route,
-                "estimatedSeconds": minutes * 60,
-                "estimatedMinutes": minutes,
-                "stopName": "靜宜大學",
-                "stopStatus": f"{minutes} 分",
-                "plateNumb": None,
-            })
-        arrivals.sort(key=lambda x: x["estimatedSeconds"])
+        for route_name, dirs in mock_routes.items():
+            for direction, stops in dirs.items():
+                for seq, stop_name in enumerate(stops, 1):
+                    minutes = random.randint(1, 40) if random.random() > 0.25 else None
+                    stop_status_code = 0 if minutes is not None else random.choice([1, 3, 4])
+                    if minutes is not None:
+                        status_text = "進站中" if minutes <= 1 else f"{minutes} 分"
+                    else:
+                        status_text = STOP_STATUS_MAP.get(stop_status_code, "未知")
+                    arrivals.append({
+                        "routeName": route_name,
+                        "direction": direction,
+                        "estimatedSeconds": minutes * 60 if minutes else None,
+                        "estimatedMinutes": minutes,
+                        "stopName": stop_name,
+                        "stopStatus": status_text,
+                        "plateNumb": None,
+                        "stopStatusCode": stop_status_code,
+                        "stopSequence": seq,
+                    })
         return arrivals
+
+    def _get_mock_route_stops(self) -> dict:
+        """
+        模擬路線站牌資料 / Mock route stops data
+        """
+        mock_data = {
+            "301": {
+                "去程": [
+                    "新民高中", "臺中一中", "臺中公園(雙十路)", "民興街",
+                    "中友百貨", "國立臺灣體大", "五權路口", "臺中火車站(民族路口)",
+                    "忠明國小", "頂何厝", "市政府(文心)", "文心中港路口",
+                    "福安里(中港路)", "朝馬", "文心森林公園", "秋紅谷(朝陽橋)",
+                    "東海別墅", "中港澄清醫院", "弘光科技大學", "晉江寮",
+                    "靜宜大學", "新光里(新福路)",
+                ],
+                "返程": [
+                    "新光里(新福路)", "靜宜大學", "晉江寮", "弘光科技大學",
+                    "中港澄清醫院", "東海別墅", "秋紅谷(朝陽橋)", "文心森林公園",
+                    "朝馬", "福安里(中港路)", "文心中港路口", "市政府(文心)",
+                    "頂何厝", "忠明國小", "臺中火車站(民族路口)", "五權路口",
+                    "國立臺灣體大", "中友百貨", "民興街", "臺中公園(雙十路)",
+                    "臺中一中", "新民高中",
+                ],
+            },
+            "368": {
+                "去程": [
+                    "臺中火車站(東站)", "臺中公園(自由路)", "中正國小",
+                    "忠明國小", "文心森林公園(文心路)", "朝馬(中港路)",
+                    "東海別墅(東海街)", "弘光科技大學", "靜宜大學",
+                    "沙鹿",
+                ],
+                "返程": [
+                    "沙鹿", "靜宜大學", "弘光科技大學",
+                    "東海別墅(東海街)", "朝馬(中港路)", "文心森林公園(文心路)",
+                    "忠明國小", "中正國小", "臺中公園(自由路)",
+                    "臺中火車站(東站)",
+                ],
+            },
+            "162": {
+                "去程": [
+                    "嘉陽高中", "大甲車站", "大甲高中", "順天國中",
+                    "清水", "沙鹿高工", "靜宜大學", "靜宜大學(英才路)",
+                ],
+                "返程": [
+                    "靜宜大學(英才路)", "靜宜大學", "沙鹿高工",
+                    "清水", "順天國中", "大甲高中", "大甲車站", "嘉陽高中",
+                ],
+            },
+        }
+        result = {}
+        for route_name, dirs in mock_data.items():
+            result[route_name] = {}
+            for direction, stops in dirs.items():
+                result[route_name][direction] = [
+                    {"stopName": name, "stopSequence": seq}
+                    for seq, name in enumerate(stops, 1)
+                ]
+        return result
 
     def get_routes_eta(self, city: str = DEFAULT_CITY) -> dict:
         """
-        查詢目標路線預估到站時間 / Query ETA for target bus routes
-        針對每條路線呼叫 TDX API，篩選靜宜大學附近站牌
-        Calls TDX API per route and filters for stops near Providence University.
+        查詢目標路線全部站牌預估到站時間 / Query ETA for ALL stops of target routes
+        不做站名篩選，回傳整條路線所有站牌的到站資訊
+        Returns ALL stops for each route (no keyword filter).
 
         Returns:
             dict with "arrivals" list and "updatedAt" timestamp
@@ -181,10 +287,6 @@ class TDXService:
                 for item in data:
                     stop_zh = item.get("StopName", {}).get("Zh_tw", "")
 
-                    # 篩選靜宜大學相關站牌 / Filter for Providence University stops
-                    if not any(kw in stop_zh for kw in STOP_KEYWORDS):
-                        continue
-
                     est_seconds = item.get("EstimateTime")
                     est_minutes = est_seconds // 60 if est_seconds is not None else None
                     stop_status_code = item.get("StopStatus", -1)
@@ -198,14 +300,15 @@ class TDXService:
                         "stopStatus": self._format_status(item),
                         "plateNumb": item.get("PlateNumb"),
                         "stopStatusCode": stop_status_code,
+                        "stopSequence": item.get("StopSequence", 0),
                     })
 
             except Exception as e:
                 logger.warning(f"TDX query failed for route {route_name}: {type(e).__name__}: {e}")
 
-        # 按到站時間排序（沒有預估時間的排最後）/ Sort by ETA
+        # 按路線 → 方向 → 站序排序 / Sort by route → direction → stop sequence
         all_arrivals.sort(
-            key=lambda x: x["estimatedSeconds"] if x["estimatedSeconds"] is not None else 99999
+            key=lambda x: (x["routeName"], x["direction"], x["stopSequence"])
         )
 
         now_str = datetime.now(
@@ -218,6 +321,75 @@ class TDXService:
         # Fallback to mock if no data
         logger.info("No real arrivals found, returning mock data")
         return {"arrivals": self._get_mock_arrivals(), "updatedAt": now_str}
+
+    def get_stops_of_routes(self, city: str = DEFAULT_CITY) -> dict:
+        """
+        從 TDX StopOfRoute API 取得各路線的站牌列表（含站序）
+        Fetch stop list for each route from TDX StopOfRoute API.
+
+        Returns:
+            dict: { "301": { "去程": [{"stopName": "...", "stopSequence": 1}, ...], ... }, ... }
+        """
+        if not self.client_id or not self.client_secret:
+            logger.info("TDX credentials not set, returning mock route stops")
+            return self._get_mock_route_stops()
+
+        result = {}
+        for route_name in TARGET_ROUTES:
+            try:
+                data = self._api_get(
+                    f"/v2/Bus/StopOfRoute/City/{city}/{route_name}",
+                    params={"$format": "JSON"},
+                )
+                route_dirs = {}
+                for route_item in data:
+                    direction = "去程" if route_item.get("Direction") == 0 else "返程"
+                    stops = []
+                    for stop in route_item.get("Stops", []):
+                        stops.append({
+                            "stopName": stop.get("StopName", {}).get("Zh_tw", ""),
+                            "stopSequence": stop.get("StopSequence", 0),
+                        })
+                    stops.sort(key=lambda s: s["stopSequence"])
+                    route_dirs[direction] = stops
+                result[route_name] = route_dirs
+            except Exception as e:
+                logger.warning(f"TDX StopOfRoute failed for {route_name}: {type(e).__name__}: {e}")
+                result[route_name] = {}
+
+        return result
+
+    def get_realtime_near_stops(self, city: str = DEFAULT_CITY) -> list:
+        """
+        從 TDX RealTimeNearStop API 取得即時公車位置
+        Fetch real-time bus positions near stops.
+
+        Returns:
+            list of { routeName, direction, stopName, stopSequence, plateNumb, eventType }
+        """
+        if not self.client_id or not self.client_secret:
+            return []
+
+        positions = []
+        for route_name in TARGET_ROUTES:
+            try:
+                data = self._api_get(
+                    f"/v2/Bus/RealTimeNearStop/City/{city}/{route_name}",
+                    params={"$format": "JSON"},
+                )
+                for item in data:
+                    positions.append({
+                        "routeName": item.get("RouteName", {}).get("Zh_tw", route_name),
+                        "direction": "去程" if item.get("Direction") == 0 else "返程",
+                        "stopName": item.get("StopName", {}).get("Zh_tw", ""),
+                        "stopSequence": item.get("StopSequence", 0),
+                        "plateNumb": item.get("PlateNumb", ""),
+                        "eventType": "進站" if item.get("A2EventType") == 1 else "離站",
+                    })
+            except Exception as e:
+                logger.warning(f"TDX RealTimeNearStop failed for {route_name}: {type(e).__name__}: {e}")
+
+        return positions
 
     # ── 保留舊方法相容性 / Keep old method for backward compatibility ──
     def get_bus_arrivals(self, stop_name: str = "靜宜大學", city: str = DEFAULT_CITY) -> Optional[list]:
