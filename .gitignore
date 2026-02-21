@@ -2,6 +2,8 @@
 .env
 .env.local
 .env.*.local
+.env.production
+.env.development
 
 # Python
 __pycache__/
@@ -64,3 +66,15 @@ storybook-static/
 /backend/debug_*.json
 piyou_*.db
 piyou_*.sqlite3
+
+# ── 機密與快取（嚴禁上傳）/ Secrets & Cache (NEVER commit) ──
+/backend/cache/
+/backend/.env
+*.pem
+*.key
+*.crt
+*.p12
+*.jks
+*secret*
+*credential*
+!*.example

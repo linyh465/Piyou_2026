@@ -1,0 +1,50 @@
+🔴 高優先 — 測試覆蓋不足
+目前後端只有 11 個測試（多為冒煙測試），前端只有 4 個測試。這是最需要補強的部分：
+
+缺少的測試	說明
+transform_timetable / transform_grades 單元測試	資料轉換邏輯是核心，但完全沒有測試
+Mock 爬蟲的完整登入流程測試	目前只測了「缺欄位 422」和「無 Token 401」
+TDX 公車服務單元測試	OAuth2 + fallback 邏輯未測試
+前端各頁面 smoke test	只測了 Dashboard，其餘 6 個頁面完全沒有
+busStore / timetableStore 狀態測試	只測了 authStore
+
+🟡 中優先 — 程式碼品質
+項目	位置
+清理 debug 遺留程式碼	scraper.py 中的 _log_menu_links() 和 print() 語句
+成績學期寫死	data.py 中 "113-1 上學期" 為硬編碼
+通知偏好未持久化	Settings.jsx 中的 Toggle 狀態重載即失效
+🟢 低優先 — 文件與功能
+項目	說明
+撰寫根目錄 README.md	專案缺少整體說明文件
+更新前端 README	目前還是 Vite 預設模板
+AI 助理升級	目前只是關鍵字規則引擎，未接 LLM
+通知實作	有 UI 開關但無實際推播功能
+
+第一階段：立即修復（安全 & 衛生）
+#	項目	原因
+1	移除 scraper.py 中的 print() 和學號 log	違反你自己建立的零日誌策略，logger.info(f"Submitting login for {student_id}") 會洩漏學號
+2	import re 移到檔案頂部	目前在 for loop 內重複 import
+3	security.py RateLimiter 記憶體洩漏	self.requests dict 只清理活躍 IP，已消失的 IP 永不回收
+4	backend/cache/*.json 加入 .gitignore	含真實學號 s1142446 的快取檔不應追蹤
+5	前端 tryAutoLogin 加 JWT 過期檢查	目前只檢查 token 存在，不驗證是否已過期
+
+第二階段：架構改善
+#	項目	原因
+6	統一 bus 資料流	dashboardStore 和 busStore 有重複的 fetchBusArrivals + 輪詢邏輯
+7	新增 React Error Boundary	目前任何未捕捉的渲染異常會直接白屏
+8	路由 React.lazy() + <Suspense>	減少首次載入 bundle 大小
+9	@app.on_event("startup") → lifespan	前者已被 FastAPI 棄用
+10	API 加 /api/v1 前綴	方便未來版本管理
+
+第三階段：DevOps & 品質
+#	項目	原因
+11	新增 Dockerfile + docker-compose	標準化開發/部署環境
+12	pyproject.toml 加入 ruff / mypy	自動化程式碼品質檢查
+13	擴展前端測試	目前只有 App 渲染 + authStore 登出測試，store/頁面覆蓋率幾乎為零
+14	確保 package-lock.json 存在	CI 的 npm ci 需要它
+
+第四階段：功能擴展
+多學期成績動態解析（目前學期名稱硬編碼）
+PWA 離線支援
+AI 助理頁面功能實作
+sql.js WASM 改為本地 bundle（離線可用）

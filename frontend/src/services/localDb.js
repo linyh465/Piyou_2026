@@ -1,6 +1,7 @@
 /**
  * Local SQLite Database Service
  * Uses sql.js (Emscripten-compiled SQLite) for in-browser task caching and offline data.
+ * WASM 檔案從本地載入，支援離線使用 / WASM loaded locally for offline support.
  */
 import initSqlJs from 'sql.js';
 
@@ -10,7 +11,8 @@ async function getDb() {
     if (db) return db;
 
     const SQL = await initSqlJs({
-        locateFile: (file) => `https://sql.js.org/dist/${file}`,
+        // 使用本地 WASM 檔案，離線可用 / Use local WASM file for offline support
+        locateFile: (file) => `/${file}`,
     });
 
     // Try to restore from localStorage

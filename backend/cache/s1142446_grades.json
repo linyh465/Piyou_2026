@@ -1,7 +1,7 @@
 {
   "semesters": [
     {
-      "name": "113-1 上學期",
+      "name": "學期別(Semester)：114 [ 1 ]",
       "courses": [
         {
           "name": "英文(一)FRESHMAN ENGLISH 1",
@@ -84,8 +84,11 @@
           "course_type": "通識(General)"
         }
       ],
-      "total_credits": 21
+      "total_credits": 21,
+      "rank": null,
+      "weighted_average": 93.7,
+      "gpa": 4.25
     }
   ],
-  "_cached_at": 1771629990.5962179
+  "_cached_at": 1771663103.2670717
 }

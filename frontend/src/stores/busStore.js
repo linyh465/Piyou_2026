@@ -11,9 +11,10 @@
 import { create } from 'zustand';
 import { api } from '../services/apiClient';
 
-// ── 全域節流常數 ──
-const MANUAL_COOLDOWN_SECONDS = 20;
-const MAX_CALLS_PER_MINUTE = 5;
+// ── 全域節流常數（TDX 基礎會員每日請求量有限，需保守控制）──
+const MANUAL_COOLDOWN_SECONDS = 60;
+const AUTO_POLL_INTERVAL = 120_000;  // 自動輪詢 120 秒
+const MAX_CALLS_PER_MINUTE = 2;
 
 const useBusStore = create((set, get) => ({
     arrivals: [],
@@ -139,7 +140,7 @@ const useBusStore = create((set, get) => ({
         if (state._autoInterval) clearInterval(state._autoInterval);
 
         get().fetchBus();
-        const interval = setInterval(() => get().fetchBus(), 30_000);
+        const interval = setInterval(() => get().fetchBus(), AUTO_POLL_INTERVAL);
         set({ _autoInterval: interval });
     },
 

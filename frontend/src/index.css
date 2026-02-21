@@ -664,3 +664,147 @@ body {
     gap: 1.25rem;
   }
 }
+
+/* ══════════════════════════════════════════════════════
+   Dashboard 首頁布局 / Dashboard Layout
+   ══════════════════════════════════════════════════════ */
+.dash-page {
+  max-width: 720px;
+}
+
+.dash-cards-grid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-card-gap);
+}
+
+@media (min-width: 640px) {
+  .dash-cards-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+}
+
+.dash-quick-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+
+.dash-quick-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 8px;
+  text-decoration: none;
+  text-align: center;
+}
+
+@media (max-width: 400px) {
+  .dash-quick-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* ══════════════════════════════════════════════════════
+   Transport 篩選器 / Transport Filter Dropdowns
+   ══════════════════════════════════════════════════════ */
+.transport-filters {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+@media (min-width: 480px) {
+  .transport-filters {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.transport-select-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.transport-select-label {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding-left: 2px;
+}
+
+.transport-select {
+  width: 100%;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  padding: 0.625rem 0.875rem;
+  font-size: 0.8125rem;
+  color: var(--text);
+  outline: none;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%23999' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  cursor: pointer;
+  transition: border-color 0.2s ease;
+}
+
+.transport-select:focus {
+  border-color: var(--color-brand);
+  box-shadow: 0 0 0 3px var(--ring-brand);
+}
+
+.transport-stops-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+
+@media (min-width: 480px) {
+  .transport-stops-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 768px) {
+  .transport-stops-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.transport-stop-btn {
+  cursor: pointer;
+  border: 1px solid var(--border);
+  text-align: left;
+  width: 100%;
+  padding: 12px 14px;
+  transition: all 0.15s ease;
+}
+
+.transport-stop-btn:hover {
+  border-color: var(--color-brand);
+}
+
+.transport-stop-active {
+  border-color: var(--color-brand) !important;
+  background: var(--color-brand-subtle) !important;
+}
+
+.dark .transport-stop-active {
+  background: rgba(99, 102, 241, 0.1) !important;
+}
+
+/* ══════════════════════════════════════════════════════
+   pulse 動畫 / Pulse Animation
+   ══════════════════════════════════════════════════════ */
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}

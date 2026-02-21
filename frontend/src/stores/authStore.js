@@ -7,6 +7,21 @@ import { create } from 'zustand';
 import { api } from '../services/apiClient';
 import secureStorage from '../services/secureStorage';
 
+/**
+ * 解碼 JWT payload 並檢查是否已過期
+ * Decode JWT payload and check if expired.
+ * @returns {boolean} true if token is valid and not expired
+ */
+function isTokenValid(token) {
+    try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        // exp 是 Unix 秒數；預留 30 秒緩衝 / exp is Unix seconds; 30s buffer
+        return payload.exp * 1000 > Date.now() + 30_000;
+    } catch {
+        return false;
+    }
+}
+
 const useAuthStore = create((set, get) => ({
     // 狀態 / State
     user: null,
@@ -86,13 +101,15 @@ const useAuthStore = create((set, get) => ({
      * Attempts re-login from securely stored credentials.
      */
     tryAutoLogin: async () => {
-        // 從 sessionStorage 讀取 token 來判斷是否已經有 token
+        // 從 sessionStorage 讀取 token 並驗證是否過期
+        // Read token from sessionStorage and verify it hasn't expired
         const token = sessionStorage.getItem('piyou_token');
-        if (token) {
-            // (可選) 驗證 token 或直接標記為 true
+        if (token && isTokenValid(token)) {
             set({ isAuthenticated: true, token });
             return true;
         }
+        // Token 不存在或已過期，清理殘留 / Token missing or expired, clean up
+        if (token) sessionStorage.removeItem('piyou_token');
         return false;
     },
 

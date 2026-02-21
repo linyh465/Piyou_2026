@@ -1,0 +1,23 @@
+/**
+ * App.jsx 路由渲染測試 / App.jsx Route Rendering Tests
+ * 驗證主要頁面是否正確渲染。
+ */
+import { describe, it, expect } from 'vitest';
+import { render, screen, waitFor } from '@testing-library/react';
+import App from '../App';
+
+describe('App', () => {
+  it('renders the layout without crashing', async () => {
+    render(<App />);
+    // Lazy-loaded — 等待 Layout 渲染完成
+    const homeLinks = await screen.findAllByText('首頁');
+    expect(homeLinks.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('shows the dashboard route by default', async () => {
+    render(<App />);
+    // Dashboard 的問候語 — 總會出現早安/午安/晚安之一
+    const greeting = await screen.findByText(/早安|午安|晚安/);
+    expect(greeting).toBeInTheDocument();
+  });
+});

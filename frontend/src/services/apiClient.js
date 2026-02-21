@@ -2,7 +2,7 @@ import axios from 'axios';
 import { retryWithBackoff } from '../utils/retryWithBackoff';
 
 // ── API Base Configuration ──
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api/v1';
 
 const apiClient = axios.create({
     baseURL: BASE_URL,

@@ -161,54 +161,122 @@ def transform_timetable(scraper_data: dict) -> TimetableResponse:
 
 
 def transform_grades(scraper_data: dict) -> GradesResponse:
-    """爬蟲成績 → API 格式 / Scraper grades → API format"""
+    """
+    爬蟲成績 → API 格式 / Scraper grades → API format
+    支援多學期動態解析 / Supports dynamic multi-semester parsing.
+    """
+
+    # GPA 4.3 對照表 / GPA 4.3 scale mapping
+    def score_to_gpa(score: float) -> float:
+        if score >= 90: return 4.3
+        if score >= 85: return 4.0
+        if score >= 80: return 3.7
+        if score >= 77: return 3.3
+        if score >= 73: return 3.0
+        if score >= 70: return 2.7
+        if score >= 67: return 2.3
+        if score >= 63: return 2.0
+        if score >= 60: return 1.7
+        if score >= 50: return 1.0
+        return 0.0
+
+    def _score_to_grade(gp: float) -> str:
+        if gp >= 4.3: return "A+"
+        if gp >= 4.0: return "A"
+        if gp >= 3.7: return "A-"
+        if gp >= 3.3: return "B+"
+        if gp >= 3.0: return "B"
+        if gp >= 2.7: return "B-"
+        if gp >= 2.3: return "C+"
+        if gp >= 2.0: return "C"
+        if gp >= 1.7: return "C-"
+        if gp >= 1.0: return "D"
+        return "F"
+
+    def _parse_rows(rows: list[list[str]]) -> list[GradeCourse]:
+        """解析成績列 / Parse grade rows"""
+        courses = []
+        for row in rows:
+            if len(row) < 5:
+                continue
+            name = row[0]
+            course_type = row[2] if len(row) > 2 else ""
+            try:
+                credits = int(row[3]) if len(row) > 3 else 0
+            except (ValueError, TypeError):
+                credits = 0
+
+            score_raw = row[4] if len(row) > 4 else ""
+            score = None
+            score_text = None
+            grade = None
+
+            try:
+                score = float(score_raw)
+                grade = _score_to_grade(score_to_gpa(score))
+            except (ValueError, TypeError):
+                score_text = score_raw
+                if "通過" in score_raw or "Pass" in score_raw:
+                    grade = "Pass"
+                elif "缺" in score_raw:
+                    grade = "W"
+
+            courses.append(GradeCourse(
+                name=name, score=score, score_text=score_text,
+                credits=credits, grade=grade, course_type=course_type,
+            ))
+        return courses
+
+    def _calc_stats(courses: list[GradeCourse]):
+        """計算加權平均 & GPA / Calculate weighted average & GPA"""
+        numeric = [c for c in courses if c.score is not None]
+        total_credits = sum(c.credits for c in courses)
+        weighted_sum = sum(c.score * c.credits for c in numeric)
+        weighted_credits = sum(c.credits for c in numeric)
+        weighted_average = round(weighted_sum / weighted_credits, 2) if weighted_credits else None
+        gpa_sum = sum(score_to_gpa(c.score) * c.credits for c in numeric)
+        gpa = round(gpa_sum / weighted_credits, 2) if weighted_credits else None
+        if gpa is not None and gpa > 4.3:
+            gpa = 4.3
+        return total_credits, weighted_average, gpa
+
+    # ── 新格式：多學期 / New format: multi-semester ──
+    raw_semesters = scraper_data.get("semesters")
+    if raw_semesters:
+        semesters = []
+        for idx, sem in enumerate(raw_semesters):
+            rows = sem.get("rows", [])
+            courses = _parse_rows(rows)
+            if not courses:
+                continue
+            total_credits, weighted_average, gpa = _calc_stats(courses)
+            sem_name = sem.get("name") or f"第 {idx + 1} 學期"
+            semesters.append(Semester(
+                name=sem_name,
+                courses=courses,
+                total_credits=total_credits,
+                weighted_average=weighted_average,
+                gpa=gpa,
+                rank=sem.get("rank"),
+            ))
+        return GradesResponse(semesters=semesters)
+
+    # ── 舊格式相容 (flat rows) / Legacy format compat ──
     rows = scraper_data.get("rows", [])
-    grade_courses = []
-    total_credits = 0
+    courses = _parse_rows(rows)
+    if not courses:
+        return GradesResponse(semesters=[])
 
-    for row in rows:
-        if len(row) < 5:
-            continue
-        name = row[0]
-        course_type = row[2] if len(row) > 2 else ""
-        try:
-            credits = int(row[3]) if len(row) > 3 else 0
-        except (ValueError, TypeError):
-            credits = 0
-
-        score_raw = row[4] if len(row) > 4 else ""
-        score = None
-        score_text = None
-        grade = None
-
-        try:
-            score = float(score_raw)
-            if score >= 90: grade = "A+"
-            elif score >= 85: grade = "A"
-            elif score >= 80: grade = "A-"
-            elif score >= 77: grade = "B+"
-            elif score >= 73: grade = "B"
-            elif score >= 70: grade = "B-"
-            elif score >= 67: grade = "C+"
-            elif score >= 63: grade = "C"
-            elif score >= 60: grade = "C-"
-            else: grade = "F"
-        except (ValueError, TypeError):
-            score_text = score_raw
-            if "通過" in score_raw or "Pass" in score_raw:
-                grade = "Pass"
-
-        total_credits += credits
-        grade_courses.append(GradeCourse(
-            name=name, score=score, score_text=score_text,
-            credits=credits, grade=grade, course_type=course_type,
-        ))
-
-    semesters = []
-    if grade_courses:
-        semesters.append(Semester(
-            name="113-1 上學期", courses=grade_courses, total_credits=total_credits,
-        ))
+    total_credits, weighted_average, gpa = _calc_stats(courses)
+    rank_str = scraper_data.get("rank")
+    semesters = [Semester(
+        name="學期成績",
+        courses=courses,
+        total_credits=total_credits,
+        weighted_average=weighted_average,
+        gpa=gpa,
+        rank=rank_str,
+    )]
     return GradesResponse(semesters=semesters)
 
 
@@ -226,10 +294,14 @@ MOCK_TIMETABLE = TimetableResponse(courses=[
 ])
 
 MOCK_GRADES = GradesResponse(semesters=[
-    Semester(name="113-1 上學期", courses=[
+    Semester(name="114-1 上學期", courses=[
         GradeCourse(name="程式設計", score=92, credits=3, grade="A"),
         GradeCourse(name="微積分", score=85, credits=4, grade="A-"),
         GradeCourse(name="英文", score=78, credits=2, grade="B+"),
+    ]),
+    Semester(name="113-2 下學期", courses=[
+        GradeCourse(name="資料結構", score=88, credits=3, grade="A"),
+        GradeCourse(name="物理", score=74, credits=3, grade="B"),
     ]),
 ])
 
@@ -316,9 +388,9 @@ async def get_grades(user: dict = Depends(get_current_user)):
     try:
         scraper = _get_authenticated_scraper(user)
         raw_data = scraper.fetch_grades()
-        if raw_data and raw_data.get("rows"):
+        if raw_data and (raw_data.get("semesters") or raw_data.get("rows")):
             result = transform_grades(raw_data)
-            logger.info(f"Fetched {sum(len(s.courses) for s in result.semesters)} grade rows")
+            logger.info(f"Fetched {sum(len(s.courses) for s in result.semesters)} grade rows across {len(result.semesters)} semesters")
 
             # 3. 儲存快取 / Save to cache
             cache_data = result.model_dump()
@@ -335,7 +407,7 @@ async def get_grades(user: dict = Depends(get_current_user)):
 # ── 記憶體內 TDX 節流 / In-memory TDX throttle ──
 _bus_mem_cache: dict | None = None
 _bus_mem_cache_at: float = 0
-BUS_THROTTLE_SECONDS = 20  # 最少 20 秒才呼叫一次 TDX
+BUS_THROTTLE_SECONDS = 60  # 最少 60 秒才呼叫一次 TDX（基礎會員每日限額有限）
 
 
 @router.get("/bus", response_model=BusResponse)

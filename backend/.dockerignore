@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+.env
+.venv/
+venv/
+cache/
+*.egg-info/
+.git/
+.gitignore
+tests/
+debug_*.html
+debug_*.json

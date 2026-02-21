@@ -1,31 +1,100 @@
 /**
  * 成績頁面 / Grades Page
- * 間距參考 Dcard / Instagram
+ * GPA 上限 4.3，「缺」「通過」等文字成績不納入計算
  */
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import useTimetableStore from '../stores/timetableStore';
 import { IconChartBar, IconRefresh, IconBook } from '../components/Icons';
 
-function calculateGPA(grades) {
-    if (!grades.length) return 0;
-    const total = grades.reduce((sum, g) => sum + (g.score || 0) * (g.credits || 0), 0);
-    const credits = grades.reduce((sum, g) => sum + (g.credits || 0), 0);
-    return credits ? (total / credits).toFixed(2) : 0;
+// ── GPA 4.3 對照表 ──
+function scoreToGPA(score) {
+    if (score >= 90) return 4.3;
+    if (score >= 85) return 4.0;
+    if (score >= 80) return 3.7;
+    if (score >= 77) return 3.3;
+    if (score >= 73) return 3.0;
+    if (score >= 70) return 2.7;
+    if (score >= 67) return 2.3;
+    if (score >= 63) return 2.0;
+    if (score >= 60) return 1.7;
+    if (score >= 50) return 1.0;
+    return 0.0;
 }
 
-function scoreColor(score) {
-    if (score >= 80) return 'var(--color-success)';
-    if (score >= 60) return 'var(--color-warning)';
+// 是否為數字成績（排除缺、通過等文字）
+function isNumericCourse(course) {
+    return course.score != null && course.score_text == null;
+}
+
+function calculateStats(courses) {
+    const numeric = (courses || []).filter(isNumericCourse);
+    if (!numeric.length) return { gpa: null, weightedAvg: null, numericCredits: 0 };
+
+    let totalWeighted = 0;
+    let totalGPA = 0;
+    let credits = 0;
+
+    for (const c of numeric) {
+        const cr = c.credits || 0;
+        totalWeighted += (c.score || 0) * cr;
+        totalGPA += scoreToGPA(c.score || 0) * cr;
+        credits += cr;
+    }
+
+    const weightedAvg = credits ? (totalWeighted / credits).toFixed(1) : null;
+    let gpa = credits ? (totalGPA / credits).toFixed(2) : null;
+    if (gpa !== null && parseFloat(gpa) > 4.3) gpa = '4.30';
+
+    return { gpa, weightedAvg, numericCredits: credits };
+}
+
+function scoreColor(course) {
+    if (!isNumericCourse(course)) return 'var(--text-muted)';
+    const s = course.score;
+    if (s >= 80) return 'var(--color-success)';
+    if (s >= 60) return 'var(--color-warning)';
     return 'var(--color-danger)';
+}
+
+function displayScore(course) {
+    if (course.score_text) return course.score_text;
+    if (course.score != null) return course.score;
+    return '--';
 }
 
 export default function Grades() {
     const { grades, isLoadingGrades, gradesError, fetchGrades } = useTimetableStore();
+    const [selectedSemester, setSelectedSemester] = useState('all');
 
     useEffect(() => { fetchGrades(); }, [fetchGrades]);
 
+    // 篩選學期 / Filter semesters
+    const filteredGrades = selectedSemester === 'all'
+        ? grades
+        : grades.filter((s) => s.name === selectedSemester);
+
+    // 全學期綜合統計 / Overall statistics across all semesters
+    const overallStats = (() => {
+        if (!grades.length) return null;
+        const allNumeric = grades.flatMap((s) => (s.courses || []).filter(isNumericCourse));
+        if (!allNumeric.length) return null;
+        let totalWeighted = 0, totalGPA = 0, credits = 0;
+        for (const c of allNumeric) {
+            const cr = c.credits || 0;
+            totalWeighted += (c.score || 0) * cr;
+            totalGPA += scoreToGPA(c.score || 0) * cr;
+            credits += cr;
+        }
+        return {
+            gpa: credits ? (totalGPA / credits).toFixed(2) : null,
+            avg: credits ? (totalWeighted / credits).toFixed(1) : null,
+            totalCourses: grades.reduce((s, sem) => s + (sem.courses || []).length, 0),
+            totalCredits: grades.reduce((s, sem) => s + (sem.courses || []).reduce((cs, c) => cs + (c.credits || 0), 0), 0),
+        };
+    })();
+
     return (
-        <div className="section-stack animate-fade-in">
+        <div className="section-stack">
             <div className="page-header">
                 <div className="page-title-group">
                     <IconChartBar size={22} style={{ color: 'var(--text-muted)' }} />
@@ -44,6 +113,56 @@ export default function Grades() {
                 </div>
             )}
 
+            {/* 學期選擇標籤 / Semester tabs */}
+            {!isLoadingGrades && grades.length > 1 && (
+                <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '4px' }}>
+                    <button
+                        onClick={() => setSelectedSemester('all')}
+                        className={`btn ${selectedSemester === 'all' ? 'btn-primary' : 'btn-ghost'}`}
+                        style={{ fontSize: '12px', padding: '6px 14px', whiteSpace: 'nowrap', borderRadius: '20px' }}
+                    >
+                        全部學期
+                    </button>
+                    {grades.map((s) => (
+                        <button
+                            key={s.name}
+                            onClick={() => setSelectedSemester(s.name)}
+                            className={`btn ${selectedSemester === s.name ? 'btn-primary' : 'btn-ghost'}`}
+                            style={{ fontSize: '12px', padding: '6px 14px', whiteSpace: 'nowrap', borderRadius: '20px' }}
+                        >
+                            {s.name || '未命名學期'}
+                        </button>
+                    ))}
+                </div>
+            )}
+
+            {/* 整體統計卡片 / Overall stats card */}
+            {!isLoadingGrades && overallStats && selectedSemester === 'all' && grades.length > 1 && (
+                <div className="card" style={{ background: 'linear-gradient(135deg, var(--color-brand-subtle) 0%, rgba(99,102,241,0.06) 100%)' }}>
+                    <p style={{ fontSize: '12px', fontWeight: 600, color: 'var(--color-brand)', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                        📊 累計成績總覽
+                    </p>
+                    <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
+                        <div>
+                            <p style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text)' }}>{overallStats.gpa ?? '--'}</p>
+                            <p style={{ fontSize: '11px', color: 'var(--text-muted)' }}>累計 GPA</p>
+                        </div>
+                        <div>
+                            <p style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text)' }}>{overallStats.avg ?? '--'}</p>
+                            <p style={{ fontSize: '11px', color: 'var(--text-muted)' }}>加權平均</p>
+                        </div>
+                        <div>
+                            <p style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text)' }}>{overallStats.totalCourses}</p>
+                            <p style={{ fontSize: '11px', color: 'var(--text-muted)' }}>總課程數</p>
+                        </div>
+                        <div>
+                            <p style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text)' }}>{overallStats.totalCredits}</p>
+                            <p style={{ fontSize: '11px', color: 'var(--text-muted)' }}>總學分</p>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {isLoadingGrades ? (
                 <div className="card-stack">
                     {[1, 2].map((i) => (
@@ -57,67 +176,104 @@ export default function Grades() {
                 </div>
             ) : (
                 <div className="card-stack">
-                    {grades.map((semester, idx) => (
-                        <div key={idx} className="card animate-fade-in" style={{ animationDelay: `${idx * 0.08}s` }}>
-                            {/* 學期標題 */}
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                    <IconBook size={18} style={{ color: 'var(--color-brand)' }} />
-                                    <h3 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text)' }}>
-                                        {semester.name || `第 ${idx + 1} 學期`}
-                                    </h3>
-                                </div>
-                                <span className="badge" style={{ background: 'var(--color-brand-subtle)', color: 'var(--color-brand)', fontWeight: 700 }}>
-                                    GPA {calculateGPA(semester.courses || [])}
-                                </span>
-                            </div>
+                    {filteredGrades.map((semester, idx) => {
+                        // 優先使用後端計算的數值，否則前端計算
+                        const stats = calculateStats(semester.courses);
+                        const gpa = semester.gpa ?? stats.gpa;
+                        const weightedAvg = semester.weighted_average ?? stats.weightedAvg;
+                        const rank = semester.rank;
 
-                            {/* 成績列表 */}
-                            <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                {(semester.courses || []).map((course, ci) => (
-                                    <div
-                                        key={ci}
-                                        style={{
-                                            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                                            padding: '12px 8px', borderRadius: '10px',
-                                            borderBottom: ci < (semester.courses || []).length - 1 ? '1px solid var(--border-light)' : 'none',
-                                        }}
-                                    >
-                                        <div style={{ flex: 1, minWidth: 0 }}>
-                                            <p style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                                {course.name}
-                                            </p>
-                                            <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>
-                                                {course.credits || 0} 學分 credits
-                                            </p>
-                                        </div>
-                                        <span style={{ fontSize: '1.25rem', fontWeight: 700, color: scoreColor(course.score || 0), marginLeft: '16px' }}>
-                                            {course.score ?? '--'}
-                                        </span>
+                        return (
+                            <div key={idx} className="card" style={{ animationDelay: `${idx * 0.08}s` }}>
+                                {/* 學期標題 */}
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', flexWrap: 'wrap', gap: 8 }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                        <IconBook size={18} style={{ color: 'var(--color-brand)' }} />
+                                        <h3 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text)' }}>
+                                            {semester.name || `第 ${idx + 1} 學期`}
+                                        </h3>
                                     </div>
-                                ))}
-                            </div>
+                                    <div style={{ display: 'flex', gap: 6 }}>
+                                        <span className="badge" style={{ background: 'var(--color-brand-subtle)', color: 'var(--color-brand)', fontWeight: 700 }}>
+                                            GPA {gpa ?? '--'}
+                                        </span>
+                                        {weightedAvg && (
+                                            <span className="badge" style={{ background: 'rgba(34,197,94,0.1)', color: 'var(--color-success)', fontWeight: 600 }}>
+                                                加權 {weightedAvg}
+                                            </span>
+                                        )}
+                                    </div>
+                                </div>
 
-                            {/* 學期統計 */}
-                            <div style={{
-                                marginTop: '14px', paddingTop: '14px',
-                                display: 'flex', gap: '20px', fontSize: '12px',
-                                borderTop: '1px solid var(--border-light)', color: 'var(--text-muted)',
-                            }}>
-                                <span>共 {(semester.courses || []).length} 門 courses</span>
-                                <span>{(semester.courses || []).reduce((s, c) => s + (c.credits || 0), 0)} 學分 credits</span>
+                                {/* 排名資訊 */}
+                                {rank && (
+                                    <div style={{
+                                        display: 'flex', alignItems: 'center', gap: 8,
+                                        padding: '8px 12px', marginBottom: 12, borderRadius: 10,
+                                        background: 'rgba(99,102,241,0.04)', border: '1px solid var(--border-light)',
+                                        fontSize: '13px', color: 'var(--text-secondary)',
+                                    }}>
+                                        🏅 班排名 {rank}
+                                    </div>
+                                )}
+
+                                {/* 成績列表 */}
+                                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                    {(semester.courses || []).map((course, ci) => (
+                                        <div
+                                            key={ci}
+                                            style={{
+                                                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                                                padding: '12px 8px', borderRadius: '10px',
+                                                borderBottom: ci < (semester.courses || []).length - 1 ? '1px solid var(--border-light)' : 'none',
+                                            }}
+                                        >
+                                            <div style={{ flex: 1, minWidth: 0 }}>
+                                                <p style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                    {course.name}
+                                                </p>
+                                                <div style={{ display: 'flex', gap: 10, fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                                                    <span>{course.credits || 0} 學分</span>
+                                                    {course.grade && <span>{course.grade}</span>}
+                                                    {course.course_type && <span>{course.course_type}</span>}
+                                                </div>
+                                            </div>
+                                            <span style={{
+                                                fontSize: isNumericCourse(course) ? '1.25rem' : '0.875rem',
+                                                fontWeight: isNumericCourse(course) ? 700 : 500,
+                                                color: scoreColor(course),
+                                                marginLeft: '16px', whiteSpace: 'nowrap',
+                                            }}>
+                                                {displayScore(course)}
+                                            </span>
+                                        </div>
+                                    ))}
+                                </div>
+
+                                {/* 學期統計 */}
+                                <div style={{
+                                    marginTop: '14px', paddingTop: '14px',
+                                    display: 'flex', gap: '16px', fontSize: '12px', flexWrap: 'wrap',
+                                    borderTop: '1px solid var(--border-light)', color: 'var(--text-muted)',
+                                }}>
+                                    <span>共 {(semester.courses || []).length} 門</span>
+                                    <span>{(semester.courses || []).reduce((s, c) => s + (c.credits || 0), 0)} 學分</span>
+                                    {stats.numericCredits > 0 && stats.numericCredits !== (semester.courses || []).reduce((s, c) => s + (c.credits || 0), 0) && (
+                                        <span>計入 GPA: {stats.numericCredits} 學分</span>
+                                    )}
+                                </div>
                             </div>
-                        </div>
-                    ))}
+                        );
+                    })}
                 </div>
             )}
 
-            {!isLoadingGrades && !grades.length && !gradesError && (
-                <div className="card animate-fade-in" style={{ textAlign: 'center', padding: '40px 20px' }}>
+            {!isLoadingGrades && !filteredGrades.length && !gradesError && (
+                <div className="card" style={{ textAlign: 'center', padding: '40px 20px' }}>
                     <IconChartBar size={36} style={{ color: 'var(--text-muted)', margin: '0 auto 16px' }} />
                     <p style={{ color: 'var(--text-secondary)', fontSize: '15px' }}>尚無成績資料</p>
                     <p style={{ fontSize: '13px', marginTop: '6px', color: 'var(--text-muted)' }}>
-                        請先登入以取得成績 Login to fetch grades
+                        請先登入以取得成績
                     </p>
                 </div>
             )}

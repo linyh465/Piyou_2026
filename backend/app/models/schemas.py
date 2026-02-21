@@ -63,6 +63,9 @@ class Semester(BaseModel):
     name: str = Field(..., description="學期名稱 / Semester name")
     courses: list[GradeCourse] = []
     total_credits: int = 0
+    rank: Optional[str] = Field(None, description="排名 / Class rank (e.g. '5/60')")
+    weighted_average: Optional[float] = Field(None, description="加權平均 / Weighted average")
+    gpa: Optional[float] = Field(None, description="GPA (上限 4.3) / GPA (max 4.3)")
 
 
 class GradesResponse(BaseModel):

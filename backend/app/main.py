@@ -5,6 +5,7 @@ FastAPI application configuration, middleware, and route registration.
 """
 import os
 import logging
+from contextlib import asynccontextmanager
 from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -24,6 +25,19 @@ install_credential_filter()
 logger = logging.getLogger(__name__)
 
 # ══════════════════════════════════════════
+#  Lifespan 事件 / Lifespan Event Handler
+# ══════════════════════════════════════════
+
+@asynccontextmanager
+async def lifespan(application: FastAPI):
+    """啟動 / 關閉事件 — 取代已棄用的 on_event"""
+    logger.info("🐾 Piyou API starting up / 披呦 API 啟動中...")
+    logger.info("Zero-log credential filter installed / 零日誌憑證過濾器已安裝")
+    yield
+    logger.info("🐾 Piyou API shutting down / 披呦 API 關閉中...")
+
+
+# ══════════════════════════════════════════
 #  建立 FastAPI 應用 / Create FastAPI App
 # ══════════════════════════════════════════
 
@@ -31,6 +45,7 @@ app = FastAPI(
     title="披呦 API / Piyou API",
     description="校園整合 App 後端服務 / Campus Integrated App Backend Service",
     version="1.0.0",
+    lifespan=lifespan,
     docs_url="/docs",
     redoc_url="/redoc",
 )
@@ -51,10 +66,12 @@ app.add_middleware(RateLimitMiddleware, max_requests=60, window_seconds=60)
 app.add_middleware(HTTPSRedirectMiddleware)
 
 # ── 註冊路由 / Register Routes ──
+# 所有業務路由統一掛載在 /api/v1 前綴下
+# All business routes mounted under /api/v1 prefix
 from app.routers import auth, data
 
-app.include_router(auth.router)
-app.include_router(data.router)
+app.include_router(auth.router, prefix="/api/v1")
+app.include_router(data.router, prefix="/api/v1")
 
 
 # ── 健康檢查 / Health Check ──
@@ -71,14 +88,6 @@ async def root():
 @app.get("/health", tags=["系統 / System"])
 async def health():
     return {"status": "healthy / 健康"}
-
-
-# ── 啟動事件 / Startup Event ──
-@app.on_event("startup")
-async def startup():
-    logger.info("🐾 Piyou API starting up / 披呦 API 啟動中...")
-    logger.info(f"CORS origins: {cors_origins}")
-    logger.info("Zero-log credential filter installed / 零日誌憑證過濾器已安裝")
 
 
 if __name__ == "__main__":

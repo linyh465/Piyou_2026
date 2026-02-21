@@ -92,10 +92,24 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         self.max_requests = max_requests
         self.window_seconds = window_seconds
         self.requests: dict[str, list[float]] = defaultdict(list)
+        self._last_gc = time.time()
+        self._gc_interval = 300  # 每 5 分鐘全面清理一次 / Full GC every 5 min
+
+    def _gc_stale_ips(self, now: float):
+        """回收已無任何記錄的 IP / Reclaim IPs with no remaining records."""
+        stale = [ip for ip, ts in self.requests.items()
+                 if not ts or now - ts[-1] >= self.window_seconds]
+        for ip in stale:
+            del self.requests[ip]
+        self._last_gc = now
 
     async def dispatch(self, request, call_next):
         client_ip = request.client.host if request.client else "unknown"
         now = time.time()
+
+        # 定期全面清理 / Periodic full GC
+        if now - self._last_gc >= self._gc_interval:
+            self._gc_stale_ips(now)
 
         # 清除過期記錄 / Clean expired records
         self.requests[client_ip] = [

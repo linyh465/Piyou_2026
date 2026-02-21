@@ -1,0 +1,56 @@
+[project]
+name = "piyou-backend"
+version = "1.0.0"
+description = "披呦校園整合 App 後端 / Piyou Campus App Backend"
+requires-python = ">=3.11"
+
+# ══════════════════════════════════════════
+#  Ruff — 取代 flake8/isort/black 的一站式 linter & formatter
+# ══════════════════════════════════════════
+[tool.ruff]
+target-version = "py311"
+line-length = 120
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "N",   # pep8-naming
+    "UP",  # pyupgrade
+    "B",   # flake8-bugbear
+    "SIM", # flake8-simplify
+    "RUF", # ruff-specific
+]
+ignore = [
+    "E501",   # line too long — 交給 formatter 處理
+    "B008",   # Depends() in function arg — FastAPI 慣例
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["app"]
+
+# ══════════════════════════════════════════
+#  Mypy — 靜態型別檢查
+# ══════════════════════════════════════════
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false          # 漸進式啟用，避免一次性大量報錯
+ignore_missing_imports = true          # 第三方套件缺少 stub 時不報錯
+check_untyped_defs = true
+plugins = ["pydantic.mypy"]
+
+[tool.pydantic-mypy]
+init_forbid_extra = true
+init_typed = true
+warn_required_dynamic_aliases = true
+
+# ══════════════════════════════════════════
+#  Pytest
+# ══════════════════════════════════════════
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]

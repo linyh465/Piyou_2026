@@ -8,6 +8,7 @@ Uses requests + BeautifulSoup to parse school portal HTML.
 """
 import os
 import logging
+import re
 import requests
 import time
 import random
@@ -75,7 +76,7 @@ class SchoolScraper:
                 "en_flag": "zh",
             }
             
-            logger.info(f"Submitting login for {student_id}...")
+            logger.info("Submitting login...")
             # 送出登入請求 / Submit login request
             response = self.session.post(
                 f"{SCHOOL_PORTAL_URL}/index_check.php",
@@ -85,9 +86,6 @@ class SchoolScraper:
             )
             response.raise_for_status()
             
-            # Debug: Check where we landed
-            print(f"📍 Login redirected to: {response.url}")
-
             # 驗證登入狀態 / Verify login status
             soup = BeautifulSoup(response.text, "html.parser")
             
@@ -115,7 +113,7 @@ class SchoolScraper:
             if user_name_el:
                 user_name = user_name_el.get_text(strip=True)
             
-            logging.info(f"Login successful for {student_id}")
+            logger.info("Login successful")
             
             return {
                 "student_id": student_id,
@@ -125,11 +123,6 @@ class SchoolScraper:
 
         except Exception as e:
             logger.error(f"Login failed: {str(e)}")
-            # Debug: Log response details if available
-            if 'response' in locals():
-                logger.error(f"Status Code: {response.status_code}")
-                logger.error(f"Response URL: {response.url}")
-                logger.error(f"Response Body (First 500 chars): {response.text[:500]}")
             raise
 
     def fetch_timetable(self) -> Optional[dict]:
@@ -193,7 +186,6 @@ class SchoolScraper:
                         periods = ""
                         room = ""
                         if schedule_text:
-                            import re
                             # Match pattern like "三(Wed)　 2, 3, 4:PH222"
                             match = re.match(r'([一二三四五六日])\((\w+)\)\s*([\d,\s]+):?(\S*)', schedule_text)
                             if match:
@@ -228,7 +220,6 @@ class SchoolScraper:
             for td in soup.find_all("td"):
                 text = td.get_text(strip=True)
                 if "學期總學分" in text:
-                    import re
                     m = re.search(r'(\d+)', text.split("學期總學分")[-1])
                     if m:
                         total_credits = int(m.group(1))
@@ -258,6 +249,16 @@ class SchoolScraper:
         """
         爬取成績資料 / Scrape grades data
         URL: https://alcat.pu.edu.tw/stu_query/score_all.php
+
+        回傳結構 / Return structure:
+        {
+          "status": "fetched",
+          "semesters": [
+            { "name": "113-1 上學期", "rows": [...], "rank": "5/60" },
+            ...
+          ],
+          "raw_length": int,
+        }
         """
         if not self.is_logged_in:
             return None
@@ -277,25 +278,122 @@ class SchoolScraper:
 
             soup = BeautifulSoup(response.text, "html.parser")
 
-            # Parse grades tables
-            semesters = []
-            tables = soup.find_all("table")
-            
-            for table in tables:
-                rows = table.find_all("tr")
-                for row in rows:
-                    cells = row.find_all("td")
-                    if len(cells) >= 3:
-                        texts = [c.get_text(strip=True) for c in cells]
-                        has_score = any(t.isdigit() or (t.replace('.','').isdigit()) for t in texts)
-                        if has_score:
-                            semesters.append(texts)
+            # ── 動態解析多學期 / Dynamic multi-semester parsing ──
+            # 策略：遍歷頁面元素，遇到學期標題即開啟新學期分組
+            # Strategy: walk page elements, start new semester group on semester header
+            semester_pattern = re.compile(
+                r'(\d{2,3})-?(\d)\s*(上學期|下學期|暑修)?'
+                r'|第\s*(\d)\s*學期'
+                r'|(上學期|下學期|暑修)'
+            )
 
-            logger.info(f"Found {len(semesters)} grade rows")
+            semesters: list[dict] = []
+            current_semester: dict | None = None
+
+            # Walk through all elements looking for semester headers & grade tables
+            for element in soup.find_all(['h1', 'h2', 'h3', 'h4', 'b', 'strong', 'caption', 'th', 'table']):
+                tag_name = element.name
+
+                # ── 偵測學期標題 / Detect semester header ──
+                if tag_name in ('h1', 'h2', 'h3', 'h4', 'b', 'strong', 'caption'):
+                    text = element.get_text(strip=True)
+                    m = semester_pattern.search(text)
+                    if m and len(text) < 40:
+                        # 儲存上一個學期 / Save previous semester
+                        if current_semester and current_semester["rows"]:
+                            semesters.append(current_semester)
+                        current_semester = {"name": text.strip(), "rows": [], "rank": None}
+                        continue
+
+                # ── 檢查 <th> 是否含學期資訊 / Check <th> for semester info ──
+                if tag_name == 'th':
+                    text = element.get_text(strip=True)
+                    m = semester_pattern.search(text)
+                    if m and len(text) < 40:
+                        if current_semester and current_semester["rows"]:
+                            semesters.append(current_semester)
+                        current_semester = {"name": text.strip(), "rows": [], "rank": None}
+                        continue
+
+                # ── 解析成績表格 / Parse grade table rows ──
+                if tag_name == 'table':
+                    rows = element.find_all("tr")
+                    for row in rows:
+                        cells = row.find_all("td")
+                        if len(cells) >= 3:
+                            texts = [c.get_text(strip=True) for c in cells]
+
+                            # 偵測排名列 / Detect rank row
+                            full_row_text = " ".join(texts)
+                            rank_match = re.search(r'排名[：:\s]*(\d+\s*/\s*\d+)', full_row_text)
+                            if rank_match and current_semester:
+                                current_semester["rank"] = rank_match.group(1).replace(" ", "")
+                                continue
+
+                            # 偵測學期標題列 / Detect semester header in table row
+                            m = semester_pattern.search(full_row_text)
+                            if m and not any(
+                                t.replace('.', '').isdigit() and len(t) <= 3
+                                for t in texts
+                            ) and len(full_row_text) < 50:
+                                if current_semester and current_semester["rows"]:
+                                    semesters.append(current_semester)
+                                current_semester = {
+                                    "name": full_row_text.strip(),
+                                    "rows": [],
+                                    "rank": None,
+                                }
+                                continue
+
+                            # 正常成績列（含數字分數）/ Normal grade row (has numeric score)
+                            has_score = any(
+                                t.replace('.', '', 1).isdigit()
+                                for t in texts
+                            )
+                            # 也接受「通過」「缺」等文字成績 / Also accept text grades
+                            has_text_score = any(
+                                t in ('通過', '不通過', '缺', 'Pass', 'Fail', 'W')
+                                for t in texts
+                            )
+                            if has_score or has_text_score:
+                                if current_semester is None:
+                                    current_semester = {
+                                        "name": "",
+                                        "rows": [],
+                                        "rank": None,
+                                    }
+                                current_semester["rows"].append(texts)
+
+            # 儲存最後一個學期 / Save last semester
+            if current_semester and current_semester["rows"]:
+                semesters.append(current_semester)
+
+            # ── Fallback: 若完全沒偵測到學期分組，退回舊行為 ──
+            # Fallback: if no semester groups found, fall back to flat rows
+            if not semesters:
+                flat_rows = []
+                for table in soup.find_all("table"):
+                    for row in table.find_all("tr"):
+                        cells = row.find_all("td")
+                        if len(cells) >= 3:
+                            texts = [c.get_text(strip=True) for c in cells]
+                            has_score = any(
+                                t.isdigit() or t.replace('.', '', 1).isdigit()
+                                for t in texts
+                            )
+                            if has_score:
+                                flat_rows.append(texts)
+                if flat_rows:
+                    semesters = [{"name": "", "rows": flat_rows, "rank": None}]
+
+            total_rows = sum(len(s["rows"]) for s in semesters)
+            logger.info(
+                f"Found {total_rows} grade rows across {len(semesters)} semesters"
+            )
 
             return {
                 "status": "fetched",
-                "rows": semesters,
+                "semesters": semesters,
                 "raw_length": len(response.text),
             }
 
@@ -303,43 +401,4 @@ class SchoolScraper:
             logger.error(f"Failed to fetch grades: {e}")
             return None
 
-    def _log_menu_links(self):
-        """Helper to find internal links after login"""
-        try:
-            # Analyze the file we just saved in login() if it exists
-            if os.path.exists("debug_login_result.html"):
-                print("🔍 Analyzing debug_login_result.html for links...")
-                with open("debug_login_result.html", "r", encoding="utf-8") as f:
-                    content = f.read()
-                soup = BeautifulSoup(content, "html.parser")
-            else:
-                self._random_sleep(1, 2)
-                # Try main.php instead of index.php
-                r = self.session.get(f"{SCHOOL_PORTAL_URL}/main.php")
-                r.encoding = r.apparent_encoding
-                soup = BeautifulSoup(r.text, "html.parser")
-            
-            links = soup.find_all("a")
-            print(f"🔍 Found {len(links)} links on the page.")
-            
-            found_count = 0
-            for a in links:
-                href = a.get("href")
-                text = a.get_text(strip=True)
-                # Relaxed matching
-                if href and text:
-                    # print(f"DEBUG Link: {text} -> {href}") # Uncomment if needed
-                    if "課表" in text or "成績" in text or "table" in href or "score" in href:
-                        print(f"🔗 Found potential link: {text} -> {href}")
-                        found_count += 1
-            
-            if found_count == 0:
-                print("⚠️ No specific timetable/grade links found matched keywords.")
-                print("   Checking for frames...")
-                frames = soup.find_all(['frame', 'iframe'])
-                for f in frames:
-                    print(f"🎞️ Found frame: {f.get('std_name') or f.get('name')} -> {f.get('src')}")
 
-        except Exception as e:
-            print(f"Error logging links: {e}")
-            pass

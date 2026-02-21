@@ -1,33 +1,73 @@
 {
   "arrivals": [
     {
-      "routeName": "301",
+      "routeName": "162",
       "direction": "返程",
-      "estimatedSeconds": 2820,
-      "estimatedMinutes": 47,
+      "estimatedSeconds": 1020,
+      "estimatedMinutes": 17,
+      "stopName": "靜宜大學(英才路)",
+      "stopStatus": "17 分",
+      "plateNumb": "KKC-1222",
+      "stopStatusCode": 0
+    },
+    {
+      "routeName": "162",
+      "direction": "返程",
+      "estimatedSeconds": 1200,
+      "estimatedMinutes": 20,
       "stopName": "靜宜大學(校門)",
-      "stopStatus": "47 分",
-      "plateNumb": "EAL-1273",
+      "stopStatus": "20 分",
+      "plateNumb": "KKC-1222",
       "stopStatusCode": 0
     },
     {
-      "routeName": "301",
+      "routeName": "162",
       "direction": "返程",
-      "estimatedSeconds": 2940,
-      "estimatedMinutes": 49,
+      "estimatedSeconds": 1260,
+      "estimatedMinutes": 21,
       "stopName": "靜宜大學主顧樓",
-      "stopStatus": "49 分",
-      "plateNumb": "EAL-1273",
+      "stopStatus": "21 分",
+      "plateNumb": "KKC-1222",
+      "stopStatusCode": 0
+    },
+    {
+      "routeName": "162",
+      "direction": "返程",
+      "estimatedSeconds": 1320,
+      "estimatedMinutes": 22,
+      "stopName": "靜宜大學主顧聖母堂",
+      "stopStatus": "22 分",
+      "plateNumb": "KKC-1222",
       "stopStatusCode": 0
     },
     {
       "routeName": "301",
       "direction": "返程",
-      "estimatedSeconds": 3000,
-      "estimatedMinutes": 50,
+      "estimatedSeconds": 2520,
+      "estimatedMinutes": 42,
+      "stopName": "靜宜大學(校門)",
+      "stopStatus": "42 分",
+      "plateNumb": "EAL-1275",
+      "stopStatusCode": 0
+    },
+    {
+      "routeName": "301",
+      "direction": "返程",
+      "estimatedSeconds": 2640,
+      "estimatedMinutes": 44,
+      "stopName": "靜宜大學主顧樓",
+      "stopStatus": "44 分",
+      "plateNumb": "EAL-1275",
+      "stopStatusCode": 0
+    },
+    {
+      "routeName": "301",
+      "direction": "返程",
+      "estimatedSeconds": 2700,
+      "estimatedMinutes": 45,
       "stopName": "靜宜大學靜園餐廳",
-      "stopStatus": "50 分",
-      "plateNumb": "EAL-1273",
+      "stopStatus": "45 分",
+      "plateNumb": "EAL-1275",
       "stopStatusCode": 0
     },
     {
@@ -116,11 +156,31 @@
       "estimatedSeconds": null,
       "estimatedMinutes": null,
       "stopName": "靜宜大學(英才路)",
+      "stopStatus": "尚未發車",
+      "plateNumb": "",
+      "stopStatusCode": 1
+    },
+    {
+      "routeName": "162",
+      "direction": "去程",
+      "estimatedSeconds": null,
+      "estimatedMinutes": null,
+      "stopName": "靜宜大學(英才路)",
+      "stopStatus": "尚未發車",
+      "plateNumb": "",
+      "stopStatusCode": 1
+    },
+    {
+      "routeName": "162",
+      "direction": "去程",
+      "estimatedSeconds": null,
+      "estimatedMinutes": null,
+      "stopName": "靜宜大學主顧聖母堂",
       "stopStatus": "尚未發車",
       "plateNumb": "",
       "stopStatusCode": 1
     }
   ],
-  "updatedAt": "07:42:54",
-  "_cached_at": 1771630974.3350303
+  "updatedAt": "16:39:07",
+  "_cached_at": 1771663147.9596457
 }
