@@ -7,8 +7,10 @@
 快取策略 / Caching Strategy:
 - 爬蟲 Session：每位學生最多 30 分鐘登入一次
   Scraper session: at most 1 login per 30 minutes per student.
-- 本地資料快取：課表/成績存入 JSON 檔案，避免重複爬取
-  Local data cache: timetable/grades saved to JSON files to avoid re-scraping.
+- 課表/成績：不在伺服器端快取，僅回傳給前端由 localStorage 保存（隱私保護）
+  Timetable/Grades: no server-side cache; returned to frontend for localStorage only (privacy).
+- 公車資料：快取至磁碟與記憶體，減少 TDX API 呼叫
+  Bus data: cached to disk and memory to reduce TDX API calls.
 """
 import os
 import json
@@ -325,28 +327,12 @@ MOCK_BUS = BusResponse(arrivals=[
 async def get_timetable(user: dict = Depends(get_current_user)):
     """
     取得課表 / Get Timetable
-    優先讀取本地快取 → 無快取時爬蟲抓取 → 儲存快取 → 失敗回傳 mock
-    Priority: local cache → scraper fetch → save cache → fallback to mock.
+    爬蟲抓取後直接回傳，不在伺服器端儲存快取（隱私保護）。
+    前端會自行快取至 localStorage。
+    Scraper fetch → return directly. No server-side cache (privacy).
+    Frontend caches in localStorage on its own.
     """
-    student_id = user.get("sub", "")
-
-    # 1. 嘗試讀取本地快取 / Try local cache
-    cached = _read_data_cache(student_id, "timetable")
-    if cached:
-        try:
-            courses_data = cached.get("courses", [])
-            courses = [Course(**c) for c in courses_data]
-            return TimetableResponse(
-                courses=courses,
-                total_credits=cached.get("total_credits", 0),
-                semester=cached.get("semester", ""),
-                student_name=cached.get("student_name", ""),
-                class_name=cached.get("class_name", ""),
-            )
-        except Exception as e:
-            logger.warning(f"Cache parse error, will re-fetch: {e}")
-
-    # 2. 爬蟲抓取（在執行緒池中執行，避免阻塞事件迴圈）
+    # 爬蟲抓取（在執行緒池中執行，避免阻塞事件迴圈）
     # Scraper fetch (run in thread pool to avoid blocking event loop)
     try:
         scraper = _get_authenticated_scraper(user)
@@ -354,10 +340,6 @@ async def get_timetable(user: dict = Depends(get_current_user)):
         if raw_data and raw_data.get("courses"):
             result = transform_timetable(raw_data)
             logger.info(f"Fetched {len(result.courses)} real course periods")
-
-            # 3. 儲存快取 / Save to cache
-            cache_data = result.model_dump()
-            _write_data_cache(student_id, "timetable", cache_data)
             return result
     except HTTPException:
         raise
@@ -371,29 +353,12 @@ async def get_timetable(user: dict = Depends(get_current_user)):
 async def get_grades(user: dict = Depends(get_current_user)):
     """
     取得成績 / Get Grades
-    優先讀取本地快取 → 無快取時爬蟲抓取 → 儲存快取 → 失敗回傳 mock
-    Priority: local cache → scraper fetch → save cache → fallback to mock.
+    爬蟲抓取後直接回傳，不在伺服器端儲存快取（隱私保護）。
+    前端會自行快取至 localStorage。
+    Scraper fetch → return directly. No server-side cache (privacy).
+    Frontend caches in localStorage on its own.
     """
-    student_id = user.get("sub", "")
-
-    # 1. 嘗試讀取本地快取 / Try local cache
-    cached = _read_data_cache(student_id, "grades")
-    if cached:
-        try:
-            semesters_data = cached.get("semesters", [])
-            semesters = [Semester(
-                name=s["name"],
-                courses=[GradeCourse(**c) for c in s.get("courses", [])],
-                total_credits=s.get("total_credits", 0),
-                weighted_average=s.get("weighted_average"),
-                gpa=s.get("gpa"),
-                rank=s.get("rank"),
-            ) for s in semesters_data]
-            return GradesResponse(semesters=semesters)
-        except Exception as e:
-            logger.warning(f"Cache parse error, will re-fetch: {e}")
-
-    # 2. 爬蟲抓取（在執行緒池中執行，避免阻塞事件迴圈）
+    # 爬蟲抓取（在執行緒池中執行，避免阻塞事件迴圈）
     # Scraper fetch (run in thread pool to avoid blocking event loop)
     try:
         scraper = _get_authenticated_scraper(user)
@@ -401,10 +366,6 @@ async def get_grades(user: dict = Depends(get_current_user)):
         if raw_data and (raw_data.get("semesters") or raw_data.get("rows")):
             result = transform_grades(raw_data)
             logger.info(f"Fetched {sum(len(s.courses) for s in result.semesters)} grade rows across {len(result.semesters)} semesters")
-
-            # 3. 儲存快取 / Save to cache
-            cache_data = result.model_dump()
-            _write_data_cache(student_id, "grades", cache_data)
             return result
     except HTTPException:
         raise
@@ -466,6 +427,7 @@ async def get_bus():
                 stopStatus=a.get("stopStatus"),
                 plateNumb=a.get("plateNumb"),
                 stopStatusCode=a.get("stopStatusCode"),
+                eventType=a.get("eventType"),
             )
             for a in arrivals_raw
         ]

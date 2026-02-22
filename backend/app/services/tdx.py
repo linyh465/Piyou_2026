@@ -185,6 +185,14 @@ class TDXService:
                         status_text = "進站中" if minutes <= 1 else f"{minutes} 分"
                     else:
                         status_text = STOP_STATUS_MAP.get(stop_status_code, "未知")
+
+                    # 模擬車牌與進站/離站狀態
+                    plate = None
+                    event_type = None
+                    if minutes is not None and minutes <= 3:
+                        plate = f"{random.choice(['KKA', 'FAE', 'EAA'])}-{random.randint(100, 999)}"
+                        event_type = "進站" if minutes <= 1 else "離站"
+
                     arrivals.append({
                         "routeName": route_name,
                         "direction": direction,
@@ -192,9 +200,10 @@ class TDXService:
                         "estimatedMinutes": minutes,
                         "stopName": stop_name,
                         "stopStatus": status_text,
-                        "plateNumb": None,
+                        "plateNumb": plate,
                         "stopStatusCode": stop_status_code,
                         "stopSequence": seq,
+                        "eventType": event_type,
                     })
         return arrivals
 
@@ -256,11 +265,48 @@ class TDXService:
                 ]
         return result
 
+    def _build_route_filter(self) -> str:
+        """
+        建立 OData $filter 以批次查詢多路線 / Build OData $filter for batch route query
+        例: RouteName/Zh_tw eq '301' or RouteName/Zh_tw eq '368' or ...
+        """
+        clauses = [f"RouteName/Zh_tw eq '{r}'" for r in TARGET_ROUTES]
+        return " or ".join(clauses)
+
+    def _fetch_realtime_positions(self, city: str) -> dict:
+        """
+        從 RealTimeNearStop API 取得即時公車位置，回傳以 (route, direction, stopSequence) 為 key 的 dict
+        Fetch real-time bus positions from RealTimeNearStop API.
+        Returns dict keyed by (routeName, direction, stopSequence).
+        """
+        positions = {}
+        try:
+            data = self._api_get(
+                f"/v2/Bus/RealTimeNearStop/City/{city}",
+                params={
+                    "$format": "JSON",
+                    "$filter": self._build_route_filter(),
+                },
+            )
+            for item in data:
+                route = item.get("RouteName", {}).get("Zh_tw", "")
+                direction = "去程" if item.get("Direction") == 0 else "返程"
+                stop_seq = item.get("StopSequence", 0)
+                plate = item.get("PlateNumb", "")
+                event = "進站" if item.get("A2EventType") == 1 else "離站"
+                key = (route, direction, stop_seq)
+                positions[key] = {"plateNumb": plate, "eventType": event}
+            logger.info(f"RealTimeNearStop: got {len(positions)} position entries")
+        except Exception as e:
+            logger.warning(f"RealTimeNearStop batch query failed: {type(e).__name__}: {e}")
+        return positions
+
     def get_routes_eta(self, city: str = DEFAULT_CITY) -> dict:
         """
-        查詢目標路線全部站牌預估到站時間 / Query ETA for ALL stops of target routes
-        不做站名篩選，回傳整條路線所有站牌的到站資訊
-        Returns ALL stops for each route (no keyword filter).
+        查詢目標路線全部站牌預估到站時間 + 即時車牌位置
+        Query ETA for ALL stops of target routes AND merge real-time bus positions.
+        使用 $filter 批次查詢，只需 2 次 API 呼叫（ETA + RealTimeNearStop）
+        Uses $filter for batch query: only 2 API calls (ETA + RealTimeNearStop).
 
         Returns:
             dict with "arrivals" list and "updatedAt" timestamp
@@ -277,34 +323,52 @@ class TDXService:
 
         all_arrivals = []
 
-        for route_name in TARGET_ROUTES:
-            try:
-                data = self._api_get(
-                    f"/v2/Bus/EstimatedTimeOfArrival/City/{city}/{route_name}",
-                    params={"$format": "JSON"},
-                )
+        # ── 1. 批次取得 ETA（單次 API 呼叫取得所有路線）──
+        try:
+            data = self._api_get(
+                f"/v2/Bus/EstimatedTimeOfArrival/City/{city}",
+                params={
+                    "$format": "JSON",
+                    "$filter": self._build_route_filter(),
+                },
+            )
 
-                for item in data:
-                    stop_zh = item.get("StopName", {}).get("Zh_tw", "")
+            for item in data:
+                route_name = item.get("RouteName", {}).get("Zh_tw", "")
+                stop_zh = item.get("StopName", {}).get("Zh_tw", "")
 
-                    est_seconds = item.get("EstimateTime")
-                    est_minutes = est_seconds // 60 if est_seconds is not None else None
-                    stop_status_code = item.get("StopStatus", -1)
+                est_seconds = item.get("EstimateTime")
+                est_minutes = est_seconds // 60 if est_seconds is not None else None
+                stop_status_code = item.get("StopStatus", -1)
 
-                    all_arrivals.append({
-                        "routeName": item.get("RouteName", {}).get("Zh_tw", route_name),
-                        "direction": "去程" if item.get("Direction") == 0 else "返程",
-                        "estimatedSeconds": est_seconds,
-                        "estimatedMinutes": est_minutes,
-                        "stopName": stop_zh,
-                        "stopStatus": self._format_status(item),
-                        "plateNumb": item.get("PlateNumb"),
-                        "stopStatusCode": stop_status_code,
-                        "stopSequence": item.get("StopSequence", 0),
-                    })
+                all_arrivals.append({
+                    "routeName": route_name,
+                    "direction": "去程" if item.get("Direction") == 0 else "返程",
+                    "estimatedSeconds": est_seconds,
+                    "estimatedMinutes": est_minutes,
+                    "stopName": stop_zh,
+                    "stopStatus": self._format_status(item),
+                    "plateNumb": item.get("PlateNumb") or None,
+                    "stopStatusCode": stop_status_code,
+                    "stopSequence": item.get("StopSequence", 0),
+                    "eventType": None,
+                })
 
-            except Exception as e:
-                logger.warning(f"TDX query failed for route {route_name}: {type(e).__name__}: {e}")
+        except Exception as e:
+            logger.warning(f"TDX ETA batch query failed: {type(e).__name__}: {e}")
+
+        # ── 2. 批次取得即時車牌位置（單次 API 呼叫）──
+        positions = self._fetch_realtime_positions(city)
+
+        # ── 3. 合併：將車牌與進站/離站狀態寫入對應到站資料 ──
+        for arrival in all_arrivals:
+            key = (arrival["routeName"], arrival["direction"], arrival["stopSequence"])
+            pos = positions.get(key)
+            if pos:
+                # RealTimeNearStop 的車牌更可靠，優先使用
+                if pos["plateNumb"]:
+                    arrival["plateNumb"] = pos["plateNumb"]
+                arrival["eventType"] = pos["eventType"]
 
         # 按路線 → 方向 → 站序排序 / Sort by route → direction → stop sequence
         all_arrivals.sort(
@@ -326,6 +390,7 @@ class TDXService:
         """
         從 TDX StopOfRoute API 取得各路線的站牌列表（含站序）
         Fetch stop list for each route from TDX StopOfRoute API.
+        使用 $filter 批次查詢（單次 API 呼叫）/ Batch query with $filter (1 API call).
 
         Returns:
             dict: { "301": { "去程": [{"stopName": "...", "stopSequence": 1}, ...], ... }, ... }
@@ -334,28 +399,30 @@ class TDXService:
             logger.info("TDX credentials not set, returning mock route stops")
             return self._get_mock_route_stops()
 
-        result = {}
-        for route_name in TARGET_ROUTES:
-            try:
-                data = self._api_get(
-                    f"/v2/Bus/StopOfRoute/City/{city}/{route_name}",
-                    params={"$format": "JSON"},
-                )
-                route_dirs = {}
-                for route_item in data:
-                    direction = "去程" if route_item.get("Direction") == 0 else "返程"
-                    stops = []
-                    for stop in route_item.get("Stops", []):
-                        stops.append({
-                            "stopName": stop.get("StopName", {}).get("Zh_tw", ""),
-                            "stopSequence": stop.get("StopSequence", 0),
-                        })
-                    stops.sort(key=lambda s: s["stopSequence"])
-                    route_dirs[direction] = stops
-                result[route_name] = route_dirs
-            except Exception as e:
-                logger.warning(f"TDX StopOfRoute failed for {route_name}: {type(e).__name__}: {e}")
-                result[route_name] = {}
+        result = {r: {} for r in TARGET_ROUTES}
+        try:
+            data = self._api_get(
+                f"/v2/Bus/StopOfRoute/City/{city}",
+                params={
+                    "$format": "JSON",
+                    "$filter": self._build_route_filter(),
+                },
+            )
+            for route_item in data:
+                route_name = route_item.get("RouteName", {}).get("Zh_tw", "")
+                if route_name not in result:
+                    continue
+                direction = "去程" if route_item.get("Direction") == 0 else "返程"
+                stops = []
+                for stop in route_item.get("Stops", []):
+                    stops.append({
+                        "stopName": stop.get("StopName", {}).get("Zh_tw", ""),
+                        "stopSequence": stop.get("StopSequence", 0),
+                    })
+                stops.sort(key=lambda s: s["stopSequence"])
+                result[route_name][direction] = stops
+        except Exception as e:
+            logger.warning(f"TDX StopOfRoute batch query failed: {type(e).__name__}: {e}")
 
         return result
 
@@ -363,6 +430,7 @@ class TDXService:
         """
         從 TDX RealTimeNearStop API 取得即時公車位置
         Fetch real-time bus positions near stops.
+        使用 $filter 批次查詢所有目標路線 / Batch query using $filter.
 
         Returns:
             list of { routeName, direction, stopName, stopSequence, plateNumb, eventType }
@@ -371,23 +439,25 @@ class TDXService:
             return []
 
         positions = []
-        for route_name in TARGET_ROUTES:
-            try:
-                data = self._api_get(
-                    f"/v2/Bus/RealTimeNearStop/City/{city}/{route_name}",
-                    params={"$format": "JSON"},
-                )
-                for item in data:
-                    positions.append({
-                        "routeName": item.get("RouteName", {}).get("Zh_tw", route_name),
-                        "direction": "去程" if item.get("Direction") == 0 else "返程",
-                        "stopName": item.get("StopName", {}).get("Zh_tw", ""),
-                        "stopSequence": item.get("StopSequence", 0),
-                        "plateNumb": item.get("PlateNumb", ""),
-                        "eventType": "進站" if item.get("A2EventType") == 1 else "離站",
-                    })
-            except Exception as e:
-                logger.warning(f"TDX RealTimeNearStop failed for {route_name}: {type(e).__name__}: {e}")
+        try:
+            data = self._api_get(
+                f"/v2/Bus/RealTimeNearStop/City/{city}",
+                params={
+                    "$format": "JSON",
+                    "$filter": self._build_route_filter(),
+                },
+            )
+            for item in data:
+                positions.append({
+                    "routeName": item.get("RouteName", {}).get("Zh_tw", ""),
+                    "direction": "去程" if item.get("Direction") == 0 else "返程",
+                    "stopName": item.get("StopName", {}).get("Zh_tw", ""),
+                    "stopSequence": item.get("StopSequence", 0),
+                    "plateNumb": item.get("PlateNumb", ""),
+                    "eventType": "進站" if item.get("A2EventType") == 1 else "離站",
+                })
+        except Exception as e:
+            logger.warning(f"TDX RealTimeNearStop batch query failed: {type(e).__name__}: {e}")
 
         return positions
 

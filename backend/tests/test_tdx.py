@@ -78,6 +78,7 @@ class TestTDXMockData:
             assert "estimatedMinutes" in arrival
             assert "stopName" in arrival
             assert "stopSequence" in arrival
+            assert "eventType" in arrival
             assert arrival["routeName"] in ["301", "368", "162"]
 
 
@@ -153,7 +154,7 @@ class TestTDXGetRoutesETA:
     @patch("app.services.tdx.requests.get")
     @patch("app.services.tdx.requests.post")
     def test_real_api_flow(self, mock_post, mock_get):
-        """模擬完整 API 流程（auth → query → filter）"""
+        """模擬完整 API 流程（auth → ETA query → RealTimeNearStop merge）"""
         # Mock token response
         mock_post.return_value = MagicMock(
             json=MagicMock(return_value={
@@ -163,8 +164,8 @@ class TestTDXGetRoutesETA:
             raise_for_status=MagicMock(),
         )
 
-        # Mock API response with TDX-format data
-        mock_get.return_value = MagicMock(
+        # Mock API responses: first call = ETA, second call = RealTimeNearStop
+        eta_response = MagicMock(
             json=MagicMock(return_value=[
                 {
                     "StopName": {"Zh_tw": "靜宜大學"},
@@ -173,6 +174,7 @@ class TestTDXGetRoutesETA:
                     "EstimateTime": 180,
                     "StopStatus": 0,
                     "PlateNumb": "ABC-1234",
+                    "StopSequence": 1,
                 },
                 {
                     "StopName": {"Zh_tw": "沙鹿站"},
@@ -180,10 +182,25 @@ class TestTDXGetRoutesETA:
                     "Direction": 0,
                     "EstimateTime": 60,
                     "StopStatus": 0,
+                    "StopSequence": 2,
                 },
             ]),
             raise_for_status=MagicMock(),
         )
+        position_response = MagicMock(
+            json=MagicMock(return_value=[
+                {
+                    "RouteName": {"Zh_tw": "301"},
+                    "Direction": 0,
+                    "StopName": {"Zh_tw": "沙鹿站"},
+                    "StopSequence": 2,
+                    "PlateNumb": "KKA-750",
+                    "A2EventType": 1,  # 進站
+                },
+            ]),
+            raise_for_status=MagicMock(),
+        )
+        mock_get.side_effect = [eta_response, position_response]
 
         svc = TDXService()
         svc.client_id = "test_id"
@@ -192,10 +209,14 @@ class TestTDXGetRoutesETA:
         result = svc.get_routes_eta()
 
         assert len(result["arrivals"]) >= 1
-        # Now returns ALL stops (no keyword filter)
         stop_names = [a["stopName"] for a in result["arrivals"]]
         assert "靜宜大學" in stop_names
         assert "沙鹿站" in stop_names
+
+        # 驗證 RealTimeNearStop 車牌已合併 / Verify plate merged from positions
+        shalu = next(a for a in result["arrivals"] if a["stopName"] == "沙鹿站")
+        assert shalu["plateNumb"] == "KKA-750"
+        assert shalu["eventType"] == "進站"
 
     @patch("app.services.tdx.requests.get")
     @patch("app.services.tdx.requests.post")

@@ -74,15 +74,15 @@ const useBusStore = create((set, get) => ({
 
     /**
      * 核心資料抓取 / Core fetch
-     * @param {boolean} isManual — 是否為手動觸發
+     * @param {boolean} isManual — 是否為手動觸發（繞過節流）
      */
-    fetchBus: async (/* isManual = false */) => {
+    fetchBus: async (isManual = false) => {
         const state = get();
 
-        // ── 全域節流：每分鐘最多 MAX_CALLS_PER_MINUTE 次 ──
+        // ── 全域節流：每分鐘最多 MAX_CALLS_PER_MINUTE 次（手動刷新可繞過）──
         const now = Date.now();
         const recentCalls = state._callTimestamps.filter(t => now - t < 60_000);
-        if (recentCalls.length >= MAX_CALLS_PER_MINUTE) {
+        if (!isManual && recentCalls.length >= MAX_CALLS_PER_MINUTE) {
             console.warn(`Bus API rate limit: ${MAX_CALLS_PER_MINUTE} calls/min exceeded`);
             return; // 靜默跳過
         }

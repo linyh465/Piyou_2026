@@ -86,6 +86,7 @@ class BusArrival(BaseModel):
     plateNumb: Optional[str] = Field(None, description="車牌號碼 / Plate number")
     stopStatusCode: Optional[int] = Field(None, description="狀態碼 / Status code")
     stopSequence: Optional[int] = Field(None, description="站序 / Stop sequence number")
+    eventType: Optional[str] = Field(None, description="即時事件 / Real-time event (進站/離站)")
 
 
 class BusStopInfo(BaseModel):

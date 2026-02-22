@@ -102,7 +102,7 @@ describe('Transport Page', () => {
       </MemoryRouter>
     );
     // 所有路線描述都出現在選擇器中
-    const matches = screen.getAllByText(/新民高中/);
+    const matches = screen.getAllByText(/靜宜大學/);
     expect(matches.length).toBeGreaterThanOrEqual(1);
   });
 });
