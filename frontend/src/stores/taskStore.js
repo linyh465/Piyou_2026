@@ -53,10 +53,21 @@ const useTaskStore = create((set, get) => ({
 
     /**
      * 切換完成狀態 / Toggle completion
+     * 使用 Optimistic Update 提升體感速度 / Uses optimistic update for snappier UX
      */
     toggleTask: async (id) => {
-        await localDb.toggleTask(id);
-        await get().loadTasks();
+        const { tasks } = get();
+        // Optimistic: 立即更新 UI
+        const optimistic = tasks.map((t) =>
+            t.id === id ? { ...t, completed: !t.completed } : t
+        );
+        set({ tasks: optimistic });
+        try {
+            await localDb.toggleTask(id);
+        } catch {
+            // Rollback: 失敗時還原
+            set({ tasks });
+        }
     },
 
     /**

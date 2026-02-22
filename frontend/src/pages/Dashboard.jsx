@@ -9,7 +9,7 @@ import useTimetableStore from '../stores/timetableStore';
 import useTaskStore from '../stores/taskStore';
 import {
     IconBook, IconMapPin, IconClock,
-    IconCheckSquare, IconCalendar, IconStar,
+    IconCheckSquare, IconCalendar, IconStar, IconPlus,
 } from '../components/Icons';
 
 // ── 問候語 / Greeting ──
@@ -140,6 +140,9 @@ function TaskPreviewCard() {
                         已完成 {completedCount} 項任務
                     </p>
                 )}
+                <a href="#/tasks" className="btn btn-soft" style={{ marginTop: '14px', fontSize: '13px', gap: '6px' }}>
+                    <IconPlus size={14} /> 新增任務
+                </a>
             </div>
         );
     }

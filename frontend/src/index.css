@@ -455,10 +455,6 @@ body {
   color: var(--color-brand-light);
 }
 
-/* ── AI 助理區塊已移除 / AI Section removed ── */
-
-.sidebar-ai-pulse-removed { display: none; }
-
 /* ── 底部設定區 / Footer ── */
 .sidebar-footer {
   padding: 0.75rem 1rem;
