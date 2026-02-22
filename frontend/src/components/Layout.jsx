@@ -46,8 +46,9 @@ const mobileNavItems = [
 ];
 
 export default function Layout() {
-    const hasCachedData = useTimetableStore((s) => s.hasCachedData);
-    const syncStatus = hasCachedData() ? 'synced' : 'error';
+    const timetable = useTimetableStore((s) => s.timetable);
+    const grades = useTimetableStore((s) => s.grades);
+    const syncStatus = (timetable.length > 0 || grades.length > 0) ? 'synced' : 'error';
 
     return (
         <div className="sidebar-layout">
