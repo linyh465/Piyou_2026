@@ -7,6 +7,7 @@
  * Sidebar design based on user-provided template.
  */
 import { NavLink, Outlet } from 'react-router-dom';
+import useTimetableStore from '../stores/timetableStore';
 import {
     IconHome, IconCalendar, IconCheckSquare,
     IconSettings, IconChartBar, IconCloudLightning, IconCloudOff, IconBus
@@ -45,8 +46,8 @@ const mobileNavItems = [
 ];
 
 export default function Layout() {
-    // 同步狀態：可之後接到真實邏輯 / Sync status: can wire to real logic later
-    const syncStatus = 'synced'; // 'synced' | 'error'
+    const hasCachedData = useTimetableStore((s) => s.hasCachedData);
+    const syncStatus = hasCachedData() ? 'synced' : 'error';
 
     return (
         <div className="sidebar-layout">
@@ -98,7 +99,7 @@ export default function Layout() {
                                 <IconCloudOff size={14} className="sidebar-sync-icon-err" />
                             )}
                             <span className="sidebar-sync-text">
-                                {syncStatus === 'synced' ? '校務資料已同步' : '憑證失效，請重新登入'}
+                                {syncStatus === 'synced' ? '校務資料已同步' : '校務資料未同步'}
                             </span>
                         </div>
                     </div>
