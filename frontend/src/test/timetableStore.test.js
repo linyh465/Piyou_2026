@@ -16,6 +16,7 @@ let mockApi;
 
 beforeEach(async () => {
   localStorage.clear();
+  sessionStorage.clear();
   vi.resetModules();
 
   vi.doMock('../services/apiClient', () => {
@@ -44,6 +45,8 @@ describe('timetableStore', () => {
   });
 
   it('fetchTimetable stores courses and caches to localStorage', async () => {
+    // 需要 token 才會實際呼叫 API / Token required to call API
+    sessionStorage.setItem('piyou_token', 'test-token');
     const courses = [
       { name: '微積分', day: 1, period: 1, startMinute: 480, location: 'A101' },
       { name: '程式設計', day: 2, period: 3, startMinute: 600, location: 'B202' },
@@ -60,6 +63,7 @@ describe('timetableStore', () => {
   });
 
   it('fetchTimetable handles errors', async () => {
+    sessionStorage.setItem('piyou_token', 'test-token');
     mockApi.mockRejectedValueOnce({
       response: { status: 500, data: { detail: '伺服器錯誤' } },
     });
@@ -72,6 +76,7 @@ describe('timetableStore', () => {
   });
 
   it('fetchTimetable clears error on 401 (auth expired)', async () => {
+    sessionStorage.setItem('piyou_token', 'test-token');
     mockApi.mockRejectedValueOnce({
       response: { status: 401 },
     });
@@ -83,6 +88,7 @@ describe('timetableStore', () => {
   });
 
   it('fetchGrades stores semesters', async () => {
+    sessionStorage.setItem('piyou_token', 'test-token');
     const semesters = [
       { name: '113-1', courses: [{ name: '國文', score: 85, credits: 3 }] },
     ];
@@ -97,6 +103,7 @@ describe('timetableStore', () => {
   });
 
   it('fetchGrades handles error', async () => {
+    sessionStorage.setItem('piyou_token', 'test-token');
     mockApi.mockRejectedValueOnce({
       response: { status: 500, data: { detail: '成績查詢失敗' } },
     });

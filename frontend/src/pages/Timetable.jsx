@@ -4,7 +4,7 @@
  */
 import { useEffect } from 'react';
 import useTimetableStore from '../stores/timetableStore';
-import { IconCalendar, IconRefresh } from '../components/Icons';
+import { IconCalendar, IconRefresh, IconTrash } from '../components/Icons';
 
 const DAYS = ['一', '二', '三', '四', '五', '六'];
 const PERIODS = Array.from({ length: 13 }, (_, i) => i + 1);
@@ -26,7 +26,7 @@ function getColorForCourse(name) {
 }
 
 export default function Timetable() {
-    const { timetable, isLoadingTimetable, timetableError, isTimeout, fetchTimetable } = useTimetableStore();
+    const { timetable, isLoadingTimetable, timetableError, isTimeout, fetchTimetable, clearSchoolData } = useTimetableStore();
 
     useEffect(() => { fetchTimetable(); }, [fetchTimetable]);
 
@@ -42,10 +42,22 @@ export default function Timetable() {
                     <h2 className="page-title">每週課表</h2>
                     <span className="page-subtitle">Weekly Schedule</span>
                 </div>
-                <button onClick={fetchTimetable} disabled={isLoadingTimetable} className="btn btn-ghost" style={{ fontSize: '13px' }}>
-                    <IconRefresh size={15} className={isLoadingTimetable ? 'animate-spin' : ''} />
-                    {isLoadingTimetable ? '載入中...' : '重新整理'}
-                </button>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                    <button onClick={fetchTimetable} disabled={isLoadingTimetable} className="btn btn-ghost" style={{ fontSize: '13px' }}>
+                        <IconRefresh size={15} className={isLoadingTimetable ? 'animate-spin' : ''} />
+                        {isLoadingTimetable ? '載入中...' : '重新整理'}
+                    </button>
+                    {timetable.length > 0 && (
+                        <button
+                            onClick={() => { if (window.confirm('確定要清除所有校務資料嗎？（課表與成績）')) clearSchoolData(); }}
+                            className="btn btn-ghost"
+                            style={{ fontSize: '13px', color: 'var(--color-danger)' }}
+                        >
+                            <IconTrash size={15} />
+                            清除資料
+                        </button>
+                    )}
+                </div>
             </div>
 
             {/* 逾時錯誤 */}

@@ -39,7 +39,16 @@ vi.mock('../stores/authStore', () => {
 });
 
 vi.mock('../stores/timetableStore', () => {
-  const store = { fetchTimetable: vi.fn(), fetchGrades: vi.fn() };
+  const store = {
+    fetchTimetable: vi.fn(),
+    fetchGrades: vi.fn(),
+    canSync: vi.fn(() => ({ allowed: true })),
+    recordSyncSuccess: vi.fn(),
+    recordSyncError: vi.fn(),
+    hasCachedData: vi.fn(() => false),
+    lastSyncTime: 0,
+    clearSchoolData: vi.fn(),
+  };
   return {
     __esModule: true,
     default: Object.assign(vi.fn((selector) => (selector ? selector(store) : store)), {

@@ -12,7 +12,7 @@ import useAuthStore from '../stores/authStore';
 import useTimetableStore from '../stores/timetableStore';
 import {
     IconUser, IconSun, IconMoon, IconBell, IconSettings,
-    IconLogOut, IconChevronRight, IconBook
+    IconLogOut, IconChevronRight, IconBook, IconCheckCircle, IconXCircle
 } from '../components/Icons';
 
 // ── 設定項目元件 / Setting Item Component ──
@@ -82,7 +82,7 @@ function SectionHeader({ title, titleEn }) {
 export default function Settings() {
     const { theme, setTheme } = useThemeStore();
     const { user, isAuthenticated, login, logout, isLoading, error, clearError } = useAuthStore();
-    const { fetchTimetable, fetchGrades } = useTimetableStore();
+    const { fetchTimetable, fetchGrades, canSync, recordSyncSuccess, recordSyncError, hasCachedData, lastSyncTime, clearSchoolData } = useTimetableStore();
 
     const [busNotify, setBusNotify] = useState(true);
     const [taskNotify, setTaskNotify] = useState(true);
@@ -97,25 +97,33 @@ export default function Settings() {
         setSyncSuccess(false);
         if (!studentId.trim() || !password.trim()) return;
 
+        // 同步頻率限制檢查 / Rate limit check
+        const syncCheck = canSync();
+        if (!syncCheck.allowed) return;
+
         const success = await login(studentId.trim(), password);
         if (success) {
             // 序列化執行，避免同一 session 被並行存取的競爭條件
-            // Sequential fetch to avoid race condition on shared scraper session
             await fetchTimetable();
             await fetchGrades();
+            recordSyncSuccess();
             setSyncSuccess(true);
             setTimeout(() => {
                 setShowSyncModal(false);
                 setPassword('');
                 setSyncSuccess(false);
             }, 1500);
+        } else {
+            // 登入失敗計入同步錯誤 / Login failure counts as sync error
+            recordSyncError();
         }
     };
 
     const handleLogout = () => {
         logout();
-        localStorage.removeItem('piyou_timetable');
-        localStorage.removeItem('piyou_grades');
+        clearSchoolData();
+        localStorage.removeItem('piyou_sync_errors');
+        localStorage.removeItem('piyou_sync_locked_until');
         window.location.reload();
     };
 
@@ -159,8 +167,23 @@ export default function Settings() {
                             <p style={{ fontWeight: 600, color: 'var(--text)', fontSize: '1.125rem' }}>
                                 {isAuthenticated && user ? user.name : '同學你好'}
                             </p>
-                            <p style={{ color: 'var(--text-muted)', fontSize: '14px', marginTop: '4px' }}>
-                                {isAuthenticated && user ? `${user.student_id} (已同步資料)` : '未同步資料 / Not synced'}
+                            <p style={{ color: 'var(--text-muted)', fontSize: '14px', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                                {hasCachedData() ? (
+                                    <>
+                                        <IconCheckCircle size={14} style={{ color: 'var(--color-success)' }} />
+                                        <span>已同步校務資料</span>
+                                        {lastSyncTime > 0 && (
+                                            <span style={{ fontSize: '12px' }}>
+                                                ({new Date(lastSyncTime).toLocaleString('zh-TW')})
+                                            </span>
+                                        )}
+                                    </>
+                                ) : (
+                                    <>
+                                        <IconXCircle size={14} />
+                                        <span>未同步校務資料</span>
+                                    </>
+                                )}
                             </p>
                         </div>
                     </div>
@@ -190,9 +213,31 @@ export default function Settings() {
                         <h3 style={{ fontSize: '1.125rem', fontWeight: 700, color: 'var(--text)', marginBottom: '8px' }}>
                             同步校務資料
                         </h3>
-                        <p style={{ fontSize: '14px', color: 'var(--text-muted)', marginBottom: '16px' }}>
-                            請輸入校務系統帳號密碼，以撈取最新課表與成績至本機端。
+                        <p style={{ fontSize: '14px', color: 'var(--text-muted)', marginBottom: '8px' }}>
+                            請輸入校務系統帳號密碼，以擈取最新課表與成績至本機端。
                         </p>
+                        <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '16px' }}>
+                            🔒 帳密不會被儲存，資料僅存於您的裝置。
+                        </p>
+
+                        {/* 同步頻率限制提示 */}
+                        {(() => {
+                            const syncCheck = canSync();
+                            if (!syncCheck.allowed) {
+                                const mins = Math.ceil(syncCheck.remainingMs / 60000);
+                                return (
+                                    <div style={{
+                                        padding: '12px', borderRadius: '10px', marginBottom: '12px',
+                                        background: 'rgba(245,158,11,0.1)', color: 'var(--color-warning)', fontSize: '14px',
+                                    }}>
+                                        {syncCheck.reason === 'locked'
+                                            ? `🔒 同步錯誤過多，已暫時鎖定，請 ${mins} 分鐘後重試`
+                                            : `⏳ 同步冷卻中，距離下次可同步還有 ${mins} 分鐘`}
+                                    </div>
+                                );
+                            }
+                            return null;
+                        })()}
 
                         {error && (
                             <div style={{
@@ -242,11 +287,11 @@ export default function Settings() {
                                 </button>
                                 <button
                                     type="submit"
-                                    disabled={isLoading || !studentId.trim() || !password.trim()}
+                                    disabled={isLoading || !studentId.trim() || !password.trim() || !canSync().allowed}
                                     className="btn btn-primary"
-                                    style={{ flex: 1, padding: '12px', fontSize: '15px', opacity: (!studentId.trim() || !password.trim()) ? 0.5 : 1 }}
+                                    style={{ flex: 1, padding: '12px', fontSize: '15px', opacity: (!studentId.trim() || !password.trim() || !canSync().allowed) ? 0.5 : 1 }}
                                 >
-                                    {isLoading ? '同步中...' : '同步 Sync'}
+                                    {isLoading ? '同步中...' : !canSync().allowed ? '暫不可用' : '同步 Sync'}
                                 </button>
                             </div>
                         </form>

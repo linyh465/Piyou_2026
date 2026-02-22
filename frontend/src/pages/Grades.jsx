@@ -4,7 +4,7 @@
  */
 import { useEffect, useState } from 'react';
 import useTimetableStore from '../stores/timetableStore';
-import { IconChartBar, IconRefresh, IconBook } from '../components/Icons';
+import { IconChartBar, IconRefresh, IconBook, IconTrash } from '../components/Icons';
 
 // ── GPA 4.3 對照表 ──
 function scoreToGPA(score) {
@@ -63,7 +63,7 @@ function displayScore(course) {
 }
 
 export default function Grades() {
-    const { grades, isLoadingGrades, gradesError, fetchGrades } = useTimetableStore();
+    const { grades, isLoadingGrades, gradesError, fetchGrades, clearSchoolData } = useTimetableStore();
     const [selectedSemester, setSelectedSemester] = useState('all');
 
     useEffect(() => { fetchGrades(); }, [fetchGrades]);
@@ -101,10 +101,22 @@ export default function Grades() {
                     <h2 className="page-title">成績查詢</h2>
                     <span className="page-subtitle">Grades</span>
                 </div>
-                <button onClick={fetchGrades} disabled={isLoadingGrades} className="btn btn-ghost" style={{ fontSize: '13px' }}>
-                    <IconRefresh size={15} className={isLoadingGrades ? 'animate-spin' : ''} />
-                    {isLoadingGrades ? '載入中...' : '重新整理'}
-                </button>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                    <button onClick={fetchGrades} disabled={isLoadingGrades} className="btn btn-ghost" style={{ fontSize: '13px' }}>
+                        <IconRefresh size={15} className={isLoadingGrades ? 'animate-spin' : ''} />
+                        {isLoadingGrades ? '載入中...' : '重新整理'}
+                    </button>
+                    {grades.length > 0 && (
+                        <button
+                            onClick={() => { if (window.confirm('確定要清除所有校務資料嗎？（課表與成績）')) clearSchoolData(); }}
+                            className="btn btn-ghost"
+                            style={{ fontSize: '13px', color: 'var(--color-danger)' }}
+                        >
+                            <IconTrash size={15} />
+                            清除資料
+                        </button>
+                    )}
+                </div>
             </div>
 
             {gradesError && (
