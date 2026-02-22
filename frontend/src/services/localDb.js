@@ -86,7 +86,9 @@ export const localDb = {
 
     async updateTask(id, updates) {
         const d = await getDb();
-        const fields = Object.keys(updates);
+        const ALLOWED_COLUMNS = ['title', 'description', 'category', 'priority', 'completed', 'due_date'];
+        const fields = Object.keys(updates).filter((f) => ALLOWED_COLUMNS.includes(f));
+        if (!fields.length) return;
         const setClause = fields.map((f) => `${f} = ?`).join(', ');
         d.run(
             `UPDATE tasks SET ${setClause}, updated_at = datetime('now') WHERE id = ?`,
