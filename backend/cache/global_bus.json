@@ -1,43 +1,83 @@
 {
   "arrivals": [
     {
-      "routeName": "162",
-      "direction": "返程",
-      "estimatedSeconds": 2880,
-      "estimatedMinutes": 48,
-      "stopName": "靜宜大學(英才路)",
-      "stopStatus": "48 分",
-      "plateNumb": "KKC-1222",
-      "stopStatusCode": 0
-    },
-    {
-      "routeName": "162",
-      "direction": "返程",
-      "estimatedSeconds": 3060,
-      "estimatedMinutes": 51,
-      "stopName": "靜宜大學(校門)",
-      "stopStatus": "51 分",
-      "plateNumb": "KKC-1222",
-      "stopStatusCode": 0
-    },
-    {
-      "routeName": "162",
-      "direction": "返程",
-      "estimatedSeconds": 3120,
-      "estimatedMinutes": 52,
-      "stopName": "靜宜大學主顧樓",
-      "stopStatus": "52 分",
-      "plateNumb": "KKC-1222",
-      "stopStatusCode": 0
-    },
-    {
-      "routeName": "162",
-      "direction": "返程",
-      "estimatedSeconds": 3180,
-      "estimatedMinutes": 53,
+      "routeName": "368",
+      "direction": "去程",
+      "estimatedSeconds": 0,
+      "estimatedMinutes": 0,
       "stopName": "靜宜大學主顧聖母堂",
-      "stopStatus": "53 分",
-      "plateNumb": "KKC-1222",
+      "stopStatus": "進站中",
+      "plateNumb": "EAA-679",
+      "stopStatusCode": 0
+    },
+    {
+      "routeName": "162",
+      "direction": "返程",
+      "estimatedSeconds": 180,
+      "estimatedMinutes": 3,
+      "stopName": "靜宜大學(英才路)",
+      "stopStatus": "3 分",
+      "plateNumb": "773-FX",
+      "stopStatusCode": 0
+    },
+    {
+      "routeName": "162",
+      "direction": "返程",
+      "estimatedSeconds": 360,
+      "estimatedMinutes": 6,
+      "stopName": "靜宜大學(校門)",
+      "stopStatus": "6 分",
+      "plateNumb": "773-FX",
+      "stopStatusCode": 0
+    },
+    {
+      "routeName": "162",
+      "direction": "返程",
+      "estimatedSeconds": 420,
+      "estimatedMinutes": 7,
+      "stopName": "靜宜大學主顧樓",
+      "stopStatus": "7 分",
+      "plateNumb": "773-FX",
+      "stopStatusCode": 0
+    },
+    {
+      "routeName": "162",
+      "direction": "返程",
+      "estimatedSeconds": 480,
+      "estimatedMinutes": 8,
+      "stopName": "靜宜大學主顧聖母堂",
+      "stopStatus": "8 分",
+      "plateNumb": "773-FX",
+      "stopStatusCode": 0
+    },
+    {
+      "routeName": "301",
+      "direction": "返程",
+      "estimatedSeconds": 1200,
+      "estimatedMinutes": 20,
+      "stopName": "靜宜大學(校門)",
+      "stopStatus": "20 分",
+      "plateNumb": "EAL-1276",
+      "stopStatusCode": 0
+    },
+    {
+      "routeName": "301",
+      "direction": "返程",
+      "estimatedSeconds": 1320,
+      "estimatedMinutes": 22,
+      "stopName": "靜宜大學主顧樓",
+      "stopStatus": "22 分",
+      "plateNumb": "EAL-1276",
+      "stopStatusCode": 0
+    },
+    {
+      "routeName": "301",
+      "direction": "返程",
+      "estimatedSeconds": 1380,
+      "estimatedMinutes": 23,
+      "stopName": "靜宜大學靜園餐廳",
+      "stopStatus": "23 分",
+      "plateNumb": "EAL-1276",
       "stopStatusCode": 0
     },
     {
@@ -46,36 +86,6 @@
       "estimatedSeconds": null,
       "estimatedMinutes": null,
       "stopName": "靜宜大學靜園餐廳",
-      "stopStatus": "末班車已過",
-      "plateNumb": "",
-      "stopStatusCode": 3
-    },
-    {
-      "routeName": "301",
-      "direction": "返程",
-      "estimatedSeconds": null,
-      "estimatedMinutes": null,
-      "stopName": "靜宜大學靜園餐廳",
-      "stopStatus": "尚未發車",
-      "plateNumb": "",
-      "stopStatusCode": 1
-    },
-    {
-      "routeName": "301",
-      "direction": "返程",
-      "estimatedSeconds": null,
-      "estimatedMinutes": null,
-      "stopName": "靜宜大學(校門)",
-      "stopStatus": "尚未發車",
-      "plateNumb": "",
-      "stopStatusCode": 1
-    },
-    {
-      "routeName": "301",
-      "direction": "返程",
-      "estimatedSeconds": null,
-      "estimatedMinutes": null,
-      "stopName": "靜宜大學主顧樓",
       "stopStatus": "尚未發車",
       "plateNumb": "",
       "stopStatusCode": 1
@@ -86,9 +96,9 @@
       "estimatedSeconds": null,
       "estimatedMinutes": null,
       "stopName": "靜宜會館",
-      "stopStatus": "末班車已過",
+      "stopStatus": "尚未發車",
       "plateNumb": "",
-      "stopStatusCode": 3
+      "stopStatusCode": 1
     },
     {
       "routeName": "368",
@@ -96,9 +106,9 @@
       "estimatedSeconds": null,
       "estimatedMinutes": null,
       "stopName": "靜宜會館",
-      "stopStatus": "末班車已過",
+      "stopStatus": "尚未發車",
       "plateNumb": "",
-      "stopStatusCode": 3
+      "stopStatusCode": 1
     },
     {
       "routeName": "368",
@@ -106,9 +116,9 @@
       "estimatedSeconds": null,
       "estimatedMinutes": null,
       "stopName": "靜宜大學(英才路)",
-      "stopStatus": "末班車已過",
+      "stopStatus": "尚未發車",
       "plateNumb": "",
-      "stopStatusCode": 3
+      "stopStatusCode": 1
     },
     {
       "routeName": "368",
@@ -116,9 +126,9 @@
       "estimatedSeconds": null,
       "estimatedMinutes": null,
       "stopName": "靜宜大學(校門)",
-      "stopStatus": "末班車已過",
+      "stopStatus": "尚未發車",
       "plateNumb": "",
-      "stopStatusCode": 3
+      "stopStatusCode": 1
     },
     {
       "routeName": "368",
@@ -126,19 +136,9 @@
       "estimatedSeconds": null,
       "estimatedMinutes": null,
       "stopName": "靜宜大學主顧樓",
-      "stopStatus": "末班車已過",
+      "stopStatus": "尚未發車",
       "plateNumb": "",
-      "stopStatusCode": 3
-    },
-    {
-      "routeName": "368",
-      "direction": "去程",
-      "estimatedSeconds": null,
-      "estimatedMinutes": null,
-      "stopName": "靜宜大學主顧聖母堂",
-      "stopStatus": "末班車已過",
-      "plateNumb": "",
-      "stopStatusCode": 3
+      "stopStatusCode": 1
     },
     {
       "routeName": "368",
@@ -146,9 +146,9 @@
       "estimatedSeconds": null,
       "estimatedMinutes": null,
       "stopName": "靜宜大學主顧聖母堂",
-      "stopStatus": "末班車已過",
+      "stopStatus": "尚未發車",
       "plateNumb": "",
-      "stopStatusCode": 3
+      "stopStatusCode": 1
     },
     {
       "routeName": "368",
@@ -156,9 +156,9 @@
       "estimatedSeconds": null,
       "estimatedMinutes": null,
       "stopName": "靜宜大學(英才路)",
-      "stopStatus": "末班車已過",
+      "stopStatus": "尚未發車",
       "plateNumb": "",
-      "stopStatusCode": 3
+      "stopStatusCode": 1
     },
     {
       "routeName": "162",
@@ -166,9 +166,9 @@
       "estimatedSeconds": null,
       "estimatedMinutes": null,
       "stopName": "靜宜大學(英才路)",
-      "stopStatus": "末班車已過",
+      "stopStatus": "尚未發車",
       "plateNumb": "",
-      "stopStatusCode": 3
+      "stopStatusCode": 1
     },
     {
       "routeName": "162",
@@ -176,11 +176,11 @@
       "estimatedSeconds": null,
       "estimatedMinutes": null,
       "stopName": "靜宜大學主顧聖母堂",
-      "stopStatus": "末班車已過",
+      "stopStatus": "尚未發車",
       "plateNumb": "",
-      "stopStatusCode": 3
+      "stopStatusCode": 1
     }
   ],
-  "updatedAt": "21:35:53",
-  "_cached_at": 1771680953.8720393
+  "updatedAt": "09:04:20",
+  "_cached_at": 1771722260.7031639
 }
