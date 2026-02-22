@@ -26,12 +26,26 @@ function getColorForCourse(name) {
 }
 
 export default function Timetable() {
-    const { timetable, isLoadingTimetable, timetableError, isTimeout, fetchTimetable, clearSchoolData } = useTimetableStore();
+    const { timetable, isLoadingTimetable, timetableError, isTimeout, fetchTimetable, clearTimetableData, canSync } = useTimetableStore();
 
-    useEffect(() => { fetchTimetable(); }, [fetchTimetable]);
+    // 僅在有快取時自動更新，避免清除後重新拉取 / Only auto-refresh if cached data exists
+    useEffect(() => {
+        if (localStorage.getItem('piyou_timetable')) fetchTimetable();
+    }, [fetchTimetable]);
 
     const matrix = {};
     timetable.forEach((course) => { matrix[`${course.day}-${course.period}`] = course; });
+
+    /** 清除課表並顯示冷卻提示 / Clear timetable with cooldown notice */
+    const handleClearTimetable = () => {
+        const syncCheck = canSync();
+        let msg = '確定要清除課表資料嗎？';
+        if (!syncCheck.allowed) {
+            const mins = Math.ceil(syncCheck.remainingMs / 60000);
+            msg += `\n\n⚠️ 冷卻時間: ${mins}分，需待冷卻結束後才可再次同步校務資料。`;
+        }
+        if (window.confirm(msg)) clearTimetableData();
+    };
 
     return (
         <div className="section-stack animate-fade-in">
@@ -49,12 +63,12 @@ export default function Timetable() {
                     </button>
                     {timetable.length > 0 && (
                         <button
-                            onClick={() => { if (window.confirm('確定要清除所有校務資料嗎？（課表與成績）')) clearSchoolData(); }}
+                            onClick={handleClearTimetable}
                             className="btn btn-ghost"
                             style={{ fontSize: '13px', color: 'var(--color-danger)' }}
                         >
                             <IconTrash size={15} />
-                            清除資料
+                            清除課表
                         </button>
                     )}
                 </div>

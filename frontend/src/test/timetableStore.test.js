@@ -118,4 +118,62 @@ describe('timetableStore', () => {
     const next = useTimetableStore.getState().getNextClass();
     expect(next).toBeNull();
   });
+
+  it('clearTimetableData clears only timetable', () => {
+    // 預先塞入課表與成績 / Seed timetable and grades
+    localStorage.setItem('piyou_timetable', JSON.stringify([{ name: '微積分' }]));
+    localStorage.setItem('piyou_grades', JSON.stringify([{ name: '113-1' }]));
+    useTimetableStore.setState({
+      timetable: [{ name: '微積分' }],
+      grades: [{ name: '113-1' }],
+    });
+
+    useTimetableStore.getState().clearTimetableData();
+
+    const state = useTimetableStore.getState();
+    expect(state.timetable).toEqual([]);
+    expect(state.grades).toEqual([{ name: '113-1' }]); // 成績不受影響
+    expect(localStorage.getItem('piyou_timetable')).toBeNull();
+    expect(localStorage.getItem('piyou_grades')).not.toBeNull();
+  });
+
+  it('clearGradesData clears only grades', () => {
+    localStorage.setItem('piyou_timetable', JSON.stringify([{ name: '微積分' }]));
+    localStorage.setItem('piyou_grades', JSON.stringify([{ name: '113-1' }]));
+    useTimetableStore.setState({
+      timetable: [{ name: '微積分' }],
+      grades: [{ name: '113-1' }],
+    });
+
+    useTimetableStore.getState().clearGradesData();
+
+    const state = useTimetableStore.getState();
+    expect(state.grades).toEqual([]);
+    expect(state.timetable).toEqual([{ name: '微積分' }]); // 課表不受影響
+    expect(localStorage.getItem('piyou_grades')).toBeNull();
+    expect(localStorage.getItem('piyou_timetable')).not.toBeNull();
+  });
+
+  it('clearSchoolData clears all data and token', () => {
+    sessionStorage.setItem('piyou_token', 'test-token');
+    localStorage.setItem('piyou_timetable', JSON.stringify([{ name: '微積分' }]));
+    localStorage.setItem('piyou_grades', JSON.stringify([{ name: '113-1' }]));
+    localStorage.setItem('piyou_last_sync', String(Date.now()));
+    useTimetableStore.setState({
+      timetable: [{ name: '微積分' }],
+      grades: [{ name: '113-1' }],
+      lastSyncTime: Date.now(),
+    });
+
+    useTimetableStore.getState().clearSchoolData();
+
+    const state = useTimetableStore.getState();
+    expect(state.timetable).toEqual([]);
+    expect(state.grades).toEqual([]);
+    expect(state.lastSyncTime).toBe(0);
+    expect(sessionStorage.getItem('piyou_token')).toBeNull();
+    expect(localStorage.getItem('piyou_timetable')).toBeNull();
+    expect(localStorage.getItem('piyou_grades')).toBeNull();
+    expect(localStorage.getItem('piyou_last_sync')).toBeNull();
+  });
 });

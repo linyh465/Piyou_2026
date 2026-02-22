@@ -63,10 +63,24 @@ function displayScore(course) {
 }
 
 export default function Grades() {
-    const { grades, isLoadingGrades, gradesError, fetchGrades, clearSchoolData } = useTimetableStore();
+    const { grades, isLoadingGrades, gradesError, fetchGrades, clearGradesData, canSync } = useTimetableStore();
     const [selectedSemester, setSelectedSemester] = useState('all');
 
-    useEffect(() => { fetchGrades(); }, [fetchGrades]);
+    // 僅在有快取時自動更新，避免清除後重新拉取 / Only auto-refresh if cached data exists
+    useEffect(() => {
+        if (localStorage.getItem('piyou_grades')) fetchGrades();
+    }, [fetchGrades]);
+
+    /** 清除成績並顯示冷卻提示 / Clear grades with cooldown notice */
+    const handleClearGrades = () => {
+        const syncCheck = canSync();
+        let msg = '確定要清除成績資料嗎？';
+        if (!syncCheck.allowed) {
+            const mins = Math.ceil(syncCheck.remainingMs / 60000);
+            msg += `\n\n⚠️ 冷卻時間: ${mins}分，需待冷卻結束後才可再次同步校務資料。`;
+        }
+        if (window.confirm(msg)) clearGradesData();
+    };
 
     // 篩選學期 / Filter semesters
     const filteredGrades = selectedSemester === 'all'
@@ -108,12 +122,12 @@ export default function Grades() {
                     </button>
                     {grades.length > 0 && (
                         <button
-                            onClick={() => { if (window.confirm('確定要清除所有校務資料嗎？（課表與成績）')) clearSchoolData(); }}
+                            onClick={handleClearGrades}
                             className="btn btn-ghost"
                             style={{ fontSize: '13px', color: 'var(--color-danger)' }}
                         >
                             <IconTrash size={15} />
-                            清除資料
+                            清除成績
                         </button>
                     )}
                 </div>
