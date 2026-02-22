@@ -17,14 +17,27 @@ import os
 import base64
 import json
 from datetime import datetime, timedelta, timezone
-from fastapi import APIRouter, HTTPException, Depends, Header
+from fastapi import APIRouter, HTTPException, Depends, Header, Request
 from typing import Optional
 from app.models.schemas import LoginRequest, LoginResponse
 from app.services.scraper import SchoolScraper
 from app.services.scraper_cache import cache_scraper_session
+from app.middleware.security import sync_cooldown
 
 router = APIRouter(prefix="/auth", tags=["認證 / Auth"])
 logger = logging.getLogger(__name__)
+
+
+def _get_client_ip(request: Request) -> str:
+    """
+    取得真實客戶端 IP / Get real client IP.
+    優先讀取 X-Forwarded-For（反向代理環境），否則取 request.client.host。
+    Prefers X-Forwarded-For (reverse proxy), falls back to request.client.host.
+    """
+    forwarded = request.headers.get("x-forwarded-for")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return request.client.host if request.client else "unknown"
 
 # JWT 設定 / JWT Configuration
 JWT_SECRET = os.getenv("JWT_SECRET")
@@ -92,20 +105,34 @@ async def get_current_user(authorization: Optional[str] = Header(None)) -> dict:
 
 
 @router.post("/login", response_model=LoginResponse)
-async def login(request: LoginRequest):
+async def login(request_body: LoginRequest, request: Request):
     """
     登入端點 / Login Endpoint
 
     流程 / Flow:
-    1. 接收學號與密碼（不記錄） / Receive credentials (never logged)
-    2. 透過爬蟲代理校務系統驗證 / Proxy auth via school portal scraper
-    3. 成功後簽發 JWT / Issue JWT on success
-    4. 快取帳密供資料端點使用 / Cache credentials for data endpoints
-    5. 函數結束後帳密自動被 GC 回收 / Credentials auto-collected by GC after function ends
+    1. 檢查伺服器端同步冷卻（IP + 學號雙重鎖定）/ Check server-side sync cooldown
+    2. 接收學號與密碼（不記錄） / Receive credentials (never logged)
+    3. 透過爬蟲代理校務系統驗證 / Proxy auth via school portal scraper
+    4. 成功後簽發 JWT / Issue JWT on success
+    5. 快取帳密供資料端點使用 / Cache credentials for data endpoints
+    6. 記錄同步成功至冷卻追蹤器 / Record sync success in cooldown tracker
 
     ⚠️ 此函數內嚴禁使用 logger 記錄任何包含帳密的變數
        DO NOT use logger to record any variable containing credentials
     """
+
+    # ── 伺服器端冷卻檢查（IP + 學號雙重鎖定）──
+    # ── Server-side cooldown check (IP + student_id dual lock) ──
+    client_ip = _get_client_ip(request)
+    cooldown_status = sync_cooldown.check_cooldown(client_ip, request_body.student_id)
+    if not cooldown_status["allowed"]:
+        remaining = cooldown_status.get("remaining_seconds", 0)
+        reason = cooldown_status.get("reason", "cooldown")
+        if reason == "locked":
+            detail = f"同步錯誤過多，已暫時鎖定，請 {remaining // 60 + 1} 分鐘後重試 / Too many sync errors, locked for {remaining // 60 + 1} min"
+        else:
+            detail = f"同步冷卻中，請 {remaining // 60 + 1} 分鐘後重試 / Sync cooldown, please wait {remaining // 60 + 1} min"
+        raise HTTPException(status_code=429, detail=detail)
 
     # ── 驗證邏輯（帳密僅存在於此函數作用域）──
     # ── Auth logic (credentials exist ONLY in this function scope) ──
@@ -115,23 +142,26 @@ async def login(request: LoginRequest):
         # 嘗試登入校務系統（在執行緒池中執行，避免阻塞事件迴圈）
         # Try logging into school portal (run in thread pool to avoid blocking event loop)
         user_info = await asyncio.to_thread(
-            scraper.login, request.student_id, request.password
+            scraper.login, request_body.student_id, request_body.password
         )
     except Exception:
         # ⚠️ 不記錄詳細錯誤（可能洩漏帳密） / Don't log details (may leak credentials)
         logger.info("Login attempt failed for a user")  # 僅記錄失敗事件 / Log only the event
+        # 記錄同步錯誤至冷卻追蹤器 / Record sync error in cooldown tracker
+        sync_cooldown.record_error(client_ip, request_body.student_id)
         raise HTTPException(
             status_code=401,
             detail="登入失敗，請確認帳號密碼 / Login failed, please check credentials",
         )
 
+    # ── 記錄同步成功至冷卻追蹤器 / Record sync success in cooldown tracker ──
+    sync_cooldown.record_success(client_ip, request_body.student_id)
+
     # ── 快取帳密 / Cache credentials ──
-    _cache_credentials(request.student_id, request.password)
+    _cache_credentials(request_body.student_id, request_body.password)
 
     # ── 快取 scraper session / Cache scraper session ──
-    # 讓後續 /data/timetable、/data/grades 重用此 session，不再重複登入校網
-    # Allow subsequent /data/* endpoints to reuse this session (no double login)
-    cache_scraper_session(request.student_id, scraper)
+    cache_scraper_session(request_body.student_id, scraper)
 
     # ── 簽發 JWT / Issue JWT ──
     payload = {
@@ -153,4 +183,22 @@ async def login(request: LoginRequest):
             "department": user_info.get("department", ""),
         },
     )
+
+
+@router.get("/sync-cooldown")
+async def get_sync_cooldown(request: Request):
+    """
+    查詢同步冷卻狀態 / Check sync cooldown status
+
+    不需要認證即可查詢（基於 IP 追蹤）。
+    No authentication required (IP-based tracking).
+
+    回傳 / Returns:
+    - allowed: 是否可以同步 / Whether sync is allowed
+    - reason: 被阻擋的原因 / Block reason (cooldown|locked)
+    - remaining_seconds: 剩餘秒數 / Remaining seconds
+    """
+    client_ip = _get_client_ip(request)
+    status = sync_cooldown.check_cooldown(client_ip)
+    return status
 

@@ -70,10 +70,12 @@ const useAuthStore = create((set, get) => ({
             return true;
         } catch (err) {
             const message = err.response?.data?.detail || '登入失敗，請確認帳號密碼 / Login failed, please check credentials';
+            const isCooldown = err.response?.status === 429;
             set((state) => ({
                 isLoading: false,
                 error: message,
-                loginErrorCount: state.loginErrorCount + 1
+                // 429 冷卻限制不計入登入錯誤次數 / 429 cooldown does NOT count as login error
+                loginErrorCount: isCooldown ? state.loginErrorCount : state.loginErrorCount + 1
             }));
             return false;
         }

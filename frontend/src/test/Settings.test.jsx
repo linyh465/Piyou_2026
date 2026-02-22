@@ -42,12 +42,13 @@ vi.mock('../stores/timetableStore', () => {
   const store = {
     fetchTimetable: vi.fn(),
     fetchGrades: vi.fn(),
-    canSync: vi.fn(() => ({ allowed: true })),
+    canSync: vi.fn(async () => ({ allowed: true })),
     recordSyncSuccess: vi.fn(),
     recordSyncError: vi.fn(),
     hasCachedData: vi.fn(() => false),
     lastSyncTime: 0,
     clearSchoolData: vi.fn(),
+    serverCooldown: null,
   };
   return {
     __esModule: true,

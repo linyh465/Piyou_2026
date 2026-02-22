@@ -158,7 +158,7 @@ describe('timetableStore', () => {
     expect(sessionStorage.getItem('piyou_token')).toBeNull(); // token 已清除
   });
 
-  it('clearSchoolData clears all data and token', () => {
+  it('clearSchoolData clears data and token but preserves cooldown', () => {
     sessionStorage.setItem('piyou_token', 'test-token');
     localStorage.setItem('piyou_timetable', JSON.stringify([{ name: '微積分' }]));
     localStorage.setItem('piyou_grades', JSON.stringify([{ name: '113-1' }]));
@@ -174,10 +174,32 @@ describe('timetableStore', () => {
     const state = useTimetableStore.getState();
     expect(state.timetable).toEqual([]);
     expect(state.grades).toEqual([]);
-    expect(state.lastSyncTime).toBe(0);
+    // 冷卻狀態不應被清除（伺服器端強制執行）/ Cooldown should NOT be cleared (server-enforced)
+    expect(state.lastSyncTime).not.toBe(0); // lastSyncTime 保留
     expect(sessionStorage.getItem('piyou_token')).toBeNull();
     expect(localStorage.getItem('piyou_timetable')).toBeNull();
     expect(localStorage.getItem('piyou_grades')).toBeNull();
-    expect(localStorage.getItem('piyou_last_sync')).toBeNull();
+    // piyou_last_sync 不再被清除 / piyou_last_sync is no longer cleared
+    expect(localStorage.getItem('piyou_last_sync')).not.toBeNull();
+  });
+
+  it('canSync queries server and returns cooldown status', async () => {
+    // Mock 伺服器回傳冷卻中 / Mock server returning cooldown active
+    mockApi.mockResolvedValueOnce({
+      data: { allowed: false, reason: 'cooldown', remaining_seconds: 1800 },
+    });
+
+    const result = await useTimetableStore.getState().canSync();
+    expect(result.allowed).toBe(false);
+    expect(result.reason).toBe('cooldown');
+    expect(result.remainingMs).toBe(1800000);
+  });
+
+  it('canSync falls back to local check on server error', async () => {
+    mockApi.mockRejectedValueOnce(new Error('Network error'));
+
+    const result = await useTimetableStore.getState().canSync();
+    // 本地沒有 lastSyncTime，應允許 / No local lastSyncTime, should allow
+    expect(result.allowed).toBe(true);
   });
 });

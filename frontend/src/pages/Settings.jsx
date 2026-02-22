@@ -6,7 +6,7 @@
  * 排版間距與字體大小統一與首頁 Dashboard 一致
  * Layout spacing and font sizes unified with Dashboard.
  */
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import useThemeStore from '../stores/themeStore';
 import useAuthStore from '../stores/authStore';
 import useTimetableStore from '../stores/timetableStore';
@@ -82,7 +82,7 @@ function SectionHeader({ title, titleEn }) {
 export default function Settings() {
     const { theme, setTheme } = useThemeStore();
     const { user, isAuthenticated, login, logout, isLoading, error, clearError } = useAuthStore();
-    const { fetchTimetable, fetchGrades, canSync, recordSyncSuccess, recordSyncError, hasCachedData, lastSyncTime, clearSchoolData } = useTimetableStore();
+    const { fetchTimetable, fetchGrades, canSync, recordSyncSuccess, recordSyncError, hasCachedData, lastSyncTime, clearSchoolData, serverCooldown } = useTimetableStore();
 
     const [busNotify, setBusNotify] = useState(true);
     const [taskNotify, setTaskNotify] = useState(true);
@@ -92,13 +92,21 @@ export default function Settings() {
     const [password, setPassword] = useState('');
     const [syncSuccess, setSyncSuccess] = useState(false);
 
+    // 當同步 Modal 開啟時，向伺服器查詢冷卻狀態
+    // Fetch server-side cooldown status when sync modal opens
+    useEffect(() => {
+        if (showSyncModal) {
+            canSync();
+        }
+    }, [showSyncModal]);
+
     const handleSync = async (e) => {
         e.preventDefault();
         setSyncSuccess(false);
         if (!studentId.trim() || !password.trim()) return;
 
-        // 同步頻率限制檢查 / Rate limit check
-        const syncCheck = canSync();
+        // 伺服器端同步冷卻檢查 / Server-side rate limit check
+        const syncCheck = await canSync();
         if (!syncCheck.allowed) return;
 
         const success = await login(studentId.trim(), password);
@@ -122,8 +130,8 @@ export default function Settings() {
     const handleLogout = () => {
         logout();
         clearSchoolData();
-        localStorage.removeItem('piyou_sync_errors');
-        localStorage.removeItem('piyou_sync_locked_until');
+        // 注意：不再清除冷卻相關 localStorage，冷卻由伺服器端 IP 追蹤強制執行
+        // Note: cooldown localStorage is NOT cleared; enforced server-side via IP tracking
         window.location.reload();
     };
 
@@ -220,23 +228,19 @@ export default function Settings() {
                             🔒 帳密不會被儲存，資料僅存於您的裝置。
                         </p>
 
-                        {/* 同步頻率限制提示 */}
-                        {(() => {
-                            const syncCheck = canSync();
-                            if (!syncCheck.allowed) {
-                                const mins = Math.ceil(syncCheck.remainingMs / 60000);
-                                return (
-                                    <div style={{
-                                        padding: '12px', borderRadius: '10px', marginBottom: '12px',
-                                        background: 'rgba(245,158,11,0.1)', color: 'var(--color-warning)', fontSize: '14px',
-                                    }}>
-                                        {syncCheck.reason === 'locked'
-                                            ? `🔒 同步錯誤過多，已暫時鎖定，請 ${mins} 分鐘後重試`
-                                            : `⏳ 同步冷卻中，距離下次可同步還有 ${mins} 分鐘`}
-                                    </div>
-                                );
-                            }
-                            return null;
+                        {/* 同步頻率限制提示（伺服器端判定）/ Server-side cooldown notice */}
+                        {serverCooldown && !serverCooldown.allowed && (() => {
+                            const mins = Math.ceil((serverCooldown.remainingMs || 0) / 60000);
+                            return (
+                                <div style={{
+                                    padding: '12px', borderRadius: '10px', marginBottom: '12px',
+                                    background: 'rgba(245,158,11,0.1)', color: 'var(--color-warning)', fontSize: '14px',
+                                }}>
+                                    {serverCooldown.reason === 'locked'
+                                        ? `🔒 同步錯誤過多，已暫時鎖定，請 ${mins} 分鐘後重試`
+                                        : `⏳ 同步冷卻中，距離下次可同步還有 ${mins} 分鐘`}
+                                </div>
+                            );
                         })()}
 
                         {error && (

@@ -3,6 +3,15 @@ API 健康檢查 & 基礎端點測試
 Tests for health check and basic API endpoints.
 """
 import pytest
+from app.middleware.security import sync_cooldown
+
+
+@pytest.fixture(autouse=True)
+def reset_sync_cooldown():
+    """每個測試前清空冷卻追蹤器 / Reset cooldown tracker before each test"""
+    sync_cooldown._records.clear()
+    yield
+    sync_cooldown._records.clear()
 
 
 @pytest.mark.anyio
@@ -50,3 +59,39 @@ async def test_bus_endpoint_exists(client):
     resp = await client.get("/api/v1/data/bus")
     # bus endpoint 不需要 auth，但可能因 TDX 憑證缺失而 503
     assert resp.status_code in (200, 503)
+
+
+@pytest.mark.anyio
+async def test_sync_cooldown_initially_allowed(client):
+    """GET /api/v1/auth/sync-cooldown 初始狀態應允許同步"""
+    resp = await client.get("/api/v1/auth/sync-cooldown")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["allowed"] is True
+
+
+@pytest.mark.anyio
+async def test_sync_cooldown_after_success(client):
+    """同步成功後冷卻應生效 / Cooldown should activate after sync success"""
+    # 模擬同步成功 / Simulate sync success
+    sync_cooldown.record_success("127.0.0.1")
+
+    resp = await client.get("/api/v1/auth/sync-cooldown")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["allowed"] is False
+    assert data["reason"] == "cooldown"
+    assert data["remaining_seconds"] > 0
+
+
+@pytest.mark.anyio
+async def test_sync_cooldown_after_errors_lock(client):
+    """連續錯誤應觸發鎖定 / Consecutive errors should trigger lock"""
+    for _ in range(3):
+        sync_cooldown.record_error("127.0.0.1")
+
+    resp = await client.get("/api/v1/auth/sync-cooldown")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["allowed"] is False
+    assert data["reason"] == "locked"

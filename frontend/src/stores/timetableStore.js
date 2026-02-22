@@ -5,6 +5,9 @@
  *
  * 資安：課表、成績僅快取於使用者本地端 (localStorage)，不上傳至雲端。
  * Security: timetable/grades are cached locally only, never uploaded to cloud.
+ *
+ * 同步冷卻：伺服器端 IP+學號雙重鎖定，前端僅做 UI 顯示。
+ * Sync cooldown: server-side IP+student_id dual lock; frontend is display-only.
  */
 import { create } from 'zustand';
 import { api } from '../services/apiClient';
@@ -12,11 +15,6 @@ import { api } from '../services/apiClient';
 // 請求超時時間 / Request timeout duration
 const REQUEST_TIMEOUT = 25000;
 const SYNC_TIMEOUT = 30000; // 同步操作允許更長時間 / Sync operations allow more time
-
-// 同步頻率限制常數 / Sync rate limiting constants
-const SYNC_COOLDOWN_MS = 60 * 60 * 1000;         // 每 1 小時只能同步一次
-const SYNC_LOCK_DURATION_MS = 15 * 60 * 1000;    // 鎖定 15 分鐘
-const MAX_SYNC_ERRORS = 3;                        // 錯誤超過 3 次觸發鎖定
 
 const useTimetableStore = create((set, get) => ({
     // 課表狀態 / Timetable state
@@ -28,44 +26,50 @@ const useTimetableStore = create((set, get) => ({
     gradesError: null,
     isTimeout: false,
 
-    // 同步限制狀態 / Sync rate limiting state
+    // 同步限制狀態（伺服器端強制） / Sync rate limiting state (server-side enforced)
+    // 前端保留 lastSyncTime 僅供 UI 顯示；冷卻由伺服器判定
+    // Frontend keeps lastSyncTime for UI display only; cooldown is server-enforced
     lastSyncTime: parseInt(localStorage.getItem('piyou_last_sync') || '0', 10),
-    syncErrorCount: parseInt(localStorage.getItem('piyou_sync_errors') || '0', 10),
-    syncLockedUntil: parseInt(localStorage.getItem('piyou_sync_locked_until') || '0', 10),
+    serverCooldown: null, // { allowed, reason?, remaining_seconds? }
 
-    /** 檢查是否允許同步 / Check if sync is allowed */
-    canSync: () => {
-        const { lastSyncTime, syncLockedUntil } = get();
-        const now = Date.now();
-        if (syncLockedUntil > now) {
-            return { allowed: false, reason: 'locked', remainingMs: syncLockedUntil - now };
+    /**
+     * 向伺服器查詢冷卻狀態 / Query server for cooldown status
+     * 回傳 { allowed, reason?, remainingMs? }
+     */
+    canSync: async () => {
+        try {
+            const res = await api.get('/auth/sync-cooldown', { timeout: 5000 });
+            const data = res.data;
+            const result = {
+                allowed: data.allowed,
+                reason: data.reason || null,
+                remainingMs: data.remaining_seconds ? data.remaining_seconds * 1000 : 0,
+            };
+            set({ serverCooldown: result });
+            return result;
+        } catch {
+            // 伺服器無法連線時，回退到本地檢查 / Fallback to local check on server error
+            const lastSync = get().lastSyncTime;
+            const now = Date.now();
+            const FALLBACK_COOLDOWN_MS = 60 * 60 * 1000;
+            if (lastSync && (now - lastSync) < FALLBACK_COOLDOWN_MS) {
+                return { allowed: false, reason: 'cooldown', remainingMs: FALLBACK_COOLDOWN_MS - (now - lastSync) };
+            }
+            return { allowed: true };
         }
-        if (lastSyncTime && (now - lastSyncTime) < SYNC_COOLDOWN_MS) {
-            return { allowed: false, reason: 'cooldown', remainingMs: SYNC_COOLDOWN_MS - (now - lastSyncTime) };
-        }
-        return { allowed: true };
     },
 
-    /** 記錄同步成功 / Record sync success */
+    /** 記錄同步成功（僅更新本地 UI 顯示用時間） / Record sync success (UI display only) */
     recordSyncSuccess: () => {
         const now = Date.now();
         localStorage.setItem('piyou_last_sync', String(now));
-        localStorage.setItem('piyou_sync_errors', '0');
-        set({ lastSyncTime: now, syncErrorCount: 0 });
+        set({ lastSyncTime: now });
     },
 
-    /** 記錄同步錯誤，超過 3 次鎖定 15 分鐘 / Record sync error */
+    /** 記錄同步錯誤（伺服器端已追蹤，前端無需額外邏輯）/ Record sync error (server-side tracked) */
     recordSyncError: () => {
-        const newCount = get().syncErrorCount + 1;
-        if (newCount >= MAX_SYNC_ERRORS) {
-            const lockUntil = Date.now() + SYNC_LOCK_DURATION_MS;
-            localStorage.setItem('piyou_sync_locked_until', String(lockUntil));
-            localStorage.setItem('piyou_sync_errors', '0');
-            set({ syncErrorCount: 0, syncLockedUntil: lockUntil });
-        } else {
-            localStorage.setItem('piyou_sync_errors', String(newCount));
-            set({ syncErrorCount: newCount });
-        }
+        // 伺服器端已自動追蹤錯誤次數與鎖定
+        // Server already tracks error count and lock
     },
 
     /** 是否有快取的校務資料 / Has cached school data */
@@ -74,13 +78,14 @@ const useTimetableStore = create((set, get) => ({
         return timetable.length > 0 || grades.length > 0;
     },
 
-    /** 清除所有校務快取資料 / Clear all cached school data */
+    /** 清除所有校務快取資料（不清除冷卻紀錄）/ Clear all cached school data (cooldown preserved) */
     clearSchoolData: () => {
         localStorage.removeItem('piyou_timetable');
         localStorage.removeItem('piyou_grades');
-        localStorage.removeItem('piyou_last_sync');
+        // 注意：不再清除 piyou_last_sync，冷卻由伺服器端強制執行
+        // Note: piyou_last_sync is NOT cleared; cooldown is server-enforced
         sessionStorage.removeItem('piyou_token');
-        set({ timetable: [], grades: [], lastSyncTime: 0 });
+        set({ timetable: [], grades: [] });
     },
 
     /** 僅清除課表快取 / Clear only timetable cache */
