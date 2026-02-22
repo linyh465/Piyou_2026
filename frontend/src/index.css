@@ -95,8 +95,7 @@ html {
   color-scheme: light;
 }
 
-.dark html,
-html:has(.dark) {
+html.dark {
   color-scheme: dark;
 }
 
