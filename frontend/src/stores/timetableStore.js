@@ -86,12 +86,14 @@ const useTimetableStore = create((set, get) => ({
     /** 僅清除課表快取 / Clear only timetable cache */
     clearTimetableData: () => {
         localStorage.removeItem('piyou_timetable');
+        sessionStorage.removeItem('piyou_token');
         set({ timetable: [] });
     },
 
     /** 僅清除成績快取 / Clear only grades cache */
     clearGradesData: () => {
         localStorage.removeItem('piyou_grades');
+        sessionStorage.removeItem('piyou_token');
         set({ grades: [] });
     },
 

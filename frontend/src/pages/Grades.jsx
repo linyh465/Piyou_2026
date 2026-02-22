@@ -2,7 +2,7 @@
  * 成績頁面 / Grades Page
  * GPA 上限 4.3，「缺」「通過」等文字成績不納入計算
  */
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import useTimetableStore from '../stores/timetableStore';
 import { IconChartBar, IconRefresh, IconBook, IconTrash } from '../components/Icons';
 
@@ -66,10 +66,8 @@ export default function Grades() {
     const { grades, isLoadingGrades, gradesError, fetchGrades, clearGradesData, canSync } = useTimetableStore();
     const [selectedSemester, setSelectedSemester] = useState('all');
 
-    // 僅在有快取時自動更新，避免清除後重新拉取 / Only auto-refresh if cached data exists
-    useEffect(() => {
-        if (localStorage.getItem('piyou_grades')) fetchGrades();
-    }, [fetchGrades]);
+    // 資料已從 localStorage 載入 zustand，不自動 fetch，避免清除後 in-flight 請求覆寫
+    // Data is already loaded from localStorage into zustand; skip auto-fetch to avoid race condition on clear
 
     /** 清除成績並顯示冷卻提示 / Clear grades with cooldown notice */
     const handleClearGrades = () => {

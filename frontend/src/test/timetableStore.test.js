@@ -119,8 +119,9 @@ describe('timetableStore', () => {
     expect(next).toBeNull();
   });
 
-  it('clearTimetableData clears only timetable', () => {
+  it('clearTimetableData clears only timetable and token', () => {
     // 預先塞入課表與成績 / Seed timetable and grades
+    sessionStorage.setItem('piyou_token', 'test-token');
     localStorage.setItem('piyou_timetable', JSON.stringify([{ name: '微積分' }]));
     localStorage.setItem('piyou_grades', JSON.stringify([{ name: '113-1' }]));
     useTimetableStore.setState({
@@ -135,9 +136,11 @@ describe('timetableStore', () => {
     expect(state.grades).toEqual([{ name: '113-1' }]); // 成績不受影響
     expect(localStorage.getItem('piyou_timetable')).toBeNull();
     expect(localStorage.getItem('piyou_grades')).not.toBeNull();
+    expect(sessionStorage.getItem('piyou_token')).toBeNull(); // token 已清除
   });
 
-  it('clearGradesData clears only grades', () => {
+  it('clearGradesData clears only grades and token', () => {
+    sessionStorage.setItem('piyou_token', 'test-token');
     localStorage.setItem('piyou_timetable', JSON.stringify([{ name: '微積分' }]));
     localStorage.setItem('piyou_grades', JSON.stringify([{ name: '113-1' }]));
     useTimetableStore.setState({
@@ -152,6 +155,7 @@ describe('timetableStore', () => {
     expect(state.timetable).toEqual([{ name: '微積分' }]); // 課表不受影響
     expect(localStorage.getItem('piyou_grades')).toBeNull();
     expect(localStorage.getItem('piyou_timetable')).not.toBeNull();
+    expect(sessionStorage.getItem('piyou_token')).toBeNull(); // token 已清除
   });
 
   it('clearSchoolData clears all data and token', () => {

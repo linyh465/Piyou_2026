@@ -2,7 +2,6 @@
  * 課表頁面 / Timetable Page
  * 間距參考 Dcard / Instagram
  */
-import { useEffect } from 'react';
 import useTimetableStore from '../stores/timetableStore';
 import { IconCalendar, IconRefresh, IconTrash } from '../components/Icons';
 
@@ -28,10 +27,8 @@ function getColorForCourse(name) {
 export default function Timetable() {
     const { timetable, isLoadingTimetable, timetableError, isTimeout, fetchTimetable, clearTimetableData, canSync } = useTimetableStore();
 
-    // 僅在有快取時自動更新，避免清除後重新拉取 / Only auto-refresh if cached data exists
-    useEffect(() => {
-        if (localStorage.getItem('piyou_timetable')) fetchTimetable();
-    }, [fetchTimetable]);
+    // 資料已從 localStorage 載入 zustand，不自動 fetch，避免清除後 in-flight 請求覆寫
+    // Data is already loaded from localStorage into zustand; skip auto-fetch to avoid race condition on clear
 
     const matrix = {};
     timetable.forEach((course) => { matrix[`${course.day}-${course.period}`] = course; });
