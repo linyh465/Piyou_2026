@@ -12,7 +12,7 @@ from typing import Optional
 class LoginRequest(BaseModel):
     """登入請求 / Login Request"""
     student_id: str = Field(..., min_length=1, max_length=20, pattern=r'^[A-Za-z0-9]+$', description="學號 / Student ID")
-    password: str = Field(..., min_length=1, max_length=128, description="密碼 / Password")
+    password: str = Field(..., min_length=4, max_length=128, description="密碼 / Password")
 
 
 class LoginResponse(BaseModel):
