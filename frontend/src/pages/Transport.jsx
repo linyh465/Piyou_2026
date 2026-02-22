@@ -185,7 +185,7 @@ export default function Transport() {
         currentStops.forEach(s => { seqToStop[s.stopSequence] = s.stopName; });
         const sequences = currentStops.map(s => s.stopSequence).sort((a, b) => a - b);
 
-        Object.entries(byPlate).forEach(([plate, entries]) => {
+        Object.entries(byPlate).forEach(([, entries]) => {
             // 每輛車取最新的一筆（最大站序）
             const latest = entries[entries.length - 1];
             const stopName = latest.stopName;
