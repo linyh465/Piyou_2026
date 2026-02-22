@@ -455,71 +455,9 @@ body {
   color: var(--color-brand-light);
 }
 
-/* ── AI 助理區塊 / AI Assistant Section ── */
-.sidebar-ai-section {
-  padding-top: 1rem;
-  margin-top: 0.5rem;
-  border-top: 1px solid var(--border-light);
-}
+/* ── AI 助理區塊已移除 / AI Section removed ── */
 
-.sidebar-ai-btn {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0.6875rem 1rem;
-  border-radius: 0.75rem;
-  font-size: 0.9375rem;
-  text-decoration: none;
-  color: var(--text-secondary);
-  border: 1px solid transparent;
-  transition: all 0.2s ease;
-}
-
-.sidebar-ai-btn:hover {
-  background: var(--bg-card-hover);
-  color: var(--text);
-}
-
-.sidebar-ai-btn.active {
-  background: linear-gradient(135deg, rgba(168, 85, 247, 0.12), rgba(99, 102, 241, 0.12));
-  color: #a855f7;
-  font-weight: 500;
-  border-color: rgba(168, 85, 247, 0.25);
-}
-
-.dark .sidebar-ai-btn.active {
-  background: linear-gradient(135deg, rgba(168, 85, 247, 0.18), rgba(99, 102, 241, 0.18));
-  color: #c084fc;
-  border-color: rgba(168, 85, 247, 0.3);
-}
-
-.sidebar-ai-btn-inner {
-  display: flex;
-  align-items: center;
-  gap: 0.875rem;
-}
-
-.sidebar-ai-pulse {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #a855f7;
-  animation: pulse-dot 2s ease-in-out infinite;
-}
-
-@keyframes pulse-dot {
-
-  0%,
-  100% {
-    opacity: 1;
-    transform: scale(1);
-  }
-
-  50% {
-    opacity: 0.5;
-    transform: scale(0.85);
-  }
-}
+.sidebar-ai-pulse-removed { display: none; }
 
 /* ── 底部設定區 / Footer ── */
 .sidebar-footer {
@@ -677,33 +615,15 @@ body {
   gap: var(--space-card-gap);
 }
 
+.dash-cards-grid > .card {
+  flex: 1;
+}
+
 @media (min-width: 640px) {
   .dash-cards-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 1rem;
-  }
-}
-
-.dash-quick-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 10px;
-}
-
-.dash-quick-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  padding: 16px 8px;
-  text-decoration: none;
-  text-align: center;
-}
-
-@media (max-width: 400px) {
-  .dash-quick-grid {
-    grid-template-columns: repeat(2, 1fr);
   }
 }
 

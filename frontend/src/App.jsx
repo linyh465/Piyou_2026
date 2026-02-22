@@ -15,7 +15,6 @@ const Timetable = lazy(() => import('./pages/Timetable'));
 const Grades = lazy(() => import('./pages/Grades'));
 const Tasks = lazy(() => import('./pages/Tasks'));
 const Transport = lazy(() => import('./pages/Transport'));
-const AIAssistant = lazy(() => import('./pages/AIAssistant'));
 const Settings = lazy(() => import('./pages/Settings'));
 
 // ── 載入中佔位 / Loading fallback ──
@@ -48,7 +47,6 @@ export default function App() {
               <Route path="grades" element={<Grades />} />
               <Route path="tasks" element={<Tasks />} />
               <Route path="transport" element={<Transport />} />
-              <Route path="ai" element={<AIAssistant />} />
               <Route path="settings" element={<Settings />} />
             </Route>
 

@@ -6,9 +6,10 @@
 import { useEffect, useRef } from 'react';
 import useDashboardStore from '../stores/dashboardStore';
 import useTimetableStore from '../stores/timetableStore';
+import useTaskStore from '../stores/taskStore';
 import {
-    IconBook, IconMapPin, IconClock, IconBus,
-    IconChartBar, IconPlus, IconBot, IconCalendar,
+    IconBook, IconMapPin, IconClock,
+    IconCheckSquare, IconCalendar, IconStar,
 } from '../components/Icons';
 
 // ── 問候語 / Greeting ──
@@ -98,25 +99,112 @@ function NextClassCard() {
 }
 
 
-// ── 快速入口 / Quick Access Grid ──
-function QuickAccess() {
-    const items = [
-        { icon: IconChartBar, label: '成績查詢', path: '/grades' },
-        { icon: IconCalendar, label: '週課表', path: '/timetable' },
-        { icon: IconBus, label: '交通', path: '/transport' },
-        { icon: IconBot, label: 'AI 助理', path: '/ai' },
-    ];
+// ── 任務預覽卡片 / Task Preview Card ──
+function TaskPreviewCard() {
+    const loadTasks = useTaskStore((s) => s.loadTasks);
+    const tasks = useTaskStore((s) => s.tasks);
+    const isLoading = useTaskStore((s) => s.isLoading);
+    const toggleTask = useTaskStore((s) => s.toggleTask);
+    const hasFetched = useRef(false);
+
+    useEffect(() => {
+        if (!hasFetched.current) { hasFetched.current = true; loadTasks(); }
+    }, [loadTasks]);
+
+    const pendingTasks = tasks.filter((t) => !t.completed).slice(0, 4);
+    const completedCount = tasks.filter((t) => t.completed).length;
+
+    // 骨架屏
+    if (isLoading && !tasks.length) {
+        return (
+            <div className="card">
+                <div className="skeleton" style={{ height: '16px', width: '96px', marginBottom: '16px' }} />
+                <div className="skeleton" style={{ height: '20px', width: '160px', marginBottom: '10px' }} />
+                <div className="skeleton" style={{ height: '16px', width: '128px' }} />
+            </div>
+        );
+    }
+
+    if (!pendingTasks.length) {
+        return (
+            <div className="card">
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-muted)', marginBottom: '12px' }}>
+                    <IconCheckSquare size={16} />
+                    <span style={{ fontSize: '13px' }}>待辦任務</span>
+                </div>
+                <p style={{ fontSize: '1.125rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                    所有任務已完成 🎉
+                </p>
+                {tasks.length > 0 && (
+                    <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '8px' }}>
+                        已完成 {completedCount} 項任務
+                    </p>
+                )}
+            </div>
+        );
+    }
 
     return (
-        <div className="dash-quick-grid">
-            {items.map((item) => (
-                <a key={item.path} href={`#${item.path}`} className="card card-hover dash-quick-item">
-                    <item.icon size={22} style={{ color: 'var(--color-brand)' }} />
-                    <span style={{ fontSize: '12px', fontWeight: 500, color: 'var(--text-secondary)' }}>
-                        {item.label}
-                    </span>
+        <div className="card">
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-muted)' }}>
+                    <IconCheckSquare size={16} />
+                    <span style={{ fontSize: '13px' }}>待辦任務</span>
+                </div>
+                <a href="#/tasks" style={{ fontSize: '12px', color: 'var(--color-brand)', textDecoration: 'none', fontWeight: 500 }}>
+                    查看全部
                 </a>
-            ))}
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {pendingTasks.map((task) => (
+                    <div
+                        key={task.id}
+                        style={{
+                            display: 'flex', alignItems: 'center', gap: '10px',
+                            padding: '8px 0',
+                            borderBottom: '1px solid var(--border-light)',
+                        }}
+                    >
+                        <button
+                            onClick={() => toggleTask(task.id)}
+                            style={{
+                                width: '20px', height: '20px', borderRadius: '6px',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                flexShrink: 0, cursor: 'pointer',
+                                border: '2px solid var(--border)', background: 'transparent',
+                                color: 'transparent',
+                            }}
+                            aria-label="完成任務"
+                        />
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                            <p style={{
+                                fontSize: '13px', fontWeight: 500, color: 'var(--text)',
+                                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                            }}>
+                                {task.title}
+                            </p>
+                            {task.due_date && (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
+                                    <IconCalendar size={10} style={{ color: 'var(--color-warning)' }} />
+                                    <span style={{ fontSize: '11px', color: 'var(--color-warning)' }}>{task.due_date}</span>
+                                </div>
+                            )}
+                        </div>
+                        {task.priority > 0 && (
+                            <span style={{ display: 'flex', gap: '1px', flexShrink: 0 }}>
+                                {Array.from({ length: Math.min(task.priority, 3) }, (_, i) => (
+                                    <IconStar key={i} size={10} style={{ color: 'var(--color-warning)', fill: 'var(--color-warning)' }} />
+                                ))}
+                            </span>
+                        )}
+                    </div>
+                ))}
+            </div>
+            {tasks.length > 0 && (
+                <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '10px' }}>
+                    {pendingTasks.length} 項待辦 · {completedCount} 項已完成
+                </p>
+            )}
         </div>
     );
 }
@@ -128,8 +216,8 @@ export default function Dashboard() {
             <Greeting />
             <div className="dash-cards-grid">
                 <NextClassCard />
+                <TaskPreviewCard />
             </div>
-            <QuickAccess />
         </div>
     );
 }

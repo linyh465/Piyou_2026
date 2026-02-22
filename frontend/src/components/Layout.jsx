@@ -8,7 +8,7 @@
  */
 import { NavLink, Outlet } from 'react-router-dom';
 import {
-    IconHome, IconCalendar, IconCheckSquare, IconBot,
+    IconHome, IconCalendar, IconCheckSquare,
     IconSettings, IconChartBar, IconCloudLightning, IconCloudOff, IconBus
 } from './Icons';
 
@@ -41,7 +41,7 @@ const mobileNavItems = [
     { to: '/', icon: IconHome, label: '首頁', end: true },
     { to: '/timetable', icon: IconCalendar, label: '課表' },
     { to: '/tasks', icon: IconCheckSquare, label: '任務' },
-    { to: '/ai', icon: IconBot, label: 'AI' },
+    { to: '/transport', icon: IconBus, label: '交通' },
 ];
 
 export default function Layout() {
@@ -85,22 +85,6 @@ export default function Layout() {
                         </div>
                     ))}
 
-                    {/* AI 助理獨立區塊 / AI Assistant Section */}
-                    <div className="sidebar-ai-section">
-                        <NavLink
-                            to="/ai"
-                            className={({ isActive }) =>
-                                `sidebar-ai-btn ${isActive ? 'active' : ''}`
-                            }
-                        >
-                            <div className="sidebar-ai-btn-inner">
-                                <IconBot size={20} />
-                                <span>AI 助理</span>
-                            </div>
-                            {/* 通知點先移除 */}
-                            {/* <div className="sidebar-ai-pulse" /> */}
-                        </NavLink>
-                    </div>
                 </nav>
 
                 {/* 底部設定與狀態區 / Bottom Status & Settings */}
