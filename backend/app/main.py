@@ -4,6 +4,7 @@ FastAPI 應用程式配置、中介層與路由註冊
 FastAPI application configuration, middleware, and route registration.
 """
 import os
+import re
 import logging
 from contextlib import asynccontextmanager
 from dotenv import load_dotenv
@@ -55,10 +56,21 @@ app = FastAPI(
 
 # ── CORS 設定 / CORS Configuration ──
 cors_origins = os.getenv("CORS_ORIGINS", "http://localhost:5173,http://localhost:3000").split(",")
+cors_origins = [origin.strip() for origin in cors_origins if origin.strip()]
+
+# Railway 環境自動偵測 / Auto-detect Railway environment
+# Railway 設有 RAILWAY_PUBLIC_DOMAIN 等環境變數，前後端通常在不同子域
+# 自動允許所有 *.railway.app 來源，避免 CORS preflight 400
+_is_railway = bool(os.getenv("RAILWAY_PUBLIC_DOMAIN") or os.getenv("RAILWAY_ENVIRONMENT"))
+_cors_origin_regex = r"https://.*\.railway\.app" if _is_railway else None
+
+if _is_railway:
+    logger.info("Railway environment detected — allowing *.railway.app CORS origins")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[origin.strip() for origin in cors_origins],
+    allow_origins=cors_origins,
+    allow_origin_regex=_cors_origin_regex,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
