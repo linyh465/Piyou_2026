@@ -484,9 +484,15 @@ export default function Transport() {
                                                     color: busIndicator.color,
                                                     fontWeight: 600,
                                                     whiteSpace: 'nowrap',
+                                                    display: 'inline-flex', alignItems: 'center', gap: 4,
                                                     ...(busIndicator.label === '進站中' ? { animation: 'pulse 1.5s ease-in-out infinite' } : {}),
                                                 }}>
                                                     🚌 {busIndicator.label}
+                                                    {busIndicator.plate && busIndicator.plate !== 'unknown' && (
+                                                        <span style={{ opacity: 0.75, fontWeight: 500 }}>
+                                                            {busIndicator.plate}
+                                                        </span>
+                                                    )}
                                                 </span>
                                             )}
                                         </div>
