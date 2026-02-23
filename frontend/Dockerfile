@@ -10,6 +10,12 @@ COPY package.json package-lock.json ./
 RUN npm ci
 
 COPY . .
+
+# 支援 build-time 注入 API 網址（Railway / 生產環境用）
+# Support build-time API URL injection (for Railway / production)
+ARG VITE_API_BASE_URL=/api/v1
+ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
+
 RUN npm run build
 
 # ── Stage 2: Serve with Nginx ──
