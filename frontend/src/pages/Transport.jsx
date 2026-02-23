@@ -297,6 +297,7 @@ export default function Transport() {
                     className="btn btn-ghost"
                     style={{ minWidth: 40, padding: '8px', borderRadius: 12 }}
                     title={manualCooldown > 0 ? `請稍候 ${manualCooldown} 秒` : '重新整理'}
+                    aria-label={manualCooldown > 0 ? `請稍候 ${manualCooldown} 秒` : '重新整理公車資訊'}
                 >
                     {manualCooldown > 0 ? (
                         <span style={{ fontSize: '12px', fontWeight: 700 }}>{manualCooldown}s</span>

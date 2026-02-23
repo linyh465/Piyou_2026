@@ -5,21 +5,7 @@
 import { useState } from 'react';
 import useTimetableStore from '../stores/timetableStore';
 import { IconChartBar, IconRefresh, IconBook, IconTrash } from '../components/Icons';
-
-// ── GPA 4.3 對照表 ──
-function scoreToGPA(score) {
-    if (score >= 90) return 4.3;
-    if (score >= 85) return 4.0;
-    if (score >= 80) return 3.7;
-    if (score >= 77) return 3.3;
-    if (score >= 73) return 3.0;
-    if (score >= 70) return 2.7;
-    if (score >= 67) return 2.3;
-    if (score >= 63) return 2.0;
-    if (score >= 60) return 1.7;
-    if (score >= 50) return 1.0;
-    return 0.0;
-}
+import { scoreToGPA } from '../utils/scoreToGPA';
 
 // 是否為數字成績（排除缺、通過等文字）
 function isNumericCourse(course) {
@@ -114,7 +100,7 @@ export default function Grades() {
                     <span className="page-subtitle">Grades</span>
                 </div>
                 <div style={{ display: 'flex', gap: '8px' }}>
-                    <button onClick={fetchGrades} disabled={isLoadingGrades} className="btn btn-ghost" style={{ fontSize: '13px' }}>
+                    <button onClick={fetchGrades} disabled={isLoadingGrades} className="btn btn-ghost" style={{ fontSize: '13px' }} aria-label="重新整理成績">
                         <IconRefresh size={15} className={isLoadingGrades ? 'animate-spin' : ''} />
                         {isLoadingGrades ? '載入中...' : '重新整理'}
                     </button>
@@ -123,6 +109,7 @@ export default function Grades() {
                             onClick={handleClearGrades}
                             className="btn btn-ghost"
                             style={{ fontSize: '13px', color: 'var(--color-danger)' }}
+                            aria-label="清除成績資料"
                         >
                             <IconTrash size={15} />
                             清除成績

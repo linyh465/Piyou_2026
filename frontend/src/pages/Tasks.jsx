@@ -93,6 +93,7 @@ function TaskItem({ task, onEdit }) {
             {/* 完成勾選 */}
             <button
                 onClick={() => toggleTask(task.id)}
+                aria-label={task.completed ? '取消完成' : '標記完成'}
                 style={{
                     width: '22px', height: '22px', marginTop: '2px', borderRadius: '7px',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -138,10 +139,12 @@ function TaskItem({ task, onEdit }) {
             {/* 操作 */}
             <div style={{ display: 'flex', gap: '4px', flexShrink: 0 }}>
                 <button onClick={() => onEdit(task)}
+                    aria-label="編輯任務"
                     style={{ width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '8px', border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--text-muted)' }}>
                     <IconEdit size={14} />
                 </button>
                 <button onClick={() => deleteTask(task.id)}
+                    aria-label="刪除任務"
                     style={{ width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '8px', border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--text-muted)' }}>
                     <IconTrash size={14} />
                 </button>
@@ -175,10 +178,10 @@ export default function Tasks() {
                     <span className="page-subtitle">Tasks</span>
                 </div>
                 <div style={{ display: 'flex', gap: '8px' }}>
-                    <button onClick={exportToMarkdown} className="btn btn-ghost" style={{ fontSize: '13px' }}>
+                    <button onClick={exportToMarkdown} className="btn btn-ghost" style={{ fontSize: '13px' }} aria-label="匯出為 Markdown">
                         <IconDownload size={15} /> MD
                     </button>
-                    <button onClick={() => { setEditTask(null); setShowForm(true); }} className="btn btn-primary" style={{ fontSize: '13px' }}>
+                    <button onClick={() => { setEditTask(null); setShowForm(true); }} className="btn btn-primary" style={{ fontSize: '13px' }} aria-label="新增任務">
                         <IconPlus size={15} /> 新增
                     </button>
                 </div>

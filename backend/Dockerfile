@@ -16,6 +16,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 # ── 應用程式碼 ──
 COPY . .
 
+# ── 以非 root 身份執行（安全最佳實踐）──
+RUN adduser --disabled-password --gecos '' --uid 1001 appuser
+USER appuser
+
 EXPOSE 8000
 
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

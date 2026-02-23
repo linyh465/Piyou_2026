@@ -6,7 +6,6 @@ beautifulsoup4>=4.13.0
 pyjwt>=2.10.0
 python-dotenv>=1.0.0
 pydantic>=2.10.0
-pydantic-settings>=2.7.0
 
 # 測試依賴 / Test Dependencies
 pytest>=8.0.0

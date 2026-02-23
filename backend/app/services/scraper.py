@@ -126,7 +126,7 @@ class SchoolScraper:
             return {
                 "student_id": student_id,
                 "name": user_name,
-                "department": "靜宜大學", 
+                "department": "",  # 系所由校務系統提供，此處不硬編碼
             }
 
         except Exception as e:

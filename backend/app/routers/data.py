@@ -385,12 +385,12 @@ BUS_THROTTLE_SECONDS = 60  # 最少 60 秒才呼叫一次 TDX（基礎會員每�
 async def get_bus():
     """
     取得公車資訊 / Get Bus Info
-    節流策略：20 秒內重複請求直接回傳記憶體快取，避免 TDX 429。
-    Throttle: returns in-memory cache if called within 20s to avoid TDX 429.
+    節流策略：60 秒內重複請求直接回傳記憶體快取，避免 TDX 429。
+    Throttle: returns in-memory cache if called within 60s to avoid TDX 429.
     """
     global _bus_mem_cache, _bus_mem_cache_at
 
-    # ── 節流檢查：20 秒內不重新呼叫 TDX ──
+    # ── 節流檢查：60 秒內不重新呼叫 TDX ──
     if _bus_mem_cache and (time.time() - _bus_mem_cache_at < BUS_THROTTLE_SECONDS):
         logger.info(f"Bus throttle: returning mem cache (age {int(time.time() - _bus_mem_cache_at)}s)")
         return BusResponse(**_bus_mem_cache)

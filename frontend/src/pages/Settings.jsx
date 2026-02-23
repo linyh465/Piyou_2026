@@ -49,6 +49,8 @@ function SettingItem({ icon: Icon, label, labelEn, children, onClick }) {
 function Toggle({ checked, onChange }) {
     return (
         <button
+            role="switch"
+            aria-checked={checked}
             onClick={(e) => { e.stopPropagation(); onChange(!checked); }}
             style={{
                 position: 'relative', width: '44px', height: '24px',
@@ -84,8 +86,16 @@ export default function Settings() {
     const { user, isAuthenticated, login, logout, error, clearError } = useAuthStore();
     const { fetchTimetable, fetchGrades, canSync, recordSyncSuccess, recordSyncError, hasCachedData, lastSyncTime, clearSchoolData, serverCooldown } = useTimetableStore();
 
-    const [busNotify, setBusNotify] = useState(true);
-    const [taskNotify, setTaskNotify] = useState(true);
+    const [busNotify, setBusNotify] = useState(() => {
+        try { return JSON.parse(localStorage.getItem('piyou_busNotify') ?? 'true'); } catch { return true; }
+    });
+    const [taskNotify, setTaskNotify] = useState(() => {
+        try { return JSON.parse(localStorage.getItem('piyou_taskNotify') ?? 'true'); } catch { return true; }
+    });
+
+    // 持久化通知偏好至 localStorage / Persist notification prefs
+    useEffect(() => { localStorage.setItem('piyou_busNotify', JSON.stringify(busNotify)); }, [busNotify]);
+    useEffect(() => { localStorage.setItem('piyou_taskNotify', JSON.stringify(taskNotify)); }, [taskNotify]);
 
     const [showSyncModal, setShowSyncModal] = useState(false);
     const [studentId, setStudentId] = useState('');

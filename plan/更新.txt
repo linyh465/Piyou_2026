@@ -5,7 +5,7 @@
 3	isDarkMode 在 themeStore 未定義 — Transport.jsx 讀取 s.isDarkMode 永遠為 undefined，深色模式下樣式錯誤	themeStore.js ← 使用處：Transport.jsx:5
 4	tryAutoLogin 從未被呼叫 — 頁面重整後即使 sessionStorage 有有效 JWT，用戶仍需重新登入	authStore.js:98
 5	HTTPS Redirect 在反向代理後會無限迴圈 — 未檢查 X-Forwarded-Proto header	security.py:76
-🟠 中等問題 - ❎Unfinished
+🟠 中等問題 - 👌Finished
 #	問題	檔案
 6	slideUp CSS 動畫未定義，PWA 更新提示無入場動畫	PWAReloadPrompt.jsx:49
 7	Layout.jsx 同步狀態 hardcoded 'synced'，未連結 authStore	Layout.jsx:56
@@ -14,7 +14,7 @@
 10	scoreToGPA 邏輯重複三處（前端 Grades.jsx、AIAssistant.jsx、後端 data.py）	應抽出共用
 11	Bus 節流 docstring 寫「20 秒」，實際常數為 60 秒	data.py:424
 12	_credential_cache 和 _scraper_cache 無大小上限，長期運行會記憶體洩漏	auth.py、scraper_cache.py
-🟡 低等問題 - ❎Unfinished
+🟡 低等問題 - 👌Finished
 #	問題	檔案
 13	未使用的 import：useNavigate、useThemeStore（Layout.jsx）、IconPlus（Dashboard.jsx）	Layout.jsx / Dashboard.jsx
 14	lucide-react 列為依賴但整個專案未使用，增加打包體積	package.json:15

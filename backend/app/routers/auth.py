@@ -53,10 +53,26 @@ JWT_EXPIRE_HOURS = 24
 #  Credentials stored Base64-encoded, auto-expire after 24h.
 # ══════════════════════════════════════════
 _credential_cache: dict[str, dict] = {}
+_CREDENTIAL_CACHE_MAX = 200  # 最多快取 200 組帳密 / Max 200 cached credentials
+
+
+def _evict_expired_credentials():
+    """清理過期帳密快取 / Evict expired credential entries"""
+    now = time.time()
+    expired = [k for k, v in _credential_cache.items() if now > v["expires"]]
+    for k in expired:
+        _credential_cache.pop(k, None)
 
 
 def _cache_credentials(student_id: str, password: str):
-    """快取帳密 / Cache credentials with TTL"""
+    """快取帳密 / Cache credentials with TTL and size cap"""
+    # 超過上限時先清理過期再淘汰最舊 / Evict when over capacity
+    if len(_credential_cache) >= _CREDENTIAL_CACHE_MAX:
+        _evict_expired_credentials()
+    if len(_credential_cache) >= _CREDENTIAL_CACHE_MAX:
+        oldest_key = min(_credential_cache, key=lambda k: _credential_cache[k]["expires"])
+        _credential_cache.pop(oldest_key, None)
+
     encoded = base64.b64encode(json.dumps({
         "s": student_id, "p": password
     }).encode()).decode()
