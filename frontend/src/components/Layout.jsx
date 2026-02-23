@@ -218,6 +218,23 @@ export default function Layout() {
                             </>
                         )}
                     </NavLink>
+
+                    {/* 設定 */}
+                    <NavLink
+                        to="/settings"
+                        className={({ isActive }) =>
+                            `mobile-nav-item ${isActive ? 'active' : ''}`
+                        }
+                    >
+                        {({ isActive }) => (
+                            <>
+                                <IconSettings size={22} />
+                                <span className={`mobile-nav-label ${isActive ? 'font-semibold' : ''}`}>
+                                    設定
+                                </span>
+                            </>
+                        )}
+                    </NavLink>
                 </div>
             </nav>
         </div>
