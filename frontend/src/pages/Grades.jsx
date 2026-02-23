@@ -70,11 +70,11 @@ export default function Grades() {
     // Data is already loaded from localStorage into zustand; skip auto-fetch to avoid race condition on clear
 
     /** 清除成績並顯示冷卻提示 / Clear grades with cooldown notice */
-    const handleClearGrades = () => {
-        const syncCheck = canSync();
+    const handleClearGrades = async () => {
+        const syncCheck = await canSync();
         let msg = '確定要清除成績資料嗎？';
         if (!syncCheck.allowed) {
-            const mins = Math.ceil(syncCheck.remainingMs / 60000);
+            const mins = Math.ceil((syncCheck.remainingMs || 0) / 60000);
             msg += `\n\n⚠️ 冷卻時間: ${mins}分，需待冷卻結束後才可再次同步校務資料。`;
         }
         if (window.confirm(msg)) clearGradesData();

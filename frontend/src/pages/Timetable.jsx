@@ -34,11 +34,11 @@ export default function Timetable() {
     timetable.forEach((course) => { matrix[`${course.day}-${course.period}`] = course; });
 
     /** 清除課表並顯示冷卻提示 / Clear timetable with cooldown notice */
-    const handleClearTimetable = () => {
-        const syncCheck = canSync();
+    const handleClearTimetable = async () => {
+        const syncCheck = await canSync();
         let msg = '確定要清除課表資料嗎？';
         if (!syncCheck.allowed) {
-            const mins = Math.ceil(syncCheck.remainingMs / 60000);
+            const mins = Math.ceil((syncCheck.remainingMs || 0) / 60000);
             msg += `\n\n⚠️ 冷卻時間: ${mins}分，需待冷卻結束後才可再次同步校務資料。`;
         }
         if (window.confirm(msg)) clearTimetableData();
