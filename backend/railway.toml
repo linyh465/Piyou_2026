@@ -1,0 +1,9 @@
+# ── 披呦後端 Railway 設定 / Piyou Backend Railway Config ──
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
+
+[deploy]
+healthcheckPath = "/health"
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 3
