@@ -109,7 +109,7 @@ export default function Settings() {
         if (showSyncModal) {
             canSync();
         }
-    }, [showSyncModal]);
+    }, [showSyncModal, canSync]);
 
     const handleSync = async (e) => {
         e.preventDefault();

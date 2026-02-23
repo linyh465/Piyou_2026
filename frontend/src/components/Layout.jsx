@@ -58,6 +58,14 @@ export default function Layout() {
     const location = useLocation();
     const isStudyActive = studyPaths.some((p) => location.pathname === p || location.pathname.startsWith(p + '/'));
 
+    // 路由切換時關閉（render 期間調整狀態，避免 set-state-in-effect）
+    // Reset on navigation using the render-time state adjustment pattern
+    const [prevPathname, setPrevPathname] = useState(location.pathname);
+    if (prevPathname !== location.pathname) {
+        setPrevPathname(location.pathname);
+        setStudyOpen(false);
+    }
+
     // 點擊外部關閉 / Close on outside click
     useEffect(() => {
         if (!studyOpen) return;
@@ -69,9 +77,6 @@ export default function Layout() {
         document.addEventListener('pointerdown', handler);
         return () => document.removeEventListener('pointerdown', handler);
     }, [studyOpen]);
-
-    // 路由切換時關閉 / Close on navigation
-    useEffect(() => { setStudyOpen(false); }, [location.pathname]);
 
     const handleStudyClick = useCallback(() => {
         setStudyOpen((prev) => !prev);
