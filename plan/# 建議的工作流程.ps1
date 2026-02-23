@@ -12,7 +12,7 @@ git status
 # 4. 暫存變更
 git add .
 # 或選擇性暫存
-git add <特定檔案>
+git add 特定檔案
 
 # 5. 提交變更（使用有意義的訊息）
 git commit -m "描述你的變更"
