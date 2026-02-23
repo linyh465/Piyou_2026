@@ -16,6 +16,10 @@ import { api } from '../services/apiClient';
 const REQUEST_TIMEOUT = 25000;
 const SYNC_TIMEOUT = 30000; // 同步操作允許更長時間 / Sync operations allow more time
 
+// 資料世代計數器：每次清除資料時遞增，用於取消尚在飛行中的請求寫回
+// Data generation counter: incremented on clear to discard stale in-flight writes
+let _dataGeneration = 0;
+
 const useTimetableStore = create((set, get) => ({
     // 課表狀態 / Timetable state
     timetable: JSON.parse(localStorage.getItem('piyou_timetable') || '[]'),
@@ -80,6 +84,7 @@ const useTimetableStore = create((set, get) => ({
 
     /** 清除所有校務快取資料（不清除冷卻紀錄）/ Clear all cached school data (cooldown preserved) */
     clearSchoolData: () => {
+        _dataGeneration++; // 使飛行中的請求過期 / Invalidate in-flight requests
         localStorage.removeItem('piyou_timetable');
         localStorage.removeItem('piyou_grades');
         // 注意：不再清除 piyou_last_sync，冷卻由伺服器端強制執行
@@ -90,6 +95,7 @@ const useTimetableStore = create((set, get) => ({
 
     /** 僅清除課表快取 / Clear only timetable cache */
     clearTimetableData: () => {
+        _dataGeneration++; // 使飛行中的請求過期 / Invalidate in-flight requests
         localStorage.removeItem('piyou_timetable');
         sessionStorage.removeItem('piyou_token');
         set({ timetable: [] });
@@ -97,6 +103,7 @@ const useTimetableStore = create((set, get) => ({
 
     /** 僅清除成績快取 / Clear only grades cache */
     clearGradesData: () => {
+        _dataGeneration++; // 使飛行中的請求過期 / Invalidate in-flight requests
         localStorage.removeItem('piyou_grades');
         sessionStorage.removeItem('piyou_token');
         set({ grades: [] });
@@ -111,9 +118,12 @@ const useTimetableStore = create((set, get) => ({
         const token = sessionStorage.getItem('piyou_token');
         if (!token) return; // 未認證時使用 localStorage 快取即可
 
+        const gen = _dataGeneration; // 快照世代 / Snapshot generation
         set({ isLoadingTimetable: true, timetableError: null, isTimeout: false });
         try {
             const res = await api.get('/data/timetable', { timeout: SYNC_TIMEOUT });
+            // 若資料已被清除（世代不符），丟棄回應 / Discard if data was cleared
+            if (_dataGeneration !== gen) return set({ isLoadingTimetable: false });
             const data = res.data.courses || [];
             localStorage.setItem('piyou_timetable', JSON.stringify(data));
             set({
@@ -153,9 +163,12 @@ const useTimetableStore = create((set, get) => ({
         const token = sessionStorage.getItem('piyou_token');
         if (!token) return; // 未認證時使用 localStorage 快取即可
 
+        const gen = _dataGeneration; // 快照世代 / Snapshot generation
         set({ isLoadingGrades: true, gradesError: null });
         try {
             const res = await api.get('/data/grades', { timeout: SYNC_TIMEOUT });
+            // 若資料已被清除（世代不符），丟棄回應 / Discard if data was cleared
+            if (_dataGeneration !== gen) return set({ isLoadingGrades: false });
             const data = res.data.semesters || [];
             localStorage.setItem('piyou_grades', JSON.stringify(data));
             set({

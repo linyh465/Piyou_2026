@@ -81,7 +81,7 @@ function SectionHeader({ title, titleEn }) {
 
 export default function Settings() {
     const { theme, setTheme } = useThemeStore();
-    const { user, isAuthenticated, login, logout, isLoading, error, clearError } = useAuthStore();
+    const { user, isAuthenticated, login, logout, error, clearError } = useAuthStore();
     const { fetchTimetable, fetchGrades, canSync, recordSyncSuccess, recordSyncError, hasCachedData, lastSyncTime, clearSchoolData, serverCooldown } = useTimetableStore();
 
     const [busNotify, setBusNotify] = useState(true);
@@ -91,6 +91,7 @@ export default function Settings() {
     const [studentId, setStudentId] = useState('');
     const [password, setPassword] = useState('');
     const [syncSuccess, setSyncSuccess] = useState(false);
+    const [isSyncing, setIsSyncing] = useState(false);
 
     // 當同步 Modal 開啟時，向伺服器查詢冷卻狀態
     // Fetch server-side cooldown status when sync modal opens
@@ -105,25 +106,40 @@ export default function Settings() {
         setSyncSuccess(false);
         if (!studentId.trim() || !password.trim()) return;
 
-        // 伺服器端同步冷卻檢查 / Server-side rate limit check
-        const syncCheck = await canSync();
-        if (!syncCheck.allowed) return;
+        // 防止重複觸發：按下後立即鎖定 / Prevent duplicate: lock immediately on click
+        if (isSyncing) return;
+        setIsSyncing(true);
 
-        const success = await login(studentId.trim(), password);
-        if (success) {
-            // 序列化執行，避免同一 session 被並行存取的競爭條件
-            await fetchTimetable();
-            await fetchGrades();
-            recordSyncSuccess();
-            setSyncSuccess(true);
-            setTimeout(() => {
-                setShowSyncModal(false);
-                setPassword('');
-                setSyncSuccess(false);
-            }, 1500);
-        } else {
-            // 登入失敗計入同步錯誤 / Login failure counts as sync error
-            recordSyncError();
+        try {
+            // 伺服器端同步冷卻檢查 / Server-side rate limit check
+            const syncCheck = await canSync();
+            if (!syncCheck.allowed) {
+                setIsSyncing(false);
+                return;
+            }
+
+            const success = await login(studentId.trim(), password);
+            if (success) {
+                // 序列化執行，避免同一 session 被並行存取的競爭條件
+                await fetchTimetable();
+                await fetchGrades();
+                recordSyncSuccess();
+                setSyncSuccess(true);
+                setTimeout(() => {
+                    setShowSyncModal(false);
+                    setPassword('');
+                    setSyncSuccess(false);
+                    setIsSyncing(false);
+                }, 1500);
+            } else {
+                // 登入失敗計入同步錯誤，並解鎖讓使用者可重試
+                // Login failure counts as sync error; unlock so user can retry
+                recordSyncError();
+                setIsSyncing(false);
+            }
+        } catch {
+            // 未預期的錯誤也解鎖 / Unlock on unexpected errors too
+            setIsSyncing(false);
         }
     };
 
@@ -283,7 +299,7 @@ export default function Settings() {
                                 <button
                                     type="button"
                                     onClick={() => setShowSyncModal(false)}
-                                    disabled={isLoading}
+                                    disabled={isSyncing}
                                     className="btn btn-ghost"
                                     style={{ flex: 1, padding: '12px', fontSize: '15px' }}
                                 >
@@ -291,11 +307,11 @@ export default function Settings() {
                                 </button>
                                 <button
                                     type="submit"
-                                    disabled={isLoading || !studentId.trim() || !password.trim() || !canSync().allowed}
+                                    disabled={isSyncing || !studentId.trim() || !password.trim() || (serverCooldown && !serverCooldown.allowed)}
                                     className="btn btn-primary"
-                                    style={{ flex: 1, padding: '12px', fontSize: '15px', opacity: (!studentId.trim() || !password.trim() || !canSync().allowed) ? 0.5 : 1 }}
+                                    style={{ flex: 1, padding: '12px', fontSize: '15px', opacity: (isSyncing || !studentId.trim() || !password.trim() || (serverCooldown && !serverCooldown.allowed)) ? 0.5 : 1 }}
                                 >
-                                    {isLoading ? '同步中...' : !canSync().allowed ? '暫不可用' : '同步 Sync'}
+                                    {isSyncing ? '同步中...' : (serverCooldown && !serverCooldown.allowed) ? '暫不可用' : '同步 Sync'}
                                 </button>
                             </div>
                         </form>

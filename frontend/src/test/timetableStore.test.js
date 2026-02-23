@@ -202,4 +202,43 @@ describe('timetableStore', () => {
     // 本地沒有 lastSyncTime，應允許 / No local lastSyncTime, should allow
     expect(result.allowed).toBe(true);
   });
+
+  it('fetchTimetable discards response if data was cleared during request', async () => {
+    // 模擬 in-flight 請求期間資料被清除的競態條件
+    // Simulate race condition: data cleared while fetch is in-flight
+    sessionStorage.setItem('piyou_token', 'test-token');
+
+    const courses = [{ name: '微積分', day: 1, period: 1, startMinute: 480 }];
+    // API 回傳會稍微延遲 / API response is delayed
+    mockApi.mockImplementationOnce(() =>
+      new Promise((resolve) => setTimeout(() => resolve({ data: { courses } }), 50))
+    );
+
+    const fetchPromise = useTimetableStore.getState().fetchTimetable();
+    // 在請求還在飛行中時清除資料 / Clear data while request is in-flight
+    useTimetableStore.getState().clearTimetableData();
+    await fetchPromise;
+
+    const state = useTimetableStore.getState();
+    // 清除後不應拿到舊資料 / Should NOT get stale data after clear
+    expect(state.timetable).toEqual([]);
+    expect(localStorage.getItem('piyou_timetable')).toBeNull();
+  });
+
+  it('fetchGrades discards response if data was cleared during request', async () => {
+    sessionStorage.setItem('piyou_token', 'test-token');
+
+    const semesters = [{ name: '113-1', courses: [] }];
+    mockApi.mockImplementationOnce(() =>
+      new Promise((resolve) => setTimeout(() => resolve({ data: { semesters } }), 50))
+    );
+
+    const fetchPromise = useTimetableStore.getState().fetchGrades();
+    useTimetableStore.getState().clearGradesData();
+    await fetchPromise;
+
+    const state = useTimetableStore.getState();
+    expect(state.grades).toEqual([]);
+    expect(localStorage.getItem('piyou_grades')).toBeNull();
+  });
 });

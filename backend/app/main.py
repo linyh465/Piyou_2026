@@ -41,13 +41,16 @@ async def lifespan(application: FastAPI):
 #  建立 FastAPI 應用 / Create FastAPI App
 # ══════════════════════════════════════════
 
+# ── 判斷是否為生產環境 / Determine if running in production ──
+_is_production = os.getenv("ENVIRONMENT", "").lower() == "production"
+
 app = FastAPI(
     title="披呦 API / Piyou API",
     description="校園整合 App 後端服務 / Campus Integrated App Backend Service",
     version="1.0.0",
     lifespan=lifespan,
-    docs_url="/docs",
-    redoc_url="/redoc",
+    docs_url=None if _is_production else "/docs",
+    redoc_url=None if _is_production else "/redoc",
 )
 
 # ── CORS 設定 / CORS Configuration ──
