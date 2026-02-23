@@ -164,71 +164,105 @@ export default function Transport() {
         return map;
     }, [arrivals, selectedRoute, direction]);
 
-    // ── 車輛位置追蹤：只在有車的站顯示指標 ──
+    // ── 車輛位置追蹤：使用 RealTimeNearStop 進離站事件精確定位每台公車 ──
     const busIndicatorMap = useMemo(() => {
-        // map: stopName → { label, color, bgColor, plate }
+        // map: stopName → { label, color, bgColor, plate, source }
         const indicators = {};
-        // 收集本路線本方向所有有車牌的到站資料
-        const busEntries = arrivals
-            .filter(a => a.routeName === selectedRoute && a.direction === direction && a.plateNumb)
-            .sort((a, b) => (a.stopSequence || 0) - (b.stopSequence || 0));
 
-        // 依車牌分組
-        const byPlate = {};
-        busEntries.forEach(entry => {
-            if (!byPlate[entry.plateNumb]) byPlate[entry.plateNumb] = [];
-            byPlate[entry.plateNumb].push(entry);
-        });
+        // ── 1. RealTimeNearStop 位置資料（eventType 只有真實公車位置才會有）──
+        const positionEntries = arrivals.filter(
+            a => a.routeName === selectedRoute && a.direction === direction && a.eventType
+        );
 
         // 建立站序 → 站名 的對照（用於「即將進站」標記下一站）
         const seqToStop = {};
         currentStops.forEach(s => { seqToStop[s.stopSequence] = s.stopName; });
         const sequences = currentStops.map(s => s.stopSequence).sort((a, b) => a - b);
 
-        Object.entries(byPlate).forEach(([, entries]) => {
-            // 每輛車取最新的一筆（最大站序）
-            const latest = entries[entries.length - 1];
-            const stopName = latest.stopName;
-            const seq = latest.stopSequence || 0;
+        // 依車牌分組
+        const byPlate = {};
+        positionEntries.forEach(entry => {
+            const plate = entry.plateNumb || 'unknown';
+            if (!byPlate[plate]) byPlate[plate] = [];
+            byPlate[plate].push(entry);
+        });
 
-            if (latest.eventType === '進站') {
-                // 車輛正在此站 → 進站中
-                indicators[stopName] = {
-                    label: '進站中',
-                    color: 'var(--color-danger, #ef4444)',
-                    bgColor: 'rgba(239,68,68,0.10)',
-                };
-            } else {
-                // 車輛已離此站 → 前往下站
-                indicators[stopName] = {
-                    label: '前往下站',
-                    color: 'var(--color-info, #3b82f6)',
-                    bgColor: 'rgba(59,130,246,0.10)',
-                };
-                // 找到下一站，標記「即將進站」
-                const seqIdx = sequences.indexOf(seq);
-                if (seqIdx !== -1 && seqIdx < sequences.length - 1) {
-                    const nextSeq = sequences[seqIdx + 1];
-                    const nextStopName = seqToStop[nextSeq];
-                    if (nextStopName && !indicators[nextStopName]) {
-                        indicators[nextStopName] = {
-                            label: '即將進站',
-                            color: '#f97316',
-                            bgColor: 'rgba(249,115,22,0.08)',
-                        };
+        Object.entries(byPlate).forEach(([plate, entries]) => {
+            // 每輛車通常只有一筆 RealTimeNearStop 記錄
+            entries.forEach(entry => {
+                const stopName = entry.stopName;
+                const seq = entry.stopSequence || 0;
+
+                if (entry.eventType === '進站') {
+                    // 車輛正在此站 → 進站中
+                    indicators[stopName] = {
+                        label: '進站中',
+                        color: 'var(--color-danger, #ef4444)',
+                        bgColor: 'rgba(239,68,68,0.10)',
+                        plate,
+                        source: 'position',
+                    };
+                } else {
+                    // 車輛已離此站 → 已離站
+                    indicators[stopName] = {
+                        label: '已離站',
+                        color: 'var(--color-info, #3b82f6)',
+                        bgColor: 'rgba(59,130,246,0.10)',
+                        plate,
+                        source: 'position',
+                    };
+                    // 找到下一站，標記「即將進站」
+                    const seqIdx = sequences.indexOf(seq);
+                    if (seqIdx !== -1 && seqIdx < sequences.length - 1) {
+                        const nextSeq = sequences[seqIdx + 1];
+                        const nextStopName = seqToStop[nextSeq];
+                        if (nextStopName && !indicators[nextStopName]) {
+                            indicators[nextStopName] = {
+                                label: '即將進站',
+                                color: '#f97316',
+                                bgColor: 'rgba(249,115,22,0.08)',
+                                plate,
+                                source: 'position',
+                            };
+                        }
                     }
                 }
-            }
+            });
         });
+
+        // ── 2. ETA 補充：若 ETA ≤ 60 秒（進站中）但無 RealTimeNearStop，補上指標以同步 ──
+        arrivals
+            .filter(a => a.routeName === selectedRoute && a.direction === direction)
+            .forEach(a => {
+                if (indicators[a.stopName]) return; // 已有位置資料，不覆蓋
+                if (a.estimatedSeconds !== null && a.estimatedSeconds !== undefined && a.estimatedSeconds <= 60 &&
+                    (a.stopStatusCode === 0 || a.stopStatusCode === undefined || a.stopStatusCode === null)) {
+                    indicators[a.stopName] = {
+                        label: '進站中',
+                        color: 'var(--color-danger, #ef4444)',
+                        bgColor: 'rgba(239,68,68,0.06)',
+                        plate: a.plateNumb || null,
+                        source: 'eta',
+                    };
+                }
+            });
+
         return indicators;
     }, [arrivals, selectedRoute, direction, currentStops]);
 
-    // 計算統計資訊
+    // 計算統計資訊（以唯一車牌數統計行駛中公車）
     const stats = useMemo(() => {
         const arriving = Object.values(arrivalMap).filter(
             a => a.estimatedMinutes !== null && a.estimatedMinutes <= 3 && (a.stopStatusCode === 0 || a.stopStatusCode === undefined)
         ).length;
-        const busCount = Object.keys(busIndicatorMap).filter(k => busIndicatorMap[k].label === '進站中' || busIndicatorMap[k].label === '前往下站').length;
+        // 以唯一車牌計算行駛中公車數量（只算 RealTimeNearStop 來源的進站/離站）
+        const busPlates = new Set();
+        Object.values(busIndicatorMap).forEach(ind => {
+            if (ind.source === 'position' && ind.plate && (ind.label === '進站中' || ind.label === '已離站')) {
+                busPlates.add(ind.plate);
+            }
+        });
+        const busCount = busPlates.size;
         const total = currentStops.length;
         return { arriving, total, busCount };
     }, [arrivalMap, currentStops, busIndicatorMap]);
@@ -385,12 +419,20 @@ export default function Transport() {
                             const isProvidence = stop.stopName.includes('靜宜');
                             const statusColor = getStatusColor(arrival);
                             const statusBg = getStatusBg(arrival);
-                            const isArriving = arrival?.estimatedMinutes !== null &&
-                                arrival?.estimatedMinutes !== undefined &&
-                                arrival?.estimatedMinutes <= 1 &&
-                                (arrival?.stopStatusCode === 0 || arrival?.stopStatusCode === undefined);
                             const busIndicator = busIndicatorMap[stop.stopName];
                             const hasBus = !!busIndicator;
+
+                            // ── 同步：進站中的公車指標同步到右側 ETA 顯示 ──
+                            const isBusArriving = busIndicator?.label === '進站中';
+                            const displayMain = isBusArriving ? '進站中' : main;
+                            const displaySub = isBusArriving ? '' : sub;
+                            const displayColor = isBusArriving ? 'var(--color-danger, #ef4444)' : statusColor;
+                            const isArriving = isBusArriving || (
+                                arrival?.estimatedMinutes !== null &&
+                                arrival?.estimatedMinutes !== undefined &&
+                                arrival?.estimatedMinutes <= 1 &&
+                                (arrival?.stopStatusCode === 0 || arrival?.stopStatusCode === undefined)
+                            );
 
                             return (
                                 <div
@@ -450,19 +492,19 @@ export default function Transport() {
                                         </div>
                                     </div>
 
-                                    {/* 右側：到站時間 */}
-                                    <div className="transport-stop-eta" style={{ color: statusColor }}>
+                                    {/* 右側：到站時間（與公車指標同步）*/}
+                                    <div className="transport-stop-eta" style={{ color: displayColor }}>
                                         <span style={{
-                                            fontSize: main === '進站中' || main === '尚未發車' ? '0.8125rem' : '1rem',
+                                            fontSize: displayMain === '進站中' || displayMain === '尚未發車' ? '0.8125rem' : '1rem',
                                             fontWeight: 700,
                                             whiteSpace: 'nowrap',
                                             ...(isArriving ? { animation: 'pulse 1.5s ease-in-out infinite' } : {}),
                                         }}>
-                                            {main}
+                                            {displayMain}
                                         </span>
-                                        {sub && (
+                                        {displaySub && (
                                             <span style={{ fontSize: '0.6875rem', opacity: 0.7 }}>
-                                                {sub}
+                                                {displaySub}
                                             </span>
                                         )}
                                     </div>
