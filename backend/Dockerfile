@@ -20,6 +20,9 @@ COPY . .
 RUN adduser --disabled-password --gecos '' --uid 1001 appuser
 USER appuser
 
-EXPOSE 8000
+# Railway 會透過 PORT 環境變數指定埠號，預設 8000
+# Railway assigns port via PORT env var, default 8000
+ENV PORT=8000
+EXPOSE ${PORT}
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD uvicorn app.main:app --host 0.0.0.0 --port ${PORT}
