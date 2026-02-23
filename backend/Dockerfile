@@ -16,6 +16,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 # ── 應用程式碼 ──
 COPY . .
 
+# ── 建立快取目錄（appuser 需要寫入權限）──
+# ── Create cache directory (appuser needs write access) ──
+RUN mkdir -p /app/cache && chown 1001:1001 /app/cache
+
 # ── 以非 root 身份執行（安全最佳實踐）──
 RUN adduser --disabled-password --gecos '' --uid 1001 appuser
 USER appuser
