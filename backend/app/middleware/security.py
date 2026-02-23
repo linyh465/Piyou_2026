@@ -67,9 +67,20 @@ class HTTPSRedirectMiddleware(BaseHTTPMiddleware):
     """
     在生產環境中強制 HTTPS。開發模式 (localhost) 略過。
     Forces HTTPS in production. Skips for localhost in dev mode.
+
+    略過健康檢查路徑，避免 Railway / 負載均衡器的內部 HTTP 探測被擋。
+    Skips health-check paths so Railway / load-balancer HTTP probes are not blocked.
     """
 
+    # 不需要 HTTPS 的路徑（健康檢查、根路由）
+    # Paths exempt from HTTPS redirect (health checks, root)
+    _SKIP_PATHS = frozenset({"/", "/health"})
+
     async def dispatch(self, request, call_next):
+        # 健康檢查路徑直接放行 / Let health-check paths pass through
+        if request.url.path in self._SKIP_PATHS:
+            return await call_next(request)
+
         host = request.headers.get("host", "")
         is_local = "localhost" in host or "127.0.0.1" in host
 
