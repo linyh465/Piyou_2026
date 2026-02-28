@@ -6,8 +6,8 @@
  * 資安：課表、成績僅快取於使用者本地端 (localStorage)，不上傳至雲端。
  * Security: timetable/grades are cached locally only, never uploaded to cloud.
  *
- * 同步冷卻：伺服器端 IP+學號雙重鎖定，前端僅做 UI 顯示。
- * Sync cooldown: server-side IP+student_id dual lock; frontend is display-only.
+ * 同步冷卻：伺服器端裝置獨立冷卻，前端僅做 UI 顯示。
+ * Sync cooldown: server-side per-device cooldown via X-Device-Id; frontend is display-only.
  */
 import { create } from 'zustand';
 import { api } from '../services/apiClient';
@@ -55,7 +55,7 @@ const useTimetableStore = create((set, get) => ({
             // 伺服器無法連線時，回退到本地檢查 / Fallback to local check on server error
             const lastSync = get().lastSyncTime;
             const now = Date.now();
-            const FALLBACK_COOLDOWN_MS = 60 * 60 * 1000;
+            const FALLBACK_COOLDOWN_MS = 10 * 60 * 1000;
             if (lastSync && (now - lastSync) < FALLBACK_COOLDOWN_MS) {
                 return { allowed: false, reason: 'cooldown', remainingMs: FALLBACK_COOLDOWN_MS - (now - lastSync) };
             }

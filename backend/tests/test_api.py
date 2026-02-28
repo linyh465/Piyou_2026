@@ -6,6 +6,10 @@ import pytest
 from app.middleware.security import sync_cooldown
 
 
+DEVICE_A = "test-device-aaa-111"
+DEVICE_B = "test-device-bbb-222"
+
+
 @pytest.fixture(autouse=True)
 def reset_sync_cooldown():
     """每個測試前清空冷卻追蹤器 / Reset cooldown tracker before each test"""
@@ -64,7 +68,10 @@ async def test_bus_endpoint_exists(client):
 @pytest.mark.anyio
 async def test_sync_cooldown_initially_allowed(client):
     """GET /api/v1/auth/sync-cooldown 初始狀態應允許同步"""
-    resp = await client.get("/api/v1/auth/sync-cooldown")
+    resp = await client.get(
+        "/api/v1/auth/sync-cooldown",
+        headers={"X-Device-Id": DEVICE_A},
+    )
     assert resp.status_code == 200
     data = resp.json()
     assert data["allowed"] is True
@@ -73,10 +80,13 @@ async def test_sync_cooldown_initially_allowed(client):
 @pytest.mark.anyio
 async def test_sync_cooldown_after_success(client):
     """同步成功後冷卻應生效 / Cooldown should activate after sync success"""
-    # 模擬同步成功 / Simulate sync success
-    sync_cooldown.record_success("127.0.0.1")
+    # 模擬裝置 A 同步成功 / Simulate device A sync success
+    sync_cooldown.record_success(DEVICE_A)
 
-    resp = await client.get("/api/v1/auth/sync-cooldown")
+    resp = await client.get(
+        "/api/v1/auth/sync-cooldown",
+        headers={"X-Device-Id": DEVICE_A},
+    )
     assert resp.status_code == 200
     data = resp.json()
     assert data["allowed"] is False
@@ -88,10 +98,34 @@ async def test_sync_cooldown_after_success(client):
 async def test_sync_cooldown_after_errors_lock(client):
     """連續錯誤應觸發鎖定 / Consecutive errors should trigger lock"""
     for _ in range(3):
-        sync_cooldown.record_error("127.0.0.1")
+        sync_cooldown.record_error(DEVICE_A)
 
-    resp = await client.get("/api/v1/auth/sync-cooldown")
+    resp = await client.get(
+        "/api/v1/auth/sync-cooldown",
+        headers={"X-Device-Id": DEVICE_A},
+    )
     assert resp.status_code == 200
     data = resp.json()
     assert data["allowed"] is False
     assert data["reason"] == "locked"
+
+
+@pytest.mark.anyio
+async def test_different_devices_independent_cooldown(client):
+    """不同裝置冷卻互不影響 / Different devices have independent cooldowns"""
+    # 裝置 A 同步成功 → 冷卻中 / Device A synced → cooldown active
+    sync_cooldown.record_success(DEVICE_A)
+
+    # 裝置 A 應被冷卻 / Device A should be blocked
+    resp_a = await client.get(
+        "/api/v1/auth/sync-cooldown",
+        headers={"X-Device-Id": DEVICE_A},
+    )
+    assert resp_a.json()["allowed"] is False
+
+    # 裝置 B 不受影響 / Device B should be unaffected
+    resp_b = await client.get(
+        "/api/v1/auth/sync-cooldown",
+        headers={"X-Device-Id": DEVICE_B},
+    )
+    assert resp_b.json()["allowed"] is True

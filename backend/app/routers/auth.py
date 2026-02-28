@@ -39,6 +39,15 @@ def _get_client_ip(request: Request) -> str:
         return forwarded.split(",")[0].strip()
     return request.client.host if request.client else "unknown"
 
+
+def _get_device_id(request: Request) -> str:
+    """
+    取得裝置 UUID / Get device UUID from X-Device-Id header.
+    前端會在 localStorage 生成並持久保存一組 UUID。
+    Frontend generates and persists a UUID in localStorage.
+    """
+    return request.headers.get("x-device-id", "unknown")
+
 # JWT 設定 / JWT Configuration
 JWT_SECRET = os.getenv("JWT_SECRET")
 if not JWT_SECRET:
@@ -126,7 +135,7 @@ async def login(request_body: LoginRequest, request: Request):
     登入端點 / Login Endpoint
 
     流程 / Flow:
-    1. 檢查伺服器端同步冷卻（IP + 學號雙重鎖定）/ Check server-side sync cooldown
+    1. 檢查伺服器端同步冷卻（裝置獨立冷卻）/ Check server-side sync cooldown (per-device)
     2. 接收學號與密碼（不記錄） / Receive credentials (never logged)
     3. 透過爬蟲代理校務系統驗證 / Proxy auth via school portal scraper
     4. 成功後簽發 JWT / Issue JWT on success
@@ -137,10 +146,10 @@ async def login(request_body: LoginRequest, request: Request):
        DO NOT use logger to record any variable containing credentials
     """
 
-    # ── 伺服器端冷卻檢查（IP + 學號雙重鎖定）──
-    # ── Server-side cooldown check (IP + student_id dual lock) ──
-    client_ip = _get_client_ip(request)
-    cooldown_status = sync_cooldown.check_cooldown(client_ip, request_body.student_id)
+    # ── 伺服器端冷卻檢查（裝置獨立冷卻）──
+    # ── Server-side cooldown check (per-device via X-Device-Id) ──
+    device_id = _get_device_id(request)
+    cooldown_status = sync_cooldown.check_cooldown(device_id)
     if not cooldown_status["allowed"]:
         remaining = cooldown_status.get("remaining_seconds", 0)
         reason = cooldown_status.get("reason", "cooldown")
@@ -164,14 +173,14 @@ async def login(request_body: LoginRequest, request: Request):
         # ⚠️ 不記錄詳細錯誤（可能洩漏帳密） / Don't log details (may leak credentials)
         logger.info("Login attempt failed for a user")  # 僅記錄失敗事件 / Log only the event
         # 記錄同步錯誤至冷卻追蹤器 / Record sync error in cooldown tracker
-        sync_cooldown.record_error(client_ip, request_body.student_id)
+        sync_cooldown.record_error(device_id)
         raise HTTPException(
             status_code=401,
             detail="登入失敗，請確認帳號密碼 / Login failed, please check credentials",
         )
 
     # ── 記錄同步成功至冷卻追蹤器 / Record sync success in cooldown tracker ──
-    sync_cooldown.record_success(client_ip, request_body.student_id)
+    sync_cooldown.record_success(device_id)
 
     # ── 快取帳密 / Cache credentials ──
     _cache_credentials(request_body.student_id, request_body.password)
@@ -206,15 +215,15 @@ async def get_sync_cooldown(request: Request):
     """
     查詢同步冷卻狀態 / Check sync cooldown status
 
-    不需要認證即可查詢（基於 IP 追蹤）。
-    No authentication required (IP-based tracking).
+    基於裝置 UUID (X-Device-Id header) 追蹤。
+    Tracked via device UUID from X-Device-Id header.
 
     回傳 / Returns:
     - allowed: 是否可以同步 / Whether sync is allowed
     - reason: 被阻擋的原因 / Block reason (cooldown|locked)
     - remaining_seconds: 剩餘秒數 / Remaining seconds
     """
-    client_ip = _get_client_ip(request)
-    status = sync_cooldown.check_cooldown(client_ip)
+    device_id = _get_device_id(request)
+    status = sync_cooldown.check_cooldown(device_id)
     return status
 

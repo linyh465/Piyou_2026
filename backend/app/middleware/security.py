@@ -6,8 +6,8 @@
   HTTPS redirect middleware.
 - 基本速率限制
   Basic rate limiting guard.
-- 同步冷卻追蹤器（IP + 學號雙重鎖定）
-  Sync cooldown tracker (IP + student_id dual lock).
+- 同步冷卻追蹤器（裝置獨立冷卻）
+  Sync cooldown tracker (per-device cooldown via X-Device-Id).
 """
 import logging
 import re
@@ -146,14 +146,13 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
 # ══════════════════════════════════════════════
 #  同步冷卻追蹤器 / Sync Cooldown Tracker
-#  基於 IP + 學號雙重鎖定，伺服器端強制執行
-#  IP + student_id dual lock, server-side enforced.
-#  清除瀏覽器資料、登出、換帳號都無法繞過冷卻時間。
-#  Clearing browser data, logout, or switching accounts
-#  cannot bypass the cooldown.
+#  基於裝置 UUID 獨立冷卻，伺服器端強制執行
+#  Per-device cooldown via X-Device-Id, server-side enforced.
+#  每台裝置各自計時，不同裝置互不影響。
+#  Each device has its own independent cooldown timer.
 # ══════════════════════════════════════════════
 
-SYNC_COOLDOWN_SECONDS = 60 * 60          # 1 小時冷卻 / 1 hour cooldown
+SYNC_COOLDOWN_SECONDS = 60 * 10          # 10 分鐘冷卻 / 10 min cooldown
 SYNC_ERROR_LOCK_SECONDS = 15 * 60        # 錯誤鎖定 15 分鐘 / 15 min error lock
 SYNC_MAX_ERRORS = 3                       # 連續錯誤上限 / Max consecutive errors
 
@@ -161,13 +160,13 @@ SYNC_MAX_ERRORS = 3                       # 連續錯誤上限 / Max consecutive
 class SyncCooldownTracker:
     """
     全域同步冷卻追蹤器（單例）/ Global sync cooldown tracker (singleton).
-    同時追蹤 IP 與學號，兩者任一命中都會被擋下。
-    Tracks both IP and student_id; either match blocks the sync.
+    以裝置 UUID (X-Device-Id) 為 key，每台裝置各自獨立冷卻。
+    Tracks per-device cooldown using device UUID from X-Device-Id header.
     """
 
     def __init__(self):
         self._lock = threading.Lock()
-        # key = ip or student_id → {"last_sync": float, "errors": int, "locked_until": float}
+        # key = device_id → {"last_sync": float, "errors": int, "locked_until": float}
         self._records: dict[str, dict] = {}
         self._last_gc = time.time()
         self._gc_interval = 600  # 每 10 分鐘清理 / GC every 10 min
@@ -188,7 +187,7 @@ class SyncCooldownTracker:
             self._records[key] = {"last_sync": 0, "errors": 0, "locked_until": 0}
         return self._records[key]
 
-    def check_cooldown(self, ip: str, student_id: str | None = None) -> dict:
+    def check_cooldown(self, device_id: str) -> dict:
         """
         檢查冷卻狀態 / Check cooldown status.
         Returns dict: {"allowed": bool, "reason"?: str, "remaining_seconds"?: int}
@@ -198,61 +197,49 @@ class SyncCooldownTracker:
             if now - self._last_gc > self._gc_interval:
                 self._gc(now)
 
-            # 檢查所有相關 key（IP 必查，學號可選）
-            # Check all relevant keys (IP always, student_id optional)
-            keys = [f"ip:{ip}"]
-            if student_id:
-                keys.append(f"sid:{student_id}")
+            key = f"dev:{device_id}"
+            rec = self._get_or_create(key)
 
-            for key in keys:
-                rec = self._get_or_create(key)
+            # 錯誤鎖定中 / Error lock active
+            if rec["locked_until"] > now:
+                remaining = int(rec["locked_until"] - now)
+                return {
+                    "allowed": False,
+                    "reason": "locked",
+                    "remaining_seconds": remaining,
+                }
 
-                # 錯誤鎖定中 / Error lock active
-                if rec["locked_until"] > now:
-                    remaining = int(rec["locked_until"] - now)
-                    return {
-                        "allowed": False,
-                        "reason": "locked",
-                        "remaining_seconds": remaining,
-                    }
-
-                # 冷卻中 / Cooldown active
-                elapsed = now - rec["last_sync"]
-                if rec["last_sync"] > 0 and elapsed < SYNC_COOLDOWN_SECONDS:
-                    remaining = int(SYNC_COOLDOWN_SECONDS - elapsed)
-                    return {
-                        "allowed": False,
-                        "reason": "cooldown",
-                        "remaining_seconds": remaining,
-                    }
+            # 冷卻中 / Cooldown active
+            elapsed = now - rec["last_sync"]
+            if rec["last_sync"] > 0 and elapsed < SYNC_COOLDOWN_SECONDS:
+                remaining = int(SYNC_COOLDOWN_SECONDS - elapsed)
+                return {
+                    "allowed": False,
+                    "reason": "cooldown",
+                    "remaining_seconds": remaining,
+                }
 
         return {"allowed": True}
 
-    def record_success(self, ip: str, student_id: str | None = None):
+    def record_success(self, device_id: str):
         """記錄同步成功 / Record sync success"""
         now = time.time()
         with self._lock:
-            keys = [f"ip:{ip}"]
-            if student_id:
-                keys.append(f"sid:{student_id}")
-            for key in keys:
-                rec = self._get_or_create(key)
-                rec["last_sync"] = now
-                rec["errors"] = 0
+            key = f"dev:{device_id}"
+            rec = self._get_or_create(key)
+            rec["last_sync"] = now
+            rec["errors"] = 0
 
-    def record_error(self, ip: str, student_id: str | None = None):
+    def record_error(self, device_id: str):
         """記錄同步錯誤，超過上限觸發鎖定 / Record sync error, lock on threshold"""
         now = time.time()
         with self._lock:
-            keys = [f"ip:{ip}"]
-            if student_id:
-                keys.append(f"sid:{student_id}")
-            for key in keys:
-                rec = self._get_or_create(key)
-                rec["errors"] += 1
-                if rec["errors"] >= SYNC_MAX_ERRORS:
-                    rec["locked_until"] = now + SYNC_ERROR_LOCK_SECONDS
-                    rec["errors"] = 0
+            key = f"dev:{device_id}"
+            rec = self._get_or_create(key)
+            rec["errors"] += 1
+            if rec["errors"] >= SYNC_MAX_ERRORS:
+                rec["locked_until"] = now + SYNC_ERROR_LOCK_SECONDS
+                rec["errors"] = 0
 
 
 # 全域單例 / Global singleton
