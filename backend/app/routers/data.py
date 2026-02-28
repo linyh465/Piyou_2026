@@ -19,7 +19,7 @@ import asyncio
 import logging
 from pathlib import Path
 from datetime import datetime, timezone, timedelta
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Request
 from app.models.schemas import (
     TimetableResponse, GradesResponse,
     Course, GradeCourse, Semester,
@@ -374,6 +374,69 @@ async def get_grades(user: dict = Depends(get_current_user)):
 
     return MOCK_GRADES
 
+
+# ══════════════════════════════════════════
+#  任務同步 / Task Sync
+# ══════════════════════════════════════════
+
+TASKS_DIR = CACHE_DIR / "tasks"
+TASKS_DIR.mkdir(exist_ok=True)
+MAX_TASKS = 500  # 每位學生最多 500 筆任務 / Max 500 tasks per student
+
+
+def _get_tasks_path(student_id: str) -> Path:
+    """取得任務儲存路徑 / Get task storage path"""
+    safe_id = "".join(c for c in student_id if c.isalnum())
+    return TASKS_DIR / f"{safe_id}.json"
+
+
+@router.get("/tasks")
+async def get_tasks(user: dict = Depends(get_current_user)):
+    """
+    取得該學號的任務列表 / Get tasks for this student
+    回傳儲存在伺服器端的任務 JSON，若無資料回傳 404。
+    Returns server-stored tasks JSON; 404 if no data exists.
+    """
+    student_id = user.get("sub", "")
+    path = _get_tasks_path(student_id)
+    if not path.exists():
+        raise HTTPException(status_code=404, detail="尚無任務資料 / No task data found")
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+        return data
+    except Exception as e:
+        logger.warning(f"Task read error: {e}")
+        raise HTTPException(status_code=500, detail="讀取任務失敗 / Failed to read tasks")
+
+
+@router.put("/tasks")
+async def put_tasks(request: Request, user: dict = Depends(get_current_user)):
+    """
+    覆寫該學號的任務列表 / Overwrite tasks for this student
+    前端上傳完整任務 JSON，伺服器端直接覆寫。
+    Frontend uploads full task JSON; server overwrites entirely.
+    """
+    student_id = user.get("sub", "")
+    try:
+        body = await request.json()
+    except Exception:
+        raise HTTPException(status_code=400, detail="請求格式錯誤 / Invalid request body")
+
+    tasks = body.get("tasks")
+    if not isinstance(tasks, list):
+        raise HTTPException(status_code=400, detail="tasks 必須為陣列 / tasks must be an array")
+    if len(tasks) > MAX_TASKS:
+        raise HTTPException(status_code=400, detail=f"任務數量超過上限 {MAX_TASKS} / Too many tasks (max {MAX_TASKS})")
+
+    path = _get_tasks_path(student_id)
+    try:
+        data = {"tasks": tasks, "updated_at": datetime.now(timezone.utc).isoformat()}
+        path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+        logger.info(f"Saved {len(tasks)} tasks for student")
+        return {"status": "ok", "count": len(tasks)}
+    except Exception as e:
+        logger.warning(f"Task write error: {e}")
+        raise HTTPException(status_code=500, detail="儲存任務失敗 / Failed to save tasks")
 
 # ── 記憶體內 TDX 節流 / In-memory TDX throttle ──
 _bus_mem_cache: dict | None = None

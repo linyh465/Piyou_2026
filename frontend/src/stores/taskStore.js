@@ -1,16 +1,19 @@
 /**
  * 任務管理狀態 / Task Management Store
- * 基於本地 SQLite 的 CRUD 操作，含 Markdown 匯出功能
- * Local SQLite-based CRUD operations with Markdown export capability.
+ * 本地 localStorage CRUD 操作 + 雲端同步
+ * Local localStorage-based CRUD with cloud sync capability.
  */
 import { create } from 'zustand';
 import localDb from '../services/localDb';
 import { downloadMarkdown } from '../utils/exportMarkdown';
+import { api } from '../services/apiClient';
 
 const useTaskStore = create((set, get) => ({
     // 狀態 / State
     tasks: [],
     isLoading: false,
+    isSyncing: false,
+    syncError: null,
     filter: 'all', // all | active | completed
     categoryFilter: 'all',
 
@@ -94,6 +97,50 @@ const useTaskStore = create((set, get) => ({
 
     setFilter: (filter) => set({ filter }),
     setCategoryFilter: (categoryFilter) => set({ categoryFilter }),
+
+    // ── 雲端同步 / Cloud Sync ──
+
+    /**
+     * 上傳本地任務至伺服器 / Upload local tasks to server
+     */
+    syncTasksToServer: async () => {
+        const token = sessionStorage.getItem('piyou_token');
+        if (!token) return;
+
+        set({ isSyncing: true, syncError: null });
+        try {
+            const tasks = localDb.exportAllTasks();
+            await api.put('/data/tasks', { tasks }, { timeout: 15000 });
+            set({ isSyncing: false });
+        } catch (err) {
+            set({ isSyncing: false, syncError: err.response?.data?.detail || '任務上傳失敗 / Task upload failed' });
+        }
+    },
+
+    /**
+     * 從伺服器下載任務並覆蓋本地 / Download tasks from server and overwrite local
+     */
+    syncTasksFromServer: async () => {
+        const token = sessionStorage.getItem('piyou_token');
+        if (!token) return;
+
+        set({ isSyncing: true, syncError: null });
+        try {
+            const res = await api.get('/data/tasks', { timeout: 15000 });
+            const serverTasks = res.data.tasks || [];
+            localDb.replaceAllTasks(serverTasks);
+            await get().loadTasks();
+            set({ isSyncing: false });
+        } catch (err) {
+            // 404 代表伺服器尚無此學號的任務資料（首次同步）
+            // 404 means no server data for this student yet (first sync)
+            if (err.response?.status === 404) {
+                set({ isSyncing: false, syncError: null });
+                return;
+            }
+            set({ isSyncing: false, syncError: err.response?.data?.detail || '任務下載失敗 / Task download failed' });
+        }
+    },
 }));
 
 export default useTaskStore;

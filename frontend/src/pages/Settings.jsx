@@ -10,6 +10,7 @@ import { useState, useEffect } from 'react';
 import useThemeStore from '../stores/themeStore';
 import useAuthStore from '../stores/authStore';
 import useTimetableStore from '../stores/timetableStore';
+import useTaskStore from '../stores/taskStore';
 import {
     IconUser, IconSun, IconMoon, IconBell, IconSettings,
     IconLogOut, IconChevronRight, IconBook, IconCheckCircle, IconXCircle
@@ -85,6 +86,7 @@ export default function Settings() {
     const { theme, setTheme } = useThemeStore();
     const { user, isAuthenticated, login, logout, error, clearError } = useAuthStore();
     const { fetchTimetable, fetchGrades, canSync, recordSyncSuccess, recordSyncError, hasCachedData, lastSyncTime, clearSchoolData, serverCooldown } = useTimetableStore();
+    const { syncTasksFromServer, syncTasksToServer } = useTaskStore();
 
     const [busNotify, setBusNotify] = useState(() => {
         try { return JSON.parse(localStorage.getItem('piyou_busNotify') ?? 'true'); } catch { return true; }
@@ -133,6 +135,10 @@ export default function Settings() {
                 // 序列化執行，避免同一 session 被並行存取的競爭條件
                 await fetchTimetable();
                 await fetchGrades();
+                // 同步任務：先從伺服器下載覆蓋本地，再上傳確保伺服器有最新版
+                // Sync tasks: download from server first, then upload to ensure server has latest
+                await syncTasksFromServer();
+                await syncTasksToServer();
                 recordSyncSuccess();
                 setSyncSuccess(true);
                 setTimeout(() => {
