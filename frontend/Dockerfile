@@ -22,8 +22,13 @@ RUN npm run build
 FROM nginx:stable-alpine
 
 COPY --from=build /app/dist /usr/share/nginx/html
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+# 以 template 形式複製，啟動時用 envsubst 注入 $PORT
+# Copy as template, inject $PORT at startup via envsubst
+COPY nginx.conf /etc/nginx/templates/default.conf.template
 
-EXPOSE 80
+# Railway 透過 PORT 環境變數指定埠號，本地預設 80
+# Railway assigns port via PORT env var, default 80 for local
+ENV PORT=80
+EXPOSE ${PORT}
 
-CMD ["nginx", "-g", "daemon off;"]
+CMD ["/bin/sh", "-c", "envsubst '${PORT}' < /etc/nginx/templates/default.conf.template > /etc/nginx/conf.d/default.conf && nginx -g 'daemon off;'"]

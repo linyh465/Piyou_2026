@@ -1,0 +1,4 @@
+# ── 披呦前端 Railway 設定 / Piyou Frontend Railway Config ──
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
