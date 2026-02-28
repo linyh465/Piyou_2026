@@ -8,6 +8,8 @@ import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Layout from './components/Layout';
 import ErrorBoundary from './components/ErrorBoundary';
 import useAuthStore from './stores/authStore';
+// 提早載入主題，確保初始即套用系統/使用者偏好 / Eagerly load theme store so theme is applied on first render
+import './stores/themeStore';
 
 // ── Lazy-loaded 頁面 / Lazy-loaded pages ──
 const Dashboard = lazy(() => import('./pages/Dashboard'));
