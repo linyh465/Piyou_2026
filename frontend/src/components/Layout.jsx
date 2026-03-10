@@ -91,7 +91,7 @@ export default function Layout() {
                 {/* 頂部品牌區 / Brand Header */}
                 <div className="sidebar-brand">
                     <div className="sidebar-brand-inner">
-                        <div className="sidebar-logo">P</div>
+                        <img src="/pwa-192x192.svg" alt="Piyou" className="sidebar-logo" />
                         <span className="sidebar-title">披呦</span>
                     </div>
                 </div>

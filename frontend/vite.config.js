@@ -19,7 +19,7 @@ export default defineConfig({
         name: '披呦 Piyou — 校園智慧助理',
         short_name: '披呦',
         description: '靜宜大學校園智慧助理：課表、成績、公車、任務一站式查詢',
-        theme_color: '#6366f1',
+        theme_color: '#0072ff',
         background_color: '#0f0f14',
         display: 'standalone',
         scope: '/',
