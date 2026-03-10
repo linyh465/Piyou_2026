@@ -6,6 +6,12 @@
 
 export const busRoutes = [
     {
+        id: '300', name: '300',
+        description: '臺中車站 — 靜宜大學',
+        from: '靜宜大學(專用道)', to: '臺中車站(A月台)',
+        color: '#8b5cf6',
+    },
+    {
         id: '301', name: '301',
         description: '靜宜大學 — 新光里',
         from: '靜宜大學靜園餐廳', to: '新光里(新福路)',

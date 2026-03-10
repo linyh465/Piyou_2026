@@ -79,7 +79,7 @@ class TestTDXMockData:
             assert "stopName" in arrival
             assert "stopSequence" in arrival
             assert "eventType" in arrival
-            assert arrival["routeName"] in ["301", "368", "162"]
+            assert arrival["routeName"] in ["300", "301", "368", "162"]
 
 
 class TestTDXTokenAuth:
