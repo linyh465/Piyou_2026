@@ -192,7 +192,7 @@ export default function Grades() {
                         const stats = calculateStats(semester.courses);
                         const gpa = semester.gpa ?? stats.gpa;
                         const weightedAvg = semester.weighted_average ?? stats.weightedAvg;
-                        const rank = semester.rank;
+                        const rank = semester.rank; // kept for backward compat fallback
 
                         return (
                             <div key={idx} className="card" style={{ animationDelay: `${idx * 0.08}s` }}>
@@ -216,17 +216,16 @@ export default function Grades() {
                                     </div>
                                 </div>
 
-                                {/* 排名資訊 */}
-                                {rank && (
-                                    <div style={{
-                                        display: 'flex', alignItems: 'center', gap: 8,
-                                        padding: '8px 12px', marginBottom: 12, borderRadius: 10,
-                                        background: 'rgba(99,102,241,0.04)', border: '1px solid var(--border-light)',
-                                        fontSize: '13px', color: 'var(--text-secondary)',
-                                    }}>
-                                        🏅 班排名 {rank}
-                                    </div>
-                                )}
+                                {/* 排名資訊 — 始終顯示 / Rank info — always visible */}
+                                <div style={{
+                                    display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap',
+                                    padding: '8px 12px', marginBottom: 12, borderRadius: 10,
+                                    background: 'rgba(99,102,241,0.04)', border: '1px solid var(--border-light)',
+                                    fontSize: '13px', color: 'var(--text-secondary)',
+                                }}>
+                                    <span>🏅 班排名：{semester.class_rank ?? semester.rank ?? '--'}</span>
+                                    <span>🎓 系排名：{semester.dept_rank ?? '--'}</span>
+                                </div>
 
                                 {/* 成績列表 */}
                                 <div style={{ display: 'flex', flexDirection: 'column' }}>

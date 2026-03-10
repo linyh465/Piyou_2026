@@ -264,6 +264,8 @@ def transform_grades(scraper_data: dict) -> GradesResponse:
                 weighted_average=weighted_average,
                 gpa=gpa,
                 rank=sem.get("rank"),
+                class_rank=sem.get("class_rank"),
+                dept_rank=sem.get("dept_rank"),
             ))
         return GradesResponse(semesters=semesters)
 
@@ -275,6 +277,8 @@ def transform_grades(scraper_data: dict) -> GradesResponse:
 
     total_credits, weighted_average, gpa = _calc_stats(courses)
     rank_str = scraper_data.get("rank")
+    class_rank_str = scraper_data.get("class_rank")
+    dept_rank_str = scraper_data.get("dept_rank")
     semesters = [Semester(
         name="學期成績",
         courses=courses,
@@ -282,6 +286,8 @@ def transform_grades(scraper_data: dict) -> GradesResponse:
         weighted_average=weighted_average,
         gpa=gpa,
         rank=rank_str,
+        class_rank=class_rank_str,
+        dept_rank=dept_rank_str,
     )]
     return GradesResponse(semesters=semesters)
 

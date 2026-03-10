@@ -316,12 +316,28 @@ class TestTransformGrades:
         raw = {"rows": [["A", "C1", "", "3", "90"]], "rank": "5/60"}
         result = transform_grades(raw)
         assert result.semesters[0].rank == "5/60"
+        assert result.semesters[0].class_rank is None
+        assert result.semesters[0].dept_rank is None
 
     def test_rank_defaults_to_none(self):
         """無排名資訊"""
         raw = {"rows": [["A", "C1", "", "3", "90"]]}
         result = transform_grades(raw)
         assert result.semesters[0].rank is None
+        assert result.semesters[0].class_rank is None
+        assert result.semesters[0].dept_rank is None
+
+    def test_class_and_dept_rank(self):
+        """班排名與系排名 / Class rank and dept rank"""
+        raw = {
+            "rows": [["A", "C1", "", "3", "90"]],
+            "class_rank": "3/50",
+            "dept_rank": "10/120",
+        }
+        result = transform_grades(raw)
+        sem = result.semesters[0]
+        assert sem.class_rank == "3/50"
+        assert sem.dept_rank == "10/120"
 
     def test_multi_semester_parsing(self):
         """多學期動態解析 / Multi-semester dynamic parsing"""
@@ -334,6 +350,8 @@ class TestTransformGrades:
                         ["微積分", "MA101", "必修", "4", "85"],
                     ],
                     "rank": "3/60",
+                    "class_rank": "3/60",
+                    "dept_rank": "8/120",
                 },
                 {
                     "name": "112-2 下學期",
@@ -349,6 +367,8 @@ class TestTransformGrades:
         assert result.semesters[0].name == "113-1 上學期"
         assert len(result.semesters[0].courses) == 2
         assert result.semesters[0].rank == "3/60"
+        assert result.semesters[0].class_rank == "3/60"
+        assert result.semesters[0].dept_rank == "8/120"
         assert result.semesters[0].gpa is not None
         assert result.semesters[0].weighted_average is not None
 

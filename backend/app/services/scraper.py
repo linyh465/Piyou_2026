@@ -310,7 +310,7 @@ class SchoolScraper:
                         # 儲存上一個學期 / Save previous semester
                         if current_semester and current_semester["rows"]:
                             semesters.append(current_semester)
-                        current_semester = {"name": text.strip(), "rows": [], "rank": None}
+                        current_semester = {"name": text.strip(), "rows": [], "rank": None, "class_rank": None, "dept_rank": None}
                         continue
 
                 # ── 檢查 <th> 是否含學期資訊 / Check <th> for semester info ──
@@ -320,7 +320,7 @@ class SchoolScraper:
                     if m and len(text) < 40:
                         if current_semester and current_semester["rows"]:
                             semesters.append(current_semester)
-                        current_semester = {"name": text.strip(), "rows": [], "rank": None}
+                        current_semester = {"name": text.strip(), "rows": [], "rank": None, "class_rank": None, "dept_rank": None}
                         continue
 
                 # ── 解析成績表格 / Parse grade table rows ──
@@ -328,14 +328,36 @@ class SchoolScraper:
                     rows = element.find_all("tr")
                     for row in rows:
                         cells = row.find_all("td")
+
+                        # ── 偵測排名列（2-cell 結構）/ Detect rank row (2-cell label+value) ──
+                        # 實際 HTML: <td>班排名(Class ranking)</td><td colspan="4">5/60 或 缺(None)</td>
+                        if len(cells) >= 2 and current_semester:
+                            label_text = cells[0].get_text(strip=True)
+                            value_text = cells[1].get_text(strip=True)
+                            rank_val_match = re.search(r'(\d+\s*/\s*\d+)', value_text)
+                            rank_val = rank_val_match.group(1).replace(" ", "") if rank_val_match else None
+
+                            if "班排名" in label_text or "Class ranking" in label_text:
+                                current_semester["class_rank"] = rank_val
+                                continue
+                            if "系排名" in label_text or "Department ranking" in label_text:
+                                current_semester["dept_rank"] = rank_val
+                                continue
+
                         if len(cells) >= 3:
                             texts = [c.get_text(strip=True) for c in cells]
 
-                            # 偵測排名列 / Detect rank row
+                            # 偵測排名列（舊格式 fallback）/ Detect rank row (legacy inline format)
                             full_row_text = " ".join(texts)
                             rank_match = re.search(r'排名[：:\s]*(\d+\s*/\s*\d+)', full_row_text)
                             if rank_match and current_semester:
-                                current_semester["rank"] = rank_match.group(1).replace(" ", "")
+                                rank_val = rank_match.group(1).replace(" ", "")
+                                if "班" in full_row_text:
+                                    current_semester["class_rank"] = rank_val
+                                elif "系" in full_row_text:
+                                    current_semester["dept_rank"] = rank_val
+                                else:
+                                    current_semester["rank"] = rank_val
                                 continue
 
                             # 偵測學期標題列 / Detect semester header in table row
@@ -350,6 +372,8 @@ class SchoolScraper:
                                     "name": full_row_text.strip(),
                                     "rows": [],
                                     "rank": None,
+                                    "class_rank": None,
+                                    "dept_rank": None,
                                 }
                                 continue
 
@@ -369,6 +393,8 @@ class SchoolScraper:
                                         "name": "",
                                         "rows": [],
                                         "rank": None,
+                                        "class_rank": None,
+                                        "dept_rank": None,
                                     }
                                 current_semester["rows"].append(texts)
 
@@ -392,7 +418,7 @@ class SchoolScraper:
                             if has_score:
                                 flat_rows.append(texts)
                 if flat_rows:
-                    semesters = [{"name": "", "rows": flat_rows, "rank": None}]
+                    semesters = [{"name": "", "rows": flat_rows, "rank": None, "class_rank": None, "dept_rank": None}]
 
             total_rows = sum(len(s["rows"]) for s in semesters)
             logger.info(

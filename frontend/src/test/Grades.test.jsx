@@ -11,6 +11,8 @@ vi.mock('../stores/timetableStore', () => {
     grades: [
       {
         name: '113-1 上學期',
+        class_rank: '5/60',
+        dept_rank: '12/120',
         courses: [
           { name: '微積分', score: 92, credits: 3 },
           { name: '國文', score: 78, credits: 2 },
@@ -20,6 +22,8 @@ vi.mock('../stores/timetableStore', () => {
     ],
     isLoadingGrades: false,
     gradesError: null,
+    clearGradesData: vi.fn(),
+    canSync: vi.fn().mockResolvedValue({ allowed: true }),
     fetchGrades: vi.fn(),
   };
   return {
@@ -75,5 +79,15 @@ describe('Grades Page', () => {
     // GPA 會根據分數計算（92→4.3, 78→3.3），加權平均
     const gpaBadges = screen.getAllByText(/GPA/);
     expect(gpaBadges.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('displays class rank and dept rank', () => {
+    render(
+      <MemoryRouter>
+        <Grades />
+      </MemoryRouter>
+    );
+    expect(screen.getByText(/班排名：5\/60/)).toBeInTheDocument();
+    expect(screen.getByText(/系排名：12\/120/)).toBeInTheDocument();
   });
 });
