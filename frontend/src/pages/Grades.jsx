@@ -192,8 +192,6 @@ export default function Grades() {
                         const stats = calculateStats(semester.courses);
                         const gpa = semester.gpa ?? stats.gpa;
                         const weightedAvg = semester.weighted_average ?? stats.weightedAvg;
-                        const rank = semester.rank; // kept for backward compat fallback
-
                         return (
                             <div key={idx} className="card" style={{ animationDelay: `${idx * 0.08}s` }}>
                                 {/* 學期標題 */}
