@@ -961,3 +961,13 @@ body {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.5; }
 }
+
+/* ── 滑動提示動畫 / Swipe hint animations ── */
+@keyframes swipeHintLeft {
+  0%, 100% { transform: translateX(0); }
+  50% { transform: translateX(-4px); }
+}
+@keyframes swipeHintRight {
+  0%, 100% { transform: translateX(0); }
+  50% { transform: translateX(4px); }
+}

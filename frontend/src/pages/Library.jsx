@@ -298,6 +298,9 @@ export default function Library() {
                             key={tab.key}
                             onClick={() => setActiveTab(tab.key)}
                             className={`btn ${activeTab === tab.key ? 'btn-primary' : 'btn-ghost'}`}
+                            role="tab"
+                            aria-selected={activeTab === tab.key}
+                            aria-label={tab.label}
                             style={{
                                 fontSize: '12px', padding: '6px 14px',
                                 whiteSpace: 'nowrap', borderRadius: '20px',

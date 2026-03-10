@@ -342,6 +342,9 @@ export default function Transport() {
                     className={`transport-dir-tab ${dirIndex === 0 ? 'active' : ''}`}
                     onClick={() => setDirIndex(0)}
                     style={{ '--tab-color': routeInfo.color }}
+                    role="tab"
+                    aria-selected={dirIndex === 0}
+                    aria-label={`去程 往${routeInfo.to}`}
                 >
                     <span style={{ fontSize: '0.75rem', opacity: 0.7 }}>去程</span>
                     <span style={{ fontSize: '0.8125rem', fontWeight: 600 }}>
@@ -352,6 +355,9 @@ export default function Transport() {
                     className={`transport-dir-tab ${dirIndex === 1 ? 'active' : ''}`}
                     onClick={() => setDirIndex(1)}
                     style={{ '--tab-color': routeInfo.color }}
+                    role="tab"
+                    aria-selected={dirIndex === 1}
+                    aria-label={`返程 往${routeInfo.from}`}
                 >
                     <span style={{ fontSize: '0.75rem', opacity: 0.7 }}>返程</span>
                     <span style={{ fontSize: '0.8125rem', fontWeight: 600 }}>
@@ -361,8 +367,11 @@ export default function Transport() {
                 <p style={{
                     fontSize: '0.6875rem', color: 'var(--text-muted)', textAlign: 'center',
                     width: '100%', marginTop: 4,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
                 }}>
-                    ← 左滑返程 ｜ 右滑去程 →
+                    <span style={{ display: 'inline-block', animation: 'swipeHintLeft 2s ease-in-out infinite', opacity: 0.7 }}>👈</span>
+                    左右滑動切換方向
+                    <span style={{ display: 'inline-block', animation: 'swipeHintRight 2s ease-in-out infinite', opacity: 0.7 }}>👉</span>
                 </p>
             </div>
 
@@ -405,6 +414,8 @@ export default function Transport() {
                 onTouchStart={handleTouchStart}
                 onTouchEnd={handleTouchEnd}
                 style={{ minHeight: 200 }}
+                role="region"
+                aria-label={`${selectedRoute} 路線 ${direction}站牌列表`}
             >
                 {isLoading && currentStops.length === 0 ? (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>

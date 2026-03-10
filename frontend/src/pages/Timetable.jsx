@@ -2,6 +2,7 @@
  * 課表頁面 / Timetable Page
  * 間距參考 Dcard / Instagram
  */
+import { useState } from 'react';
 import useTimetableStore from '../stores/timetableStore';
 import { IconCalendar, IconRefresh, IconTrash } from '../components/Icons';
 
@@ -32,6 +33,7 @@ function getColorForCourse(name) {
 
 export default function Timetable() {
     const { timetable, isLoadingTimetable, timetableError, isTimeout, fetchTimetable, clearTimetableData, canSync } = useTimetableStore();
+    const [activeCourse, setActiveCourse] = useState(null);
 
     // 資料已從 localStorage 載入 zustand，不自動 fetch，避免清除後 in-flight 請求覆寫
     // Data is already loaded from localStorage into zustand; skip auto-fetch to avoid race condition on clear
@@ -121,19 +123,39 @@ export default function Timetable() {
                                         <td key={day} style={{ padding: '3px' }}>
                                             {course && (() => {
                                                 const c = getColorForCourse(course.name);
+                                                const isActive = activeCourse === `${day}-${period}`;
                                                 return (
                                                     <div
                                                         style={{
                                                             borderRadius: '10px', padding: '6px', textAlign: 'center',
                                                             cursor: 'pointer', transition: 'transform 0.15s',
                                                             background: c.bg, border: `1px solid ${c.border}`, color: c.text,
-                                                            overflow: 'hidden',
+                                                            overflow: 'hidden', position: 'relative',
                                                         }}
-                                                        title={`${course.name}\n${course.location || ''}`}
+                                                        onClick={() => setActiveCourse(isActive ? null : `${day}-${period}`)}
+                                                        role="button"
+                                                        tabIndex={0}
+                                                        aria-label={`${course.name}${course.location ? ` - ${course.location}` : ''}`}
+                                                        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setActiveCourse(isActive ? null : `${day}-${period}`); } }}
                                                     >
                                                         <div style={{ fontWeight: 600, fontSize: '11px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{course.name}</div>
                                                         {course.location && (
                                                             <div style={{ fontSize: '9px', opacity: 0.7, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{course.location}</div>
+                                                        )}
+                                                        {isActive && (
+                                                            <div
+                                                                style={{
+                                                                    position: 'absolute', bottom: 'calc(100% + 6px)', left: '50%', transform: 'translateX(-50%)',
+                                                                    background: 'var(--bg-card, #fff)', color: 'var(--text)', fontSize: '12px',
+                                                                    padding: '8px 12px', borderRadius: '8px', whiteSpace: 'nowrap',
+                                                                    boxShadow: '0 4px 12px rgba(0,0,0,0.15)', zIndex: 20,
+                                                                    border: '1px solid var(--border)',
+                                                                    pointerEvents: 'none',
+                                                                }}
+                                                            >
+                                                                <div style={{ fontWeight: 600 }}>{course.name}</div>
+                                                                {course.location && <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: 2 }}>{course.location}</div>}
+                                                            </div>
                                                         )}
                                                     </div>
                                                 );

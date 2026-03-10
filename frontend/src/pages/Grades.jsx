@@ -131,6 +131,8 @@ export default function Grades() {
                         onClick={() => setSelectedSemester('all')}
                         className={`btn ${selectedSemester === 'all' ? 'btn-primary' : 'btn-ghost'}`}
                         style={{ fontSize: '12px', padding: '6px 14px', whiteSpace: 'nowrap', borderRadius: '20px' }}
+                        role="tab"
+                        aria-selected={selectedSemester === 'all'}
                     >
                         全部學期
                     </button>
@@ -140,6 +142,8 @@ export default function Grades() {
                             onClick={() => setSelectedSemester(s.name)}
                             className={`btn ${selectedSemester === s.name ? 'btn-primary' : 'btn-ghost'}`}
                             style={{ fontSize: '12px', padding: '6px 14px', whiteSpace: 'nowrap', borderRadius: '20px' }}
+                            role="tab"
+                            aria-selected={selectedSemester === s.name}
                         >
                             {s.name || '未命名學期'}
                         </button>
