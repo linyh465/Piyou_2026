@@ -122,15 +122,15 @@ def _get_authenticated_scraper(user: dict) -> SchoolScraper:
 DAY_MAP = {"Mon": 1, "Tue": 2, "Wed": 3, "Thu": 4, "Fri": 5, "Sat": 6, "Sun": 0}
 
 PERIOD_START = {
-    1: 510, 2: 570, 3: 630, 4: 690, 5: 810, 6: 870, 7: 930,
-    8: 990, 9: 1050, 10: 1110, 11: 1170, 12: 1230, 13: 1290,
+    1: 490, 2: 550, 3: 610, 4: 670, 5: 790, 6: 850, 7: 910,
+    8: 970, 9: 1030, 10: 1085, 11: 1140, 12: 1195, 13: 1250,
 }
 
 PERIOD_TIME = {
-    1: "08:30-09:20", 2: "09:30-10:20", 3: "10:30-11:20", 4: "11:30-12:20",
-    5: "13:30-14:20", 6: "14:30-15:20", 7: "15:30-16:20", 8: "16:30-17:20",
-    9: "17:30-18:20", 10: "18:30-19:20", 11: "19:30-20:20", 12: "20:30-21:20",
-    13: "21:30-22:20",
+    1: "08:10-09:00", 2: "09:10-10:00", 3: "10:10-11:00", 4: "11:10-12:00",
+    5: "13:10-14:00", 6: "14:10-15:00", 7: "15:10-16:00", 8: "16:10-17:00",
+    9: "17:10-18:00", 10: "18:05-18:55", 11: "19:00-19:50", 12: "19:55-20:45",
+    13: "20:50-21:40",
 }
 
 
@@ -291,12 +291,12 @@ def transform_grades(scraper_data: dict) -> GradesResponse:
 # ══════════════════════════════════════════
 
 MOCK_TIMETABLE = TimetableResponse(courses=[
-    Course(name="程式設計", day=1, period=1, startMinute=510, location="理 101", teacher="林教授", time="08:30-09:20"),
-    Course(name="程式設計", day=1, period=2, startMinute=570, location="理 101", teacher="林教授", time="09:30-10:20"),
-    Course(name="微積分", day=1, period=3, startMinute=630, location="理 201", teacher="陳教授", time="10:30-11:20"),
-    Course(name="微積分", day=1, period=4, startMinute=690, location="理 201", teacher="陳教授", time="11:30-12:20"),
-    Course(name="英文", day=2, period=2, startMinute=570, location="文 301", teacher="王教授", time="09:30-10:20"),
-    Course(name="英文", day=2, period=3, startMinute=630, location="文 301", teacher="王教授", time="10:30-11:20"),
+    Course(name="程式設計", day=1, period=1, startMinute=490, location="理 101", teacher="林教授", time="08:10-09:00"),
+    Course(name="程式設計", day=1, period=2, startMinute=550, location="理 101", teacher="林教授", time="09:10-10:00"),
+    Course(name="微積分", day=1, period=3, startMinute=610, location="理 201", teacher="陳教授", time="10:10-11:00"),
+    Course(name="微積分", day=1, period=4, startMinute=670, location="理 201", teacher="陳教授", time="11:10-12:00"),
+    Course(name="英文", day=2, period=2, startMinute=550, location="文 301", teacher="王教授", time="09:10-10:00"),
+    Course(name="英文", day=2, period=3, startMinute=610, location="文 301", teacher="王教授", time="10:10-11:00"),
 ])
 
 MOCK_GRADES = GradesResponse(semesters=[

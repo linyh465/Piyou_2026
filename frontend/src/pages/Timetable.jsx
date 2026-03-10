@@ -8,6 +8,12 @@ import { IconCalendar, IconRefresh, IconTrash } from '../components/Icons';
 const DAYS = ['一', '二', '三', '四', '五', '六'];
 const PERIODS = Array.from({ length: 13 }, (_, i) => i + 1);
 
+const PERIOD_TIMES = {
+    1: '08:10', 2: '09:10', 3: '10:10', 4: '11:10',
+    5: '13:10', 6: '14:10', 7: '15:10', 8: '16:10',
+    9: '17:10', 10: '18:05', 11: '19:00', 12: '19:55', 13: '20:50',
+};
+
 const COLORS = [
     { bg: 'rgba(99,102,241,0.1)', border: 'rgba(99,102,241,0.25)', text: '#6366f1' },
     { bg: 'rgba(245,158,11,0.1)', border: 'rgba(245,158,11,0.25)', text: '#f59e0b' },
@@ -102,7 +108,10 @@ export default function Timetable() {
                     <tbody>
                         {PERIODS.map((period) => (
                             <tr key={period}>
-                                <td style={{ padding: '6px 0', textAlign: 'center', fontFamily: 'monospace', color: 'var(--text-muted)', fontSize: '11px' }}>{period}</td>
+                                <td style={{ padding: '6px 0', textAlign: 'center', fontFamily: 'monospace', color: 'var(--text-muted)', fontSize: '11px', lineHeight: '1.3' }}>
+                                    <div>{period}</div>
+                                    <div style={{ fontSize: '9px', opacity: 0.6 }}>{PERIOD_TIMES[period]}</div>
+                                </td>
                                 {[1, 2, 3, 4, 5, 6].map((day) => {
                                     const course = matrix[`${day}-${period}`];
                                     if (isLoadingTimetable) {

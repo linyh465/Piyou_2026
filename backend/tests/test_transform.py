@@ -41,10 +41,10 @@ class TestTransformTimetable:
         assert c.name_en == "Programming"
         assert c.day == 1  # Mon → 1
         assert c.period == 1
-        assert c.startMinute == 510  # period 1 → 510
+        assert c.startMinute == 490  # period 1 → 490
         assert c.location == "理101"
         assert c.teacher == "lin"  # email split
-        assert c.time == "08:30-09:20"
+        assert c.time == "08:10-09:00"
         assert c.course_type == "必修"
         assert c.credits == 3
         assert result.total_credits == 3
@@ -70,11 +70,11 @@ class TestTransformTimetable:
 
         assert len(result.courses) == 2
         assert result.courses[0].period == 3
-        assert result.courses[0].startMinute == 630
-        assert result.courses[0].time == "10:30-11:20"
+        assert result.courses[0].startMinute == 610
+        assert result.courses[0].time == "10:10-11:00"
         assert result.courses[1].period == 4
-        assert result.courses[1].startMinute == 690
-        assert result.courses[1].time == "11:30-12:20"
+        assert result.courses[1].startMinute == 670
+        assert result.courses[1].time == "11:10-12:00"
 
     def test_day_mapping(self):
         """所有星期對照 / All day mappings"""
@@ -115,9 +115,9 @@ class TestTransformTimetable:
     def test_period_start_all_values(self):
         """所有 13 個節次的起始分鐘值"""
         expected = {
-            1: 510, 2: 570, 3: 630, 4: 690,
-            5: 810, 6: 870, 7: 930, 8: 990,
-            9: 1050, 10: 1110, 11: 1170, 12: 1230, 13: 1290,
+            1: 490, 2: 550, 3: 610, 4: 670,
+            5: 790, 6: 850, 7: 910, 8: 970,
+            9: 1030, 10: 1085, 11: 1140, 12: 1195, 13: 1250,
         }
         for period, start_min in expected.items():
             raw = {"courses": [{"name_zh": "X", "day": "Mon", "periods": str(period)}]}

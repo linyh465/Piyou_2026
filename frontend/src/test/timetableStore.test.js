@@ -48,8 +48,8 @@ describe('timetableStore', () => {
     // 需要 token 才會實際呼叫 API / Token required to call API
     sessionStorage.setItem('piyou_token', 'test-token');
     const courses = [
-      { name: '微積分', day: 1, period: 1, startMinute: 480, location: 'A101' },
-      { name: '程式設計', day: 2, period: 3, startMinute: 600, location: 'B202' },
+      { name: '微積分', day: 1, period: 1, startMinute: 490, location: 'A101' },
+      { name: '程式設計', day: 2, period: 3, startMinute: 610, location: 'B202' },
     ];
     mockApi.mockResolvedValueOnce({ data: { courses } });
 
@@ -208,7 +208,7 @@ describe('timetableStore', () => {
     // Simulate race condition: data cleared while fetch is in-flight
     sessionStorage.setItem('piyou_token', 'test-token');
 
-    const courses = [{ name: '微積分', day: 1, period: 1, startMinute: 480 }];
+    const courses = [{ name: '微積分', day: 1, period: 1, startMinute: 490 }];
     // API 回傳會稍微延遲 / API response is delayed
     mockApi.mockImplementationOnce(() =>
       new Promise((resolve) => setTimeout(() => resolve({ data: { courses } }), 50))
