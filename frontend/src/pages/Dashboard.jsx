@@ -155,7 +155,7 @@ function TaskPreviewCard() {
                     <IconCheckSquare size={16} />
                     <span style={{ fontSize: '13px' }}>待辦任務</span>
                 </div>
-                <a href="#/tasks" style={{ fontSize: '12px', color: 'var(--color-brand)', textDecoration: 'none', fontWeight: 500 }}>
+                <a href="#/tasks" style={{ fontSize: '12px', color: 'var(--color-brand)', textDecoration: 'none', fontWeight: 500 }} aria-label="查看全部任務">
                     查看全部
                 </a>
             </div>
@@ -232,7 +232,7 @@ function LibraryPreviewCard() {
                     <IconLibrary size={16} />
                     <span style={{ fontSize: '13px' }}>圖書館借閱</span>
                 </div>
-                <a href="#/library" style={{ fontSize: '12px', color: 'var(--color-brand)', textDecoration: 'none', fontWeight: 500 }}>
+                <a href="#/library" style={{ fontSize: '12px', color: 'var(--color-brand)', textDecoration: 'none', fontWeight: 500 }} aria-label="查看全部借閱">
                     查看全部
                 </a>
             </div>

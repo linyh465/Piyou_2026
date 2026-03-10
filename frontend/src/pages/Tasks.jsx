@@ -42,21 +42,21 @@ function TaskForm({ editTask, onClose }) {
             </h3>
 
             <input type="text" value={title} onChange={(e) => setTitle(e.target.value)}
-                placeholder="任務標題 Task title..." className="input" autoFocus />
+                placeholder="任務標題 Task title..." className="input" autoFocus aria-label="任務標題" />
 
             <textarea value={description} onChange={(e) => setDescription(e.target.value)}
                 placeholder="描述（選填）Description (optional)..."
-                rows={2} className="input" style={{ resize: 'none' }} />
+                rows={2} className="input" style={{ resize: 'none' }} aria-label="任務描述" />
 
             <div style={{ display: 'flex', gap: '12px' }}>
-                <select value={category} onChange={(e) => setCategory(e.target.value)} className="input" style={{ flex: 1 }}>
+                <select value={category} onChange={(e) => setCategory(e.target.value)} className="input" style={{ flex: 1 }} aria-label="任務類別">
                     <option value="general">一般 General</option>
                     <option value="homework">作業 Homework</option>
                     <option value="exam">考試 Exam</option>
                     <option value="project">專案 Project</option>
                     <option value="personal">個人 Personal</option>
                 </select>
-                <select value={priority} onChange={(e) => setPriority(Number(e.target.value))} className="input" style={{ width: '130px' }}>
+                <select value={priority} onChange={(e) => setPriority(Number(e.target.value))} className="input" style={{ width: '130px' }} aria-label="任務優先順序">
                     <option value={0}>普通 Normal</option>
                     <option value={1}>重要 High</option>
                     <option value={2}>緊急 Urgent</option>
@@ -64,7 +64,7 @@ function TaskForm({ editTask, onClose }) {
                 </select>
             </div>
 
-            <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} className="input" />
+            <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} className="input" aria-label="截止日期" />
 
             <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', paddingTop: '4px' }}>
                 <button type="button" onClick={onClose} className="btn btn-ghost" style={{ fontSize: '13px' }}>取消 Cancel</button>

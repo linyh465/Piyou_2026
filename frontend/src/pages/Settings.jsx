@@ -21,6 +21,10 @@ function SettingItem({ icon: Icon, label, labelEn, children, onClick }) {
     return (
         <div
             onClick={onClick}
+            role={onClick ? 'button' : undefined}
+            tabIndex={onClick ? 0 : undefined}
+            aria-label={onClick ? label : undefined}
+            onKeyDown={onClick ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(); } } : undefined}
             style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                 padding: '14px 8px',
@@ -47,11 +51,12 @@ function SettingItem({ icon: Icon, label, labelEn, children, onClick }) {
 }
 
 // ── 開關元件 / Toggle Switch ──
-function Toggle({ checked, onChange }) {
+function Toggle({ checked, onChange, 'aria-label': ariaLabel }) {
     return (
         <button
             role="switch"
             aria-checked={checked}
+            aria-label={ariaLabel}
             onClick={(e) => { e.stopPropagation(); onChange(!checked); }}
             style={{
                 position: 'relative', width: '44px', height: '24px',
@@ -301,6 +306,8 @@ export default function Settings() {
                                     onChange={(e) => setStudentId(e.target.value)}
                                     className="input"
                                     style={{ padding: '12px 16px', fontSize: '15px' }}
+                                    aria-label="學號"
+                                    autoComplete="username"
                                 />
                                 <input
                                     type="password"
@@ -309,6 +316,8 @@ export default function Settings() {
                                     onChange={(e) => setPassword(e.target.value)}
                                     className="input"
                                     style={{ padding: '12px 16px', fontSize: '15px' }}
+                                    aria-label="密碼"
+                                    autoComplete="current-password"
                                 />
                             </div>
                             <div style={{ display: 'flex', gap: '8px', marginTop: '16px' }}>
@@ -372,10 +381,10 @@ export default function Settings() {
                 <SectionHeader title="通知" titleEn="Notifications" />
                 <div className="card">
                     <SettingItem icon={IconBell} label="公車到站提醒" labelEn="Bus arrival alerts">
-                        <Toggle checked={busNotify} onChange={setBusNotify} />
+                        <Toggle checked={busNotify} onChange={setBusNotify} aria-label="公車到站提醒" />
                     </SettingItem>
                     <SettingItem icon={IconBell} label="任務截止提醒" labelEn="Task deadline reminders">
-                        <Toggle checked={taskNotify} onChange={setTaskNotify} />
+                        <Toggle checked={taskNotify} onChange={setTaskNotify} aria-label="任務截止提醒" />
                     </SettingItem>
                 </div>
             </div>
