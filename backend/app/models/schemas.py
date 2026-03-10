@@ -121,6 +121,42 @@ class BusResponse(BaseModel):
     updatedAt: Optional[str] = Field(None, description="最後更新時間 / Last updated time")
 
 
+# ── 圖書館模型 / Library Models ──
+
+class LibraryBook(BaseModel):
+    """借閱書籍 / Borrowed Book"""
+    title: str = Field(..., description="書名 / Book title")
+    author: Optional[str] = Field(None, description="作者 / Author")
+    call_number: Optional[str] = Field(None, description="索書號 / Call number")
+    barcode: Optional[str] = Field(None, description="條碼 / Barcode")
+    borrow_date: Optional[str] = Field(None, description="借閱日期 / Borrow date")
+    due_date: Optional[str] = Field(None, description="到期日期 / Due date")
+    renew_count: Optional[str] = Field(None, description="續借次數 / Renew count")
+    location: Optional[str] = Field(None, description="館藏地 / Location")
+    status: Optional[str] = Field(None, description="狀態 / Status")
+    url: Optional[str] = Field(None, description="書籍詳情連結 / Book detail URL")
+    is_overdue: bool = Field(False, description="是否逾期 / Is overdue")
+
+
+class LibraryReservation(BaseModel):
+    """預約書籍 / Reserved Book"""
+    title: str = Field(..., description="書名 / Book title")
+    author: Optional[str] = Field(None, description="作者 / Author")
+    status: Optional[str] = Field(None, description="預約狀態 / Reservation status")
+    queue_position: Optional[str] = Field(None, description="預約順位 / Queue position")
+    pickup_location: Optional[str] = Field(None, description="取書地點 / Pickup location")
+    url: Optional[str] = Field(None, description="書籍詳情連結 / Book detail URL")
+
+
+class LibraryResponse(BaseModel):
+    """圖書館回應 / Library Response"""
+    loans: list[LibraryBook] = Field(default_factory=list, description="當前借閱 / Current loans")
+    reserves: list[LibraryReservation] = Field(default_factory=list, description="預約紀錄 / Reservations")
+    history: list[LibraryBook] = Field(default_factory=list, description="借閱歷史 / Borrowing history")
+    loans_count: int = Field(0, description="借閱數量 / Number of loans")
+    overdue_count: int = Field(0, description="逾期數量 / Number of overdue items")
+
+
 class BusRouteStopsResponse(BaseModel):
     """路線站牌回應 / Route Stops Response"""
     routes: dict[str, BusRouteStops] = Field(default_factory=dict)

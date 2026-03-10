@@ -12,7 +12,7 @@ import useTimetableStore from '../stores/timetableStore';
 import {
     IconHome, IconCalendar, IconCheckSquare,
     IconSettings, IconChartBar, IconCloudLightning, IconCloudOff, IconBus,
-    IconBook
+    IconBook, IconLibrary
 } from './Icons';
 
 // ── 側邊欄群組 / Sidebar Menu Groups ──
@@ -35,6 +35,7 @@ const menuGroups = [
         items: [
             { to: '/tasks', icon: IconCheckSquare, label: '任務' },
             { to: '/transport', icon: IconBus, label: '交通' },
+            { to: '/library', icon: IconLibrary, label: '圖書館' },
         ],
     },
 ];
@@ -44,6 +45,7 @@ const studySubItems = [
     { to: '/timetable', icon: IconCalendar, label: '課表' },
     { to: '/grades', icon: IconChartBar, label: '成績' },
     { to: '/tasks', icon: IconCheckSquare, label: '任務' },
+    { to: '/library', icon: IconLibrary, label: '圖書館' },
 ];
 const studyPaths = studySubItems.map((i) => i.to);
 

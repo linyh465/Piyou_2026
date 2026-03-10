@@ -240,3 +240,14 @@ export const IconStar = icon(
 export const IconChevronRight = icon(
     <polyline points="9 18 15 12 9 6" />
 );
+
+export const IconLibrary = icon(
+    <>
+        <path d="M3 21h18M3 10h18M5 6l7-3 7 3" />
+        <line x1="4" y1="10" x2="4" y2="21" />
+        <line x1="20" y1="10" x2="20" y2="21" />
+        <line x1="8" y1="14" x2="8" y2="17" />
+        <line x1="12" y1="14" x2="12" y2="17" />
+        <line x1="16" y1="14" x2="16" y2="17" />
+    </>
+);

@@ -26,9 +26,11 @@ from app.models.schemas import (
     BusResponse, BusArrival,
     BusRouteStopsResponse, BusRouteStops, BusStopInfo,
     BusPositionsResponse, BusPosition,
+    LibraryResponse, LibraryBook, LibraryReservation,
 )
 from app.services.scraper import SchoolScraper
 from app.services.tdx import TDXService
+from app.services.library_scraper import LibraryScraper
 from app.services.scraper_cache import get_cached_scraper, cache_scraper_session
 from app.routers.auth import get_current_user, get_cached_credentials
 
@@ -324,6 +326,17 @@ MOCK_BUS = BusResponse(arrivals=[
     BusArrival(routeName="162", direction="去程", estimatedSeconds=600, estimatedMinutes=10, stopName="靜宜大學", stopStatus="10 分", stopSequence=7),
 ], updatedAt="--:--:--")
 
+MOCK_LIBRARY = LibraryResponse(
+    loans=[
+        LibraryBook(title="深入淺出設計模式", author="Freeman & Robson", due_date="2026-03-25", renew_count="0", location="蓋夏圖書館 3F", is_overdue=False),
+        LibraryBook(title="Clean Code: 無瑕的程式碼", author="Robert C. Martin", due_date="2026-03-18", renew_count="1", location="蓋夏圖書館 4F", is_overdue=False),
+    ],
+    reserves=[],
+    history=[],
+    loans_count=2,
+    overdue_count=0,
+)
+
 
 # ══════════════════════════════════════════
 #  路由 / Routes
@@ -379,6 +392,143 @@ async def get_grades(user: dict = Depends(get_current_user)):
         logger.warning(f"Scraper failed, using mock data: {type(e).__name__}: {e}")
 
     return MOCK_GRADES
+
+
+# ══════════════════════════════════════════
+#  圖書館 / Library
+# ══════════════════════════════════════════
+
+def _get_library_scraper(user: dict) -> LibraryScraper:
+    """
+    取得已登入的圖書館爬蟲 / Get an authenticated library scraper
+    使用與校務系統相同的帳密（E校園服務網）
+    Uses same credentials as school portal (E-campus).
+    """
+    student_id = user.get("sub", "")
+    creds = get_cached_credentials(student_id)
+    if not creds:
+        raise HTTPException(
+            status_code=401,
+            detail="請重新登入以取得圖書館資料 / Please re-login to fetch library data",
+        )
+
+    lib_scraper = LibraryScraper()
+    success = lib_scraper.login(creds[0], creds[1])
+    if not success:
+        raise HTTPException(
+            status_code=502,
+            detail="圖書館系統登入失敗 / Library system login failed",
+        )
+    return lib_scraper
+
+
+def _calc_overdue(books: list[dict]) -> list[dict]:
+    """標記逾期書籍 / Mark overdue books"""
+    from datetime import date
+    today = date.today()
+    for book in books:
+        due = book.get("due_date", "")
+        if due:
+            try:
+                due_parts = due.replace("/", "-").split("-")
+                if len(due_parts) == 3:
+                    due_date = date(int(due_parts[0]), int(due_parts[1]), int(due_parts[2]))
+                    book["is_overdue"] = due_date < today
+            except (ValueError, IndexError):
+                pass
+    return books
+
+
+def transform_library(loans_raw, reserves_raw, history_raw) -> LibraryResponse:
+    """爬蟲資料 → API 格式 / Scraper data → API format"""
+    loans = []
+    for b in (loans_raw or []):
+        loans.append(LibraryBook(
+            title=b.get("title", ""),
+            author=b.get("author"),
+            call_number=b.get("call_number"),
+            barcode=b.get("barcode"),
+            borrow_date=b.get("borrow_date"),
+            due_date=b.get("due_date"),
+            renew_count=b.get("renew_count"),
+            location=b.get("location"),
+            status=b.get("status"),
+            url=b.get("url"),
+            is_overdue=b.get("is_overdue", False),
+        ))
+
+    reserves = []
+    for b in (reserves_raw or []):
+        reserves.append(LibraryReservation(
+            title=b.get("title", ""),
+            author=b.get("author"),
+            status=b.get("status"),
+            queue_position=b.get("queue_position"),
+            pickup_location=b.get("pickup_location"),
+            url=b.get("url"),
+        ))
+
+    history = []
+    for b in (history_raw or []):
+        history.append(LibraryBook(
+            title=b.get("title", ""),
+            author=b.get("author"),
+            call_number=b.get("call_number"),
+            barcode=b.get("barcode"),
+            borrow_date=b.get("borrow_date"),
+            due_date=b.get("due_date"),
+            renew_count=b.get("renew_count"),
+            location=b.get("location"),
+            url=b.get("url"),
+            is_overdue=False,
+        ))
+
+    overdue_count = sum(1 for l in loans if l.is_overdue)
+
+    return LibraryResponse(
+        loans=loans,
+        reserves=reserves,
+        history=history,
+        loans_count=len(loans),
+        overdue_count=overdue_count,
+    )
+
+
+@router.get("/library", response_model=LibraryResponse)
+async def get_library(user: dict = Depends(get_current_user)):
+    """
+    取得圖書館借閱資料 / Get Library Data
+    使用與校務系統相同帳密登入蓋夏圖書館 OPAC。
+    包含：當前借閱、預約紀錄、借閱歷史。
+    Uses same credentials as school portal to login library OPAC.
+    Includes: current loans, reservations, borrowing history.
+    """
+    try:
+        lib = await asyncio.to_thread(_get_library_scraper, user)
+
+        loans_raw = await asyncio.to_thread(lib.fetch_loans)
+        reserves_raw = await asyncio.to_thread(lib.fetch_reserves)
+        history_raw = await asyncio.to_thread(lib.fetch_history)
+
+        # 標記逾期 / Mark overdue
+        if loans_raw:
+            loans_raw = _calc_overdue(loans_raw)
+
+        if loans_raw or reserves_raw or history_raw:
+            result = transform_library(loans_raw, reserves_raw, history_raw)
+            logger.info(
+                f"Library: {result.loans_count} loans, "
+                f"{len(result.reserves)} reserves, "
+                f"{len(result.history)} history items"
+            )
+            return result
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.warning(f"Library scraper failed, using mock data: {type(e).__name__}: {e}")
+
+    return MOCK_LIBRARY
 
 
 # ══════════════════════════════════════════

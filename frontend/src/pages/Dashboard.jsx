@@ -7,9 +7,10 @@ import { useEffect, useRef } from 'react';
 import useDashboardStore from '../stores/dashboardStore';
 import useTimetableStore from '../stores/timetableStore';
 import useTaskStore from '../stores/taskStore';
+import useLibraryStore from '../stores/libraryStore';
 import {
     IconBook, IconMapPin, IconClock,
-    IconCheckSquare, IconCalendar, IconStar, IconPlus,
+    IconCheckSquare, IconCalendar, IconStar, IconPlus, IconLibrary,
 } from '../components/Icons';
 
 // ── 問候語 / Greeting ──
@@ -212,6 +213,46 @@ function TaskPreviewCard() {
     );
 }
 
+// ── 圖書館借閱預覽 / Library Preview Card ──
+function LibraryPreviewCard() {
+    const loans = useLibraryStore((s) => s.loans);
+    const overdueBooks = loans.filter(b => b.is_overdue);
+    const dueSoonBooks = loans.filter(b => {
+        if (b.is_overdue || !b.due_date) return false;
+        const diff = (new Date(b.due_date) - new Date()) / (1000 * 60 * 60 * 24);
+        return diff <= 7 && diff > 0;
+    });
+
+    if (!loans.length) return null;
+
+    return (
+        <div className="card card-hover">
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-muted)' }}>
+                    <IconLibrary size={16} />
+                    <span style={{ fontSize: '13px' }}>圖書館借閱</span>
+                </div>
+                <a href="#/library" style={{ fontSize: '12px', color: 'var(--color-brand)', textDecoration: 'none', fontWeight: 500 }}>
+                    查看全部
+                </a>
+            </div>
+            <p style={{ fontSize: '1.125rem', fontWeight: 700, color: 'var(--text)' }}>
+                {loans.length} 本借閱中
+            </p>
+            {overdueBooks.length > 0 && (
+                <p style={{ fontSize: '13px', color: 'var(--color-danger)', marginTop: '8px', fontWeight: 600 }}>
+                    ⚠️ {overdueBooks.length} 本已逾期
+                </p>
+            )}
+            {dueSoonBooks.length > 0 && overdueBooks.length === 0 && (
+                <p style={{ fontSize: '13px', color: 'var(--color-warning)', marginTop: '8px' }}>
+                    📅 {dueSoonBooks.length} 本即將到期
+                </p>
+            )}
+        </div>
+    );
+}
+
 // ── 主頁面 / Main Page ──
 export default function Dashboard() {
     return (
@@ -220,6 +261,7 @@ export default function Dashboard() {
             <div className="dash-cards-grid">
                 <NextClassCard />
                 <TaskPreviewCard />
+                <LibraryPreviewCard />
             </div>
         </div>
     );
