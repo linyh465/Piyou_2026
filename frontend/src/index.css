@@ -1,84 +1,195 @@
 @import "tailwindcss";
 
 /* ══════════════════════════════════════════════════════
-   披呦 Piyou — 簡約現代主題系統 / Minimalist Modern Theme
-   參考 Dcard, Instagram, YouTube 等現代 App 間距比例
-   Spacing inspired by Dcard, IG, YouTube modern App layouts.
+   披呦 Piyou — iOS Native 風格主題系統
+   Clean, minimalist, soft card-based layout with
+   frosted-glass surfaces, pastel accents, and
+   multi-color theme support.
    ══════════════════════════════════════════════════════ */
 
 @theme {
-  /* ── 品牌色 / Brand colors ── */
-  --color-brand: #6366f1;
-  --color-brand-light: #818cf8;
-  --color-brand-dark: #4f46e5;
-  --color-brand-subtle: #eef2ff;
+  /* ── 品牌色 — 由色彩主題動態覆蓋 / Overridden by color themes ── */
+  --color-brand: #007AFF;
+  --color-brand-light: #5AC8FA;
+  --color-brand-dark: #0055D4;
+  --color-brand-subtle: #EBF5FF;
 
   /* ── 語意色 / Semantic colors ── */
-  --color-success: #22c55e;
-  --color-danger: #ef4444;
-  --color-warning: #f59e0b;
-  --color-info: #3b82f6;
+  --color-success: #34C759;
+  --color-danger: #FF3B30;
+  --color-warning: #FF9500;
+  --color-info: #5AC8FA;
 
-  /* ── 字型 / Typography ── */
-  --font-sans: 'Inter', 'Noto Sans TC', system-ui, -apple-system, sans-serif;
+  /* ── 柔和標籤色 / Soft pastel tag colors ── */
+  --color-pastel-purple: #E8DEF8;
+  --color-pastel-blue: #D3E4FD;
+  --color-pastel-green: #D4EDDA;
+  --color-pastel-beige: #FFF3E0;
+  --color-pastel-pink: #FCE4EC;
+
+  /* ── 字型 / Typography — SF Pro-like system stack ── */
+  --font-sans: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text',
+    'Inter', 'Noto Sans TC', system-ui, sans-serif;
 }
 
 /* ══════════════════════════════════════════════════════
    淺色模式（預設）/ Light Mode (default)
    ══════════════════════════════════════════════════════ */
 :root {
-  --bg: #f5f5f5;
-  --bg-secondary: #ebebeb;
-  --bg-card: #ffffff;
-  --bg-card-hover: #fafafa;
-  --bg-input: #f5f5f5;
-  --bg-nav: rgba(255, 255, 255, 0.92);
-  --text: #0a0a0a;
-  --text-secondary: #525252;
-  --text-muted: #a3a3a3;
-  --text-inverse: #ffffff;
-  --border: #e5e5e5;
-  --border-light: #f5f5f5;
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.04);
-  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.06);
-  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.08);
-  --ring-brand: rgba(99, 102, 241, 0.2);
-  --skeleton-from: #e5e5e5;
-  --skeleton-via: #f5f5f5;
+  --bg: #F2F2F7;
+  --bg-secondary: #E5E5EA;
+  --bg-card: #FFFFFF;
+  --bg-card-hover: #F9F9FB;
+  --bg-input: #F2F2F7;
+  --bg-nav: rgba(255, 255, 255, 0.72);
+  --bg-nav-border: rgba(255, 255, 255, 0.50);
+  --text: #1C1C1E;
+  --text-secondary: #3A3A3C;
+  --text-muted: #8E8E93;
+  --text-inverse: #FFFFFF;
+  --border: rgba(0, 0, 0, 0.06);
+  --border-light: rgba(0, 0, 0, 0.03);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.02);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.05), 0 1px 4px rgba(0, 0, 0, 0.03);
+  --shadow-lg: 0 8px 28px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04);
+  --ring-brand: rgba(0, 122, 255, 0.25);
+  --skeleton-from: #E5E5EA;
+  --skeleton-via: #F2F2F7;
+
+  /* ── 品牌色 (預設) — 由色彩主題覆蓋 ── */
+  --color-brand: #007AFF;
+  --color-brand-light: #5AC8FA;
+  --color-brand-dark: #0055D4;
+  --color-brand-subtle: #EBF5FF;
+  --color-brand-gradient: linear-gradient(135deg, #007AFF, #5AC8FA);
 
   /* ── 間距語彙 / Spacing tokens ── */
   --space-page: 1.25rem;
-  /* 頁面外距 20px */
   --space-section: 1.5rem;
-  /* 段落間距 24px */
   --space-card-padding: 1.25rem;
-  /* 卡片內距 20px */
   --space-card-gap: 0.875rem;
-  /* 卡片間距 14px */
+  --radius-card: 1.25rem;
+  --radius-card-lg: 1.5rem;
 }
 
 /* ══════════════════════════════════════════════════════
    深色模式 / Dark Mode
    ══════════════════════════════════════════════════════ */
 .dark {
-  --bg: #0a0a0a;
-  --bg-secondary: #171717;
-  --bg-card: #171717;
-  --bg-card-hover: #1f1f1f;
-  --bg-input: #171717;
-  --bg-nav: rgba(10, 10, 10, 0.92);
-  --text: #fafafa;
-  --text-secondary: #a3a3a3;
-  --text-muted: #737373;
-  --text-inverse: #0a0a0a;
-  --border: #262626;
-  --border-light: #171717;
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
-  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.4);
-  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.5);
-  --ring-brand: rgba(99, 102, 241, 0.3);
-  --skeleton-from: #262626;
-  --skeleton-via: #404040;
+  --bg: #000000;
+  --bg-secondary: #1C1C1E;
+  --bg-card: #1C1C1E;
+  --bg-card-hover: #2C2C2E;
+  --bg-input: #1C1C1E;
+  --bg-nav: rgba(18, 18, 18, 0.78);
+  --bg-nav-border: rgba(255, 255, 255, 0.10);
+  --text: #F5F5F7;
+  --text-secondary: #AEAEB2;
+  --text-muted: #636366;
+  --text-inverse: #1C1C1E;
+  --border: rgba(255, 255, 255, 0.08);
+  --border-light: rgba(255, 255, 255, 0.04);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 8px 28px rgba(0, 0, 0, 0.6);
+  --ring-brand: rgba(0, 122, 255, 0.35);
+  --skeleton-from: #2C2C2E;
+  --skeleton-via: #3A3A3C;
+}
+
+/* ══════════════════════════════════════════════════════
+   色彩主題 / Color Themes — 文藝風命名
+   每個主題覆蓋品牌色變數，自動適配明暗模式。
+   ══════════════════════════════════════════════════════ */
+
+/* ── 晴空 Azure — 天青澄澈 ── */
+.theme-azure {
+  --color-brand: #0A84FF;
+  --color-brand-light: #64D2FF;
+  --color-brand-dark: #0066CC;
+  --color-brand-subtle: #E8F4FD;
+  --color-brand-gradient: linear-gradient(135deg, #0A84FF, #64D2FF);
+  --ring-brand: rgba(10, 132, 255, 0.25);
+}
+.dark.theme-azure,
+.dark .theme-azure {
+  --color-brand-subtle: rgba(10, 132, 255, 0.12);
+  --ring-brand: rgba(10, 132, 255, 0.35);
+}
+
+/* ── 暮紫 Violet — 幽蘭暮靄 ── */
+.theme-violet {
+  --color-brand: #8B5CF6;
+  --color-brand-light: #A78BFA;
+  --color-brand-dark: #6D28D9;
+  --color-brand-subtle: #F1EAFE;
+  --color-brand-gradient: linear-gradient(135deg, #8B5CF6, #C4B5FD);
+  --ring-brand: rgba(139, 92, 246, 0.25);
+}
+.dark.theme-violet,
+.dark .theme-violet {
+  --color-brand-subtle: rgba(139, 92, 246, 0.12);
+  --ring-brand: rgba(139, 92, 246, 0.35);
+}
+
+/* ── 琥珀 Amber — 暖陽流金 ── */
+.theme-amber {
+  --color-brand: #D97706;
+  --color-brand-light: #FBBF24;
+  --color-brand-dark: #B45309;
+  --color-brand-subtle: #FEF3C7;
+  --color-brand-gradient: linear-gradient(135deg, #D97706, #FBBF24);
+  --ring-brand: rgba(217, 119, 6, 0.25);
+}
+.dark.theme-amber,
+.dark .theme-amber {
+  --color-brand-subtle: rgba(217, 119, 6, 0.12);
+  --ring-brand: rgba(217, 119, 6, 0.35);
+}
+
+/* ── 緋紅 Crimson — 丹霞映雪 ── */
+.theme-crimson {
+  --color-brand: #DC2626;
+  --color-brand-light: #F87171;
+  --color-brand-dark: #B91C1C;
+  --color-brand-subtle: #FEE2E2;
+  --color-brand-gradient: linear-gradient(135deg, #DC2626, #F87171);
+  --ring-brand: rgba(220, 38, 38, 0.25);
+}
+.dark.theme-crimson,
+.dark .theme-crimson {
+  --color-brand-subtle: rgba(220, 38, 38, 0.12);
+  --ring-brand: rgba(220, 38, 38, 0.35);
+}
+
+/* ── 翠柏 Emerald — 蒼松敛翠 ── */
+.theme-emerald {
+  --color-brand: #059669;
+  --color-brand-light: #34D399;
+  --color-brand-dark: #047857;
+  --color-brand-subtle: #D1FAE5;
+  --color-brand-gradient: linear-gradient(135deg, #059669, #34D399);
+  --ring-brand: rgba(5, 150, 105, 0.25);
+}
+.dark.theme-emerald,
+.dark .theme-emerald {
+  --color-brand-subtle: rgba(5, 150, 105, 0.12);
+  --ring-brand: rgba(5, 150, 105, 0.35);
+}
+
+/* ── 薔薇 Rose — 春庭薔薇 ── */
+.theme-rose {
+  --color-brand: #E11D48;
+  --color-brand-light: #FB7185;
+  --color-brand-dark: #BE123C;
+  --color-brand-subtle: #FFE4E6;
+  --color-brand-gradient: linear-gradient(135deg, #E11D48, #FB7185);
+  --ring-brand: rgba(225, 29, 72, 0.25);
+}
+.dark.theme-rose,
+.dark .theme-rose {
+  --color-brand-subtle: rgba(225, 29, 72, 0.12);
+  --ring-brand: rgba(225, 29, 72, 0.35);
 }
 
 /* ══════════════════════════════════════════════════════
@@ -111,7 +222,9 @@ body {
   background: var(--bg);
   color: var(--text);
   -webkit-font-smoothing: antialiased;
-  transition: background-color 0.3s ease, color 0.3s ease;
+  -moz-osx-font-smoothing: grayscale;
+  transition: background-color 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+              color 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   line-height: 1.6;
   letter-spacing: -0.01em;
 }
@@ -131,21 +244,22 @@ body {
 }
 
 /* ══════════════════════════════════════════════════════
-   卡片 / Card
+   卡片 / Card — iOS 風格大圓角 + 柔和陰影
    ══════════════════════════════════════════════════════ */
 .card {
   background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: 1rem;
+  border-radius: var(--radius-card);
   box-shadow: var(--shadow-sm);
-  transition: all 0.2s ease;
+  border: 1px solid var(--border-light);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   padding: var(--space-card-padding);
 }
 
 .card-hover:hover {
   background: var(--bg-card-hover);
   box-shadow: var(--shadow-md);
-  transform: translateY(-1px);
+  transform: translateY(-2px);
+  border-color: var(--border);
 }
 
 /* ══════════════════════════════════════════════════════
@@ -155,9 +269,9 @@ body {
   width: 100%;
   background: var(--bg-input);
   border: 1px solid var(--border);
-  border-radius: 0.75rem;
+  border-radius: 0.875rem;
   padding: 0.75rem 1rem;
-  font-size: 0.875rem;
+  font-size: 0.9375rem;
   line-height: 1.5;
   color: var(--text);
   outline: none;
@@ -181,22 +295,30 @@ body {
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  padding: 0.625rem 1.25rem;
-  border-radius: 0.75rem;
-  font-size: 0.8125rem;
-  font-weight: 500;
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.875rem;
+  font-size: 0.9375rem;
+  font-weight: 600;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   border: none;
+  position: relative;
+  overflow: hidden;
+}
+
+.btn:active {
+  transform: scale(0.97);
 }
 
 .btn-primary {
-  background: var(--color-brand);
+  background: var(--color-brand-gradient, var(--color-brand));
   color: white;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
 }
 
 .btn-primary:hover {
-  background: var(--color-brand-dark);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
+  filter: brightness(1.08);
 }
 
 .btn-ghost {
@@ -214,7 +336,7 @@ body {
 }
 
 .dark .btn-soft {
-  background: rgba(99, 102, 241, 0.15);
+  background: rgba(0, 122, 255, 0.15);
   color: var(--color-brand-light);
 }
 
@@ -253,10 +375,14 @@ body {
 }
 
 .page-title {
-  font-size: 1.375rem;
-  font-weight: 700;
+  font-size: 1.75rem;
+  font-weight: 800;
   color: var(--text);
-  letter-spacing: -0.02em;
+  letter-spacing: -0.03em;
+  background: var(--color-brand-gradient, var(--color-brand));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
 .page-subtitle {
@@ -305,23 +431,23 @@ body {
 @keyframes fadeInUp {
   from {
     opacity: 0;
-    transform: translateY(12px);
+    transform: translateY(16px) scale(0.98);
   }
 
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: translateY(0) scale(1);
   }
 }
 
 .animate-fade-in {
-  animation: fadeInUp 0.4s ease-out forwards;
+  animation: fadeInUp 0.45s cubic-bezier(0.4, 0, 0.2, 1) forwards;
 }
 
 @keyframes slideIn {
   from {
     opacity: 0;
-    transform: translateX(-8px);
+    transform: translateX(-12px);
   }
 
   to {
@@ -331,7 +457,7 @@ body {
 }
 
 .animate-slide-in {
-  animation: slideIn 0.3s ease-out forwards;
+  animation: slideIn 0.35s cubic-bezier(0.4, 0, 0.2, 1) forwards;
 }
 
 @keyframes slideUp {
@@ -359,14 +485,16 @@ body {
   font-family: var(--font-sans);
 }
 
-/* ── 側邊欄主體 / Sidebar Body ── */
+/* ── 側邊欄主體 / Sidebar Body — 毛玻璃風格 ── */
 .sidebar {
   width: 260px;
-  background: var(--bg-card);
-  border-right: 1px solid var(--border);
+  background: var(--bg-nav);
+  backdrop-filter: blur(40px) saturate(180%);
+  -webkit-backdrop-filter: blur(40px) saturate(180%);
+  border-right: 1px solid var(--bg-nav-border);
   display: none;
   flex-direction: column;
-  transition: all 0.3s ease;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   flex-shrink: 0;
 }
 
@@ -376,7 +504,7 @@ body {
   display: flex;
   align-items: center;
   padding: 0 1.5rem;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 0.5px solid var(--border-light);
 }
 
 .sidebar-brand-inner {
@@ -395,8 +523,11 @@ body {
 .sidebar-title {
   font-size: 1.2rem;
   font-weight: 700;
-  color: var(--text);
   letter-spacing: 0.05em;
+  background: var(--color-brand-gradient, var(--color-brand));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
 /* ── 導航區 / Navigation ── */
@@ -436,35 +567,38 @@ body {
   align-items: center;
   gap: 0.875rem;
   padding: 0.6875rem 1rem;
-  border-radius: 0.75rem;
+  border-radius: 0.875rem;
   font-size: 0.9375rem;
   font-weight: 400;
   text-decoration: none;
   color: var(--text-secondary);
-  transition: all 0.2s ease;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
 }
 
 .sidebar-nav-item:hover {
   background: var(--bg-card-hover);
   color: var(--text);
+  transform: translateX(2px);
 }
 
 .sidebar-nav-item.active {
-  background: rgba(99, 102, 241, 0.1);
+  background: var(--color-brand-subtle);
   color: var(--color-brand);
-  font-weight: 500;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
 .dark .sidebar-nav-item.active {
-  background: rgba(99, 102, 241, 0.12);
+  background: var(--color-brand-subtle);
   color: var(--color-brand-light);
 }
 
 /* ── 底部設定區 / Footer ── */
 .sidebar-footer {
   padding: 0.75rem 1rem;
-  border-top: 1px solid var(--border);
-  background: var(--bg-secondary);
+  border-top: 0.5px solid var(--border-light);
+  background: transparent;
 }
 
 .sidebar-sync-bar {
@@ -506,7 +640,7 @@ body {
 }
 
 /* ══════════════════════════════════════════════════════
-   行動版底部導航 / Mobile Bottom Nav
+   行動版底部導航 / Mobile Bottom Nav — iOS Frosted Glass
    ══════════════════════════════════════════════════════ */
 .mobile-bottom-nav {
   position: fixed;
@@ -514,8 +648,9 @@ body {
   left: 0;
   right: 0;
   background: var(--bg-nav);
-  border-top: 1px solid var(--border);
-  backdrop-filter: blur(16px);
+  border-top: 0.5px solid var(--bg-nav-border);
+  backdrop-filter: blur(40px) saturate(180%);
+  -webkit-backdrop-filter: blur(40px) saturate(180%);
   padding-bottom: env(safe-area-inset-bottom, 0px);
   z-index: 50;
 }
@@ -524,7 +659,7 @@ body {
   display: flex;
   justify-content: space-around;
   align-items: center;
-  height: 56px;
+  height: 52px;
   padding: 0 0.5rem;
 }
 
@@ -539,7 +674,11 @@ body {
   min-width: 64px;
   text-decoration: none;
   color: var(--text-muted);
-  transition: color 0.15s ease;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.mobile-nav-item:active {
+  transform: scale(0.92);
 }
 
 .mobile-nav-item.active {
@@ -580,12 +719,13 @@ body {
   display: flex;
   gap: 4px;
   background: var(--bg-nav);
-  border: 1px solid var(--border);
-  border-radius: 16px;
+  border: 0.5px solid var(--bg-nav-border);
+  border-radius: var(--radius-card);
   padding: 8px 6px;
-  box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.15);
-  backdrop-filter: blur(16px);
-  animation: studyPopIn 0.18s ease-out;
+  box-shadow: var(--shadow-lg), 0 0 0 1px var(--border-light);
+  backdrop-filter: blur(40px) saturate(180%);
+  -webkit-backdrop-filter: blur(40px) saturate(180%);
+  animation: studyPopIn 0.22s cubic-bezier(0.32, 0.72, 0, 1);
   z-index: 60;
   white-space: nowrap;
 }
@@ -601,12 +741,13 @@ body {
   font-weight: 500;
   color: var(--text-muted);
   text-decoration: none;
-  transition: background 0.15s ease, color 0.15s ease;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .mobile-study-popover-item:hover,
 .mobile-study-popover-item:active {
   background: var(--bg-hover, rgba(127, 127, 127, 0.1));
+  transform: scale(1.05);
 }
 
 .mobile-study-popover-item.active {
@@ -634,6 +775,8 @@ body {
     --space-section: 1.75rem;
     --space-card-padding: 1.5rem;
     --space-card-gap: 1rem;
+    --radius-card: 1.5rem;
+    --radius-card-lg: 1.75rem;
   }
 
   .sidebar {
@@ -673,27 +816,592 @@ body {
 }
 
 /* ══════════════════════════════════════════════════════
-   Dashboard 首頁布局 / Dashboard Layout
+   Dashboard 首頁布局 / Dashboard Layout — iOS Native 風格
    ══════════════════════════════════════════════════════ */
 .dash-page {
-  max-width: 720px;
-}
-
-.dash-cards-grid {
+  max-width: 640px;
   display: flex;
   flex-direction: column;
-  gap: var(--space-card-gap);
+  gap: var(--space-section);
 }
 
-.dash-cards-grid > .card {
+.dash-hero-title {
+  font-size: 2.25rem;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  padding-bottom: 4px;
+  background: var(--color-brand-gradient, var(--color-brand));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.dash-hero-date {
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  margin-top: -4px;
+}
+
+/* ── 上課狀態 / Class Status ── */
+.dash-current-card {
+  border-left: 4px solid var(--color-success);
+  border-radius: var(--radius-card-lg);
+}
+
+.dash-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 4px;
+}
+
+.dash-status-active {
+  color: var(--color-success);
+}
+
+.dash-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-success);
+  box-shadow: 0 0 6px rgba(52, 199, 89, 0.5);
+  animation: pulseGlow 2s ease-in-out infinite;
+}
+
+@keyframes pulseGlow {
+  0%, 100% { opacity: 1; box-shadow: 0 0 6px rgba(52, 199, 89, 0.5); }
+  50% { opacity: 0.6; box-shadow: 0 0 12px rgba(52, 199, 89, 0.8); }
+}
+
+/* ── 進度條 / Progress Bar ── */
+.dash-progress-track {
+  width: 100%;
+  height: 6px;
+  background: var(--bg-secondary);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.dash-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--color-success), #30D158);
+  border-radius: 3px;
+  transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.dash-progress-fill::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.3) 50%, transparent 100%);
+  animation: shimmerProgress 2s ease-in-out infinite;
+}
+
+@keyframes shimmerProgress {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+/* ── 下一堂課預覽 / Next Class Preview ── */
+.dash-next-class {
+  padding: 14px 18px;
+  background: var(--bg-card);
+  border-radius: var(--radius-card);
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  box-shadow: var(--shadow-sm);
+}
+
+.dash-class-section {
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── 區塊標題 / Section Title ── */
+.dash-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.dash-section-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.02em;
+}
+
+/* ── 任務行 / Task Row ── */
+.dash-task-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 20px;
+  text-decoration: none;
+  color: inherit;
+  transition: background 0.15s ease;
+}
+
+.dash-task-row:hover {
+  background: var(--bg-card-hover);
+}
+
+/* ══════════════════════════════════════════════════════
+   課表 Timetable — iOS 風格
+   ══════════════════════════════════════════════════════ */
+
+/* ── 視圖切換 / View Toggle ── */
+.tt-view-toggle {
+  display: flex;
+  background: var(--bg-secondary);
+  border-radius: 10px;
+  padding: 3px;
+}
+
+.tt-view-btn {
+  flex: 1;
+  padding: 8px 16px;
+  border: none;
+  background: transparent;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.tt-view-btn.active {
+  background: var(--bg-card);
+  color: var(--text);
+  box-shadow: var(--shadow-sm);
+  font-weight: 600;
+}
+
+/* ── iOS 分段控制器 / Segmented Control ── */
+.segmented-control {
+  display: flex;
+  background: var(--bg-secondary);
+  border-radius: 10px;
+  padding: 3px;
+}
+
+.segmented-btn {
+  flex: 1;
+  padding: 8px 16px;
+  border: none;
+  background: transparent;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.segmented-btn.active {
+  background: var(--bg-card);
+  color: var(--text);
+  box-shadow: var(--shadow-sm);
+  font-weight: 600;
+}
+
+/* ── 課表卡片 / Timetable Card ── */
+.tt-card {
+  padding: 14px !important;
+  overflow-x: auto;
+}
+
+.tt-header-row {
+  display: grid;
+  grid-template-columns: 60px repeat(5, 1fr);
+  gap: 4px;
+  margin-bottom: 6px;
+}
+
+.tt-header-cell {
+  text-align: center;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+  padding: 8px 0;
+}
+
+.tt-header-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.tt-grid-block {
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-card);
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid var(--border-light);
+}
+
+.tt-row {
+  display: grid;
+  grid-template-columns: 60px repeat(5, 1fr);
+  gap: 4px;
+  min-height: 60px;
+  align-items: stretch;
+}
+
+.tt-time-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 0;
+}
+
+.tt-period-num {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1;
+}
+
+.tt-period-time {
+  font-size: 10px;
+  color: var(--text-secondary);
+  line-height: 1.3;
+}
+
+.tt-cell {
+  padding: 3px;
+  display: flex;
+}
+
+.tt-course-block {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-radius: 14px;
+  padding: 8px 4px;
+  text-align: center;
+  min-height: 52px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  user-select: none;
+}
+
+.tt-course-block:hover {
+  transform: scale(1.06);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+
+.tt-course-block:active {
+  transform: scale(0.96);
+}
+
+.tt-course-name {
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.25;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.tt-course-location {
+  font-size: 10px;
+  font-weight: 500;
+  opacity: 0.8;
+  margin-top: 3px;
+}
+
+/* ── 今日課程卡片 ── */
+.tt-today-card {
+  transition: transform 0.15s;
+}
+.tt-today-card:active {
+  transform: scale(0.98);
+}
+
+/* ── 課程詳細 Modal / Course Detail Modal ── */
+.tt-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.4);
+  animation: tt-backdrop-in 0.2s ease;
+}
+
+@keyframes tt-backdrop-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.tt-modal-sheet {
+  width: 100%;
+  max-width: 480px;
+  max-height: 85vh;
+  background: var(--bg-card);
+  border-radius: 24px 24px 0 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  animation: tt-sheet-up 0.35s cubic-bezier(0.32, 0.72, 0, 1);
+  border: 0.5px solid var(--border-light);
+}
+
+@keyframes tt-sheet-up {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+.tt-modal-handle {
+  width: 36px;
+  height: 5px;
+  border-radius: 3px;
+  background: var(--text-muted);
+  opacity: 0.3;
+  margin: 10px auto 0;
+}
+
+.tt-modal-header {
+  padding: 20px 24px 16px;
+}
+
+.tt-modal-title {
+  font-size: 1.375rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.3;
+}
+
+.tt-modal-subtitle {
+  font-size: 0.8125rem;
+  margin-top: 4px;
+}
+
+.tt-modal-body {
+  padding: 8px 24px 16px;
+  overflow-y: auto;
+}
+
+.tt-modal-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.tt-modal-row:last-child {
+  border-bottom: none;
+}
+
+.tt-modal-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
+.tt-modal-value {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text);
+  text-align: right;
+}
+
+.tt-modal-link {
+  color: var(--color-brand);
+  text-decoration: none;
+}
+
+.tt-modal-link:hover {
+  text-decoration: underline;
+}
+
+.tt-modal-close-btn {
+  display: block;
+  width: calc(100% - 48px);
+  margin: 8px 24px 24px;
+  padding: 14px;
+  border: none;
+  border-radius: 14px;
+  background: var(--bg-secondary);
+  color: var(--text);
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.tt-modal-close-btn:hover {
+  background: var(--border);
+}
+
+/* ── Desktop: Modal 居中 ── */
+@media (min-width: 640px) {
+  .tt-modal-backdrop {
+    align-items: center;
+  }
+  .tt-modal-sheet {
+    border-radius: 20px;
+    max-height: 70vh;
+    margin: 0 16px;
+    animation: tt-sheet-scale 0.25s cubic-bezier(0.32, 0.72, 0, 1);
+  }
+  @keyframes tt-sheet-scale {
+    from { transform: scale(0.95); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+  .tt-modal-close-btn {
+    margin-bottom: 20px;
+  }
+}
+
+/* ══════════════════════════════════════════════════════
+   成績 Grades — iOS 風格
+   ══════════════════════════════════════════════════════ */
+
+/* ── 學期標籤 / Semester Tabs ── */
+.grade-sem-tab {
+  padding: 8px 18px;
+  border-radius: 20px;
+  border: 1.5px solid var(--border);
+  background: transparent;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.grade-sem-tab.active {
+  background: var(--color-brand-gradient, var(--color-brand));
+  border-color: var(--color-brand);
+  color: white;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+}
+
+/* ── GPA 圓形儀錶 / GPA Gauge ── */
+.gpa-gauge {
+  position: relative;
+  width: 120px;
+  height: 120px;
+  flex-shrink: 0;
+}
+
+.gpa-gauge-svg {
+  width: 100%;
+  height: 100%;
+}
+
+.gpa-gauge-text {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.gpa-gauge-value {
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: var(--text);
+  line-height: 1;
+}
+
+.gpa-gauge-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+/* ── 成績總覽 / Grade Overview ── */
+.grade-overview {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 8px;
+}
+
+.grade-rank-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
   flex: 1;
 }
 
-@media (min-width: 640px) {
-  .dash-cards-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1rem;
+.grade-rank-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* ── 排名進度條 / Rank Progress Bar ── */
+.rank-bar-track {
+  width: 100%;
+  height: 6px;
+  background: var(--bg-secondary);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.rank-bar-fill {
+  height: 100%;
+  background: var(--color-brand-gradient, linear-gradient(90deg, var(--color-success), var(--color-brand)));
+  border-radius: 3px;
+  transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ── 課程行 / Course Row ── */
+.grade-course-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px;
+}
+
+.grade-type-badge {
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-weight: 600;
+  background: rgba(255,149,0,0.1);
+  color: var(--color-warning);
+  flex-shrink: 0;
+}
+
+.grade-type-badge.required {
+  background: rgba(255,59,48,0.1);
+  color: var(--color-danger);
+}
+
+@media (max-width: 480px) {
+  .grade-overview {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+  
+  .grade-rank-section {
+    width: 100%;
   }
 }
 
@@ -951,7 +1659,7 @@ body {
 }
 
 .dark .transport-stop-active {
-  background: rgba(99, 102, 241, 0.1) !important;
+  background: rgba(0, 122, 255, 0.1) !important;
 }
 
 /* ══════════════════════════════════════════════════════
@@ -960,6 +1668,11 @@ body {
 @keyframes pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.5; }
+}
+
+@keyframes pulseScale {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.15); opacity: 0.7; }
 }
 
 /* ── 滑動提示動畫 / Swipe hint animations ── */
@@ -971,3 +1684,115 @@ body {
   0%, 100% { transform: translateX(0); }
   50% { transform: translateX(4px); }
 }
+
+/* ══════════════════════════════════════════════════════
+   主題色票選擇器 / Color Theme Picker
+   ══════════════════════════════════════════════════════ */
+.theme-picker {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 12px;
+}
+
+.theme-swatch {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 8px;
+  border-radius: var(--radius-card);
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  background: var(--bg-input);
+}
+
+.theme-swatch:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.theme-swatch:active {
+  transform: scale(0.97);
+}
+
+.theme-swatch.active {
+  border-color: var(--color-brand);
+  background: var(--color-brand-subtle);
+  box-shadow: 0 0 0 3px var(--ring-brand);
+}
+
+.theme-swatch-dot {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  position: relative;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.theme-swatch:hover .theme-swatch-dot {
+  transform: scale(1.1);
+}
+
+.theme-swatch-dot::after {
+  content: '';
+  position: absolute;
+  inset: 3px;
+  border-radius: 50%;
+  background: inherit;
+  opacity: 0.5;
+  filter: blur(4px);
+}
+
+.theme-swatch-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-align: center;
+  line-height: 1.3;
+}
+
+.theme-swatch-sublabel {
+  font-size: 10px;
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+/* ══════════════════════════════════════════════════════
+   浮動效果 / Float & Glow utilities
+   ══════════════════════════════════════════════════════ */
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-4px); }
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+@keyframes gradientShift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.animate-gradient {
+  background-size: 200% 200%;
+  animation: gradientShift 4s ease infinite;
+}
+
+/* ══════════════════════════════════════════════════════
+   卡片群組動畫 / Staggered Card Animations
+   ══════════════════════════════════════════════════════ */
+.section-stack > * {
+  animation: fadeInUp 0.45s cubic-bezier(0.4, 0, 0.2, 1) backwards;
+}
+.section-stack > *:nth-child(1) { animation-delay: 0s; }
+.section-stack > *:nth-child(2) { animation-delay: 0.06s; }
+.section-stack > *:nth-child(3) { animation-delay: 0.12s; }
+.section-stack > *:nth-child(4) { animation-delay: 0.18s; }
+.section-stack > *:nth-child(5) { animation-delay: 0.24s; }
+.section-stack > *:nth-child(6) { animation-delay: 0.30s; }
+.section-stack > *:nth-child(7) { animation-delay: 0.36s; }
+.section-stack > *:nth-child(n+8) { animation-delay: 0.42s; }

@@ -8,6 +8,7 @@
  */
 import { useState, useEffect } from 'react';
 import useThemeStore from '../stores/themeStore';
+import { COLOR_THEMES } from '../stores/themeStore';
 import useAuthStore from '../stores/authStore';
 import useTimetableStore from '../stores/timetableStore';
 import useTaskStore from '../stores/taskStore';
@@ -88,7 +89,7 @@ function SectionHeader({ title, titleEn }) {
 }
 
 export default function Settings() {
-    const { theme, setTheme } = useThemeStore();
+    const { theme, setTheme, colorTheme, setColorTheme } = useThemeStore();
     const { user, isAuthenticated, login, logout, error, clearError } = useAuthStore();
     const { fetchTimetable, fetchGrades, canSync, recordSyncSuccess, recordSyncError, hasCachedData, lastSyncTime, clearSchoolData, serverCooldown } = useTimetableStore();
     const { syncTasksFromServer, syncTasksToServer } = useTaskStore();
@@ -372,6 +373,32 @@ export default function Settings() {
                                 </button>
                             );
                         })}
+                    </div>
+                </div>
+
+                {/* ── 色彩主題 / Color Theme ── */}
+                <div className="card">
+                    <p style={{ color: 'var(--text)', fontSize: '15px', fontWeight: 500, padding: '4px 8px 14px' }}>
+                        色彩主題 / Color Theme
+                    </p>
+                    <div className="theme-picker">
+                        {COLOR_THEMES.map((t) => (
+                            <button
+                                key={t.id}
+                                className={`theme-swatch ${colorTheme === t.id ? 'active' : ''}`}
+                                onClick={() => setColorTheme(t.id)}
+                                aria-label={`${t.label} ${t.labelEn}`}
+                            >
+                                <div
+                                    className="theme-swatch-dot"
+                                    style={{ background: `linear-gradient(135deg, ${t.color}, ${t.color}cc)` }}
+                                />
+                                <div>
+                                    <div className="theme-swatch-label">{t.label}</div>
+                                    <div className="theme-swatch-sublabel">{t.description}</div>
+                                </div>
+                            </button>
+                        ))}
                     </div>
                 </div>
             </div>

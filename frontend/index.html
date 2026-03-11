@@ -5,18 +5,20 @@
     <link rel="icon" type="image/svg+xml" href="/pwa-192x192.svg" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <meta name="theme-color" content="#0072ff" />
+    <meta name="theme-color" content="#007AFF" />
     <meta name="description" content="靜宜大學校園智慧助理：課表、成績、公車、任務一站式查詢" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="披呦" />
     <title>披呦 Piyou</title>
     <script>
-      // 同步套用主題，防止淺色閃爍 / Apply theme synchronously to prevent FOUC
+      // 同步套用主題，防止閃爍 / Apply theme + color theme synchronously to prevent FOUC
       (function () {
         var t = localStorage.getItem('piyou_theme') || 'system';
         var dark = t === 'dark' || (t === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
         if (dark) document.documentElement.classList.add('dark');
+        var c = localStorage.getItem('piyou_color_theme');
+        if (c && c !== 'default') document.documentElement.classList.add('theme-' + c);
       })();
     </script>
   </head>

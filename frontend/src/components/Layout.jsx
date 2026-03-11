@@ -1,10 +1,6 @@
 /**
- * 應用佈局外殼 / App Layout Shell
- * 桌面版 (md+)：群組化暗色側邊欄；行動版：底部 Tab 導航
- * Desktop (md+): grouped dark sidebar; Mobile: bottom tab navigation.
- *
- * 側邊欄設計參考用戶提供之範本
- * Sidebar design based on user-provided template.
+ * 應用佈局外殼 / App Layout Shell — iOS 風格
+ * 桌面版 (md+)：群組化側邊欄；行動版：底部 4-Tab 導航
  */
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
@@ -12,7 +8,7 @@ import useTimetableStore from '../stores/timetableStore';
 import {
     IconHome, IconCalendar, IconCheckSquare,
     IconSettings, IconChartBar, IconCloudLightning, IconCloudOff, IconBus,
-    IconBook, IconLibrary
+    IconBook, IconLibrary, IconUser
 } from './Icons';
 
 // ── 側邊欄群組 / Sidebar Menu Groups ──
@@ -40,48 +36,45 @@ const menuGroups = [
     },
 ];
 
-// ── 「學習」子選單 / "Study" Sub-menu Items ──
-const studySubItems = [
-    { to: '/timetable', icon: IconCalendar, label: '課表' },
-    { to: '/grades', icon: IconChartBar, label: '成績' },
+// ── 「更多」子選單項 / "More" Sub-menu Items ──
+const moreSubItems = [
     { to: '/tasks', icon: IconCheckSquare, label: '任務' },
+    { to: '/transport', icon: IconBus, label: '交通' },
     { to: '/library', icon: IconLibrary, label: '圖書館' },
+    { to: '/settings', icon: IconSettings, label: '設定' },
 ];
-const studyPaths = studySubItems.map((i) => i.to);
+const morePaths = moreSubItems.map((i) => i.to);
 
 export default function Layout() {
     const timetable = useTimetableStore((s) => s.timetable);
     const grades = useTimetableStore((s) => s.grades);
     const syncStatus = (timetable.length > 0 || grades.length > 0) ? 'synced' : 'error';
 
-    // ── 學習子選單狀態 / Study popover state ──
-    const [studyOpen, setStudyOpen] = useState(false);
-    const studyRef = useRef(null);
+    // ── 更多子選單狀態 / More popover state ──
+    const [moreOpen, setMoreOpen] = useState(false);
+    const moreRef = useRef(null);
     const location = useLocation();
-    const isStudyActive = studyPaths.some((p) => location.pathname === p || location.pathname.startsWith(p + '/'));
+    const isMoreActive = morePaths.some((p) => location.pathname === p || location.pathname.startsWith(p + '/'));
 
-    // 路由切換時關閉（render 期間調整狀態，避免 set-state-in-effect）
-    // Reset on navigation using the render-time state adjustment pattern
     const [prevPathname, setPrevPathname] = useState(location.pathname);
     if (prevPathname !== location.pathname) {
         setPrevPathname(location.pathname);
-        setStudyOpen(false);
+        setMoreOpen(false);
     }
 
-    // 點擊外部關閉 / Close on outside click
     useEffect(() => {
-        if (!studyOpen) return;
+        if (!moreOpen) return;
         const handler = (e) => {
-            if (studyRef.current && !studyRef.current.contains(e.target)) {
-                setStudyOpen(false);
+            if (moreRef.current && !moreRef.current.contains(e.target)) {
+                setMoreOpen(false);
             }
         };
         document.addEventListener('pointerdown', handler);
         return () => document.removeEventListener('pointerdown', handler);
-    }, [studyOpen]);
+    }, [moreOpen]);
 
-    const handleStudyClick = useCallback(() => {
-        setStudyOpen((prev) => !prev);
+    const handleMoreClick = useCallback(() => {
+        setMoreOpen((prev) => !prev);
     }, []);
 
     return (
@@ -156,10 +149,10 @@ export default function Layout() {
                 <Outlet />
             </main>
 
-            {/* ═══ 行動版底部導航 / Mobile Bottom Nav ═══ */}
+            {/* ═══ 行動版底部導航 / Mobile Bottom Nav — 4 Tab iOS 風格 ═══ */}
             <nav className="mobile-bottom-nav">
                 <div className="mobile-bottom-nav-inner">
-                    {/* 首頁 */}
+                    {/* 今天 */}
                     <NavLink
                         to="/"
                         end
@@ -171,17 +164,51 @@ export default function Layout() {
                             <>
                                 <IconHome size={22} />
                                 <span className={`mobile-nav-label ${isActive ? 'font-semibold' : ''}`}>
-                                    首頁
+                                    今天
                                 </span>
                             </>
                         )}
                     </NavLink>
 
-                    {/* 學習（含彈出子選單） */}
-                    <div className="mobile-nav-study-wrapper" ref={studyRef}>
-                        {studyOpen && (
+                    {/* 課表 */}
+                    <NavLink
+                        to="/timetable"
+                        className={({ isActive }) =>
+                            `mobile-nav-item ${isActive ? 'active' : ''}`
+                        }
+                    >
+                        {({ isActive }) => (
+                            <>
+                                <IconCalendar size={22} />
+                                <span className={`mobile-nav-label ${isActive ? 'font-semibold' : ''}`}>
+                                    課表
+                                </span>
+                            </>
+                        )}
+                    </NavLink>
+
+                    {/* 成績 */}
+                    <NavLink
+                        to="/grades"
+                        className={({ isActive }) =>
+                            `mobile-nav-item ${isActive ? 'active' : ''}`
+                        }
+                    >
+                        {({ isActive }) => (
+                            <>
+                                <IconChartBar size={22} />
+                                <span className={`mobile-nav-label ${isActive ? 'font-semibold' : ''}`}>
+                                    成績
+                                </span>
+                            </>
+                        )}
+                    </NavLink>
+
+                    {/* 更多（含彈出子選單） */}
+                    <div className="mobile-nav-study-wrapper" ref={moreRef}>
+                        {moreOpen && (
                             <div className="mobile-study-popover">
-                                {studySubItems.map((sub) => (
+                                {moreSubItems.map((sub) => (
                                     <NavLink
                                         key={sub.to}
                                         to={sub.to}
@@ -197,51 +224,17 @@ export default function Layout() {
                         )}
                         <button
                             type="button"
-                            className={`mobile-nav-item mobile-nav-btn ${isStudyActive ? 'active' : ''}`}
-                            onClick={handleStudyClick}
-                            aria-expanded={studyOpen}
-                            aria-label="學習選單"
+                            className={`mobile-nav-item mobile-nav-btn ${isMoreActive ? 'active' : ''}`}
+                            onClick={handleMoreClick}
+                            aria-expanded={moreOpen}
+                            aria-label="更多選單"
                         >
-                            <IconBook size={22} />
-                            <span className={`mobile-nav-label ${isStudyActive ? 'font-semibold' : ''}`}>
-                                學習
+                            <IconUser size={22} />
+                            <span className={`mobile-nav-label ${isMoreActive ? 'font-semibold' : ''}`}>
+                                更多
                             </span>
                         </button>
                     </div>
-
-                    {/* 交通 */}
-                    <NavLink
-                        to="/transport"
-                        className={({ isActive }) =>
-                            `mobile-nav-item ${isActive ? 'active' : ''}`
-                        }
-                    >
-                        {({ isActive }) => (
-                            <>
-                                <IconBus size={22} />
-                                <span className={`mobile-nav-label ${isActive ? 'font-semibold' : ''}`}>
-                                    交通
-                                </span>
-                            </>
-                        )}
-                    </NavLink>
-
-                    {/* 設定 */}
-                    <NavLink
-                        to="/settings"
-                        className={({ isActive }) =>
-                            `mobile-nav-item ${isActive ? 'active' : ''}`
-                        }
-                    >
-                        {({ isActive }) => (
-                            <>
-                                <IconSettings size={22} />
-                                <span className={`mobile-nav-label ${isActive ? 'font-semibold' : ''}`}>
-                                    設定
-                                </span>
-                            </>
-                        )}
-                    </NavLink>
                 </div>
             </nav>
         </div>

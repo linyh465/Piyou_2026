@@ -32,6 +32,7 @@ class Course(BaseModel):
     startMinute: int = Field(0, description="開始分鐘 (從午夜算起) / Start minute from midnight")
     location: Optional[str] = Field(None, description="教室位置 / Classroom location")
     teacher: Optional[str] = Field(None, description="授課教師 / Instructor")
+    teacher_email: Optional[str] = Field(None, description="教師 Email / Instructor email")
     time: Optional[str] = Field(None, description="時間字串 / Time string")
     course_type: Optional[str] = Field(None, description="修別 / Course type (必修/通識)")
     credits: Optional[int] = Field(None, description="學分數 / Credits")

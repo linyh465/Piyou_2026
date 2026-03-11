@@ -202,11 +202,30 @@ class SchoolScraper:
                                 periods = match.group(3).strip()
                                 room = match.group(4).strip() if match.group(4) else ""
 
-                        # Teacher email
-                        email = ""
+                        # Teacher name & email
+                        teacher_name = ""
+                        teacher_email = ""
                         if len(cells) >= 7:
-                            email_link = cells[6].find("a")
-                            email = email_link.get_text(strip=True) if email_link else ""
+                            teacher_cell = cells[6]
+                            email_link = teacher_cell.find("a")
+                            if email_link:
+                                link_text = email_link.get_text(strip=True)
+                                href = email_link.get("href", "")
+                                # Extract email from href (mailto:) or link text
+                                if href.startswith("mailto:"):
+                                    teacher_email = href[7:]
+                                elif "@" in link_text:
+                                    teacher_email = link_text
+                                # Teacher name: text in cell outside the <a> tag
+                                full_text = teacher_cell.get_text(strip=True)
+                                name_candidate = full_text.replace(link_text, "").strip()
+                                if name_candidate:
+                                    teacher_name = name_candidate
+                                elif "@" not in link_text:
+                                    # Link text is the teacher name, not email
+                                    teacher_name = link_text
+                            else:
+                                teacher_name = teacher_cell.get_text(strip=True)
 
                         course = {
                             "code": cells[0].get_text(strip=True),
@@ -219,7 +238,8 @@ class SchoolScraper:
                             "periods": periods,
                             "room": room,
                             "schedule_raw": schedule_text,
-                            "teacher_email": email,
+                            "teacher_name": teacher_name,
+                            "teacher_email": teacher_email,
                         }
                         courses.append(course)
 

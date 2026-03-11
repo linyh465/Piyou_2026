@@ -1,11 +1,23 @@
 /**
  * 主題狀態管理 / Theme Store
- * 管理深淺色模式切換，持久化至 localStorage
- * Manages light/dark mode toggle, persisted to localStorage.
+ * 管理深淺色模式切換 + 色彩主題切換，持久化至 localStorage
+ * Manages light/dark mode toggle + color theme, persisted to localStorage.
  */
 import { create } from 'zustand';
 
 const STORAGE_KEY = 'piyou_theme';
+const COLOR_KEY = 'piyou_color_theme';
+
+/** 可用色彩主題 / Available color themes */
+export const COLOR_THEMES = [
+    { id: 'default', label: '預設', labelEn: 'Default', description: '經典藍', color: '#007AFF' },
+    { id: 'azure', label: '晴空', labelEn: 'Azure', description: '天藍澄澈', color: '#0A84FF' },
+    { id: 'violet', label: '暮紫', labelEn: 'Violet', description: '幽蘭暮靄', color: '#8B5CF6' },
+    { id: 'amber', label: '琥珀', labelEn: 'Amber', description: '暖陽流金', color: '#D97706' },
+    { id: 'crimson', label: '緋紅', labelEn: 'Crimson', description: '丹霞映雪', color: '#DC2626' },
+    { id: 'emerald', label: '翠柏', labelEn: 'Emerald', description: '蒼松斂翠', color: '#059669' },
+    { id: 'rose', label: '薔薇', labelEn: 'Rose', description: '春庭薔薇', color: '#E11D48' },
+];
 
 function getSystemTheme() {
     return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
@@ -16,9 +28,23 @@ function applyTheme(theme) {
     document.documentElement.classList.toggle('dark', resolved === 'dark');
 }
 
+function applyColorTheme(colorTheme) {
+    const el = document.documentElement;
+    // Remove all theme-* classes first
+    COLOR_THEMES.forEach((t) => {
+        if (t.id !== 'default') el.classList.remove(`theme-${t.id}`);
+    });
+    // Apply new one
+    if (colorTheme && colorTheme !== 'default') {
+        el.classList.add(`theme-${colorTheme}`);
+    }
+}
+
 // 初始化 / Initialize
 const saved = localStorage.getItem(STORAGE_KEY) || 'system';
+const savedColor = localStorage.getItem(COLOR_KEY) || 'default';
 applyTheme(saved);
+applyColorTheme(savedColor);
 
 const useThemeStore = create((set, get) => ({
     /** 'light' | 'dark' | 'system' */
@@ -29,6 +55,9 @@ const useThemeStore = create((set, get) => ({
 
     /** 是否為深色模式 / Whether dark mode is active */
     isDarkMode: (saved === 'system' ? getSystemTheme() : saved) === 'dark',
+
+    /** 色彩主題 / Color theme id */
+    colorTheme: savedColor,
 
     /**
      * 設定主題 / Set theme
@@ -43,6 +72,16 @@ const useThemeStore = create((set, get) => ({
             resolvedTheme: resolved,
             isDarkMode: resolved === 'dark',
         });
+    },
+
+    /**
+     * 設定色彩主題 / Set color theme
+     * @param {string} colorTheme - one of COLOR_THEMES[].id
+     */
+    setColorTheme: (colorTheme) => {
+        localStorage.setItem(COLOR_KEY, colorTheme);
+        applyColorTheme(colorTheme);
+        set({ colorTheme });
     },
 
     /**
