@@ -279,3 +279,15 @@ git last              # = 查看最後一次 commit 詳情
 | 一次 commit 包含多個不相關的修改 | 每個邏輯單元獨立 commit |
 | 強制推送 `git push -f` 到共用分支 | 只在自己的功能分支使用 `--force` |
 | 忘記同步 hotfix 到 dev | hotfix 永遠要同時合併到 `main` 和 `dev` |
+
+
+前後端 啟用
+~~~shell
+cd backend
+uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+~~~
+
+~~~shell
+cd frontend
+npm run dev
+~~~
