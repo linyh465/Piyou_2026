@@ -144,6 +144,12 @@ def transform_timetable(scraper_data: dict) -> TimetableResponse:
         period_str = raw.get("periods", "")
         periods = [int(p) for p in period_str.replace(" ", "").split(",") if p.isdigit()]
 
+        # Teacher: prefer teacher_name; fall back to email prefix
+        teacher_name = raw.get("teacher_name", "") or ""
+        teacher_email = raw.get("teacher_email", "") or ""
+        if not teacher_name and teacher_email:
+            teacher_name = teacher_email.split("@")[0]
+
         for period in periods:
             courses.append(Course(
                 name=raw.get("name_zh", ""),
@@ -152,7 +158,8 @@ def transform_timetable(scraper_data: dict) -> TimetableResponse:
                 period=period,
                 startMinute=PERIOD_START.get(period, 0),
                 location=raw.get("room", ""),
-                teacher=raw.get("teacher_email", "").split("@")[0] if raw.get("teacher_email") else None,
+                teacher=teacher_name or None,
+                teacher_email=teacher_email or None,
                 time=PERIOD_TIME.get(period, ""),
                 course_type=raw.get("type", ""),
                 credits=raw.get("credits", 0),
@@ -299,12 +306,12 @@ def transform_grades(scraper_data: dict) -> GradesResponse:
 # ══════════════════════════════════════════
 
 MOCK_TIMETABLE = TimetableResponse(courses=[
-    Course(name="程式設計", day=1, period=1, startMinute=490, location="理 101", teacher="林教授", time="08:10-09:00"),
-    Course(name="程式設計", day=1, period=2, startMinute=550, location="理 101", teacher="林教授", time="09:10-10:00"),
-    Course(name="微積分", day=1, period=3, startMinute=610, location="理 201", teacher="陳教授", time="10:10-11:00"),
-    Course(name="微積分", day=1, period=4, startMinute=670, location="理 201", teacher="陳教授", time="11:10-12:00"),
-    Course(name="英文", day=2, period=2, startMinute=550, location="文 301", teacher="王教授", time="09:10-10:00"),
-    Course(name="英文", day=2, period=3, startMinute=610, location="文 301", teacher="王教授", time="10:10-11:00"),
+    Course(name="程式設計", day=1, period=1, startMinute=490, location="理 101", teacher="林教授", teacher_email="lin@pu.edu.tw", time="08:10-09:00", course_type="必修", credits=3),
+    Course(name="程式設計", day=1, period=2, startMinute=550, location="理 101", teacher="林教授", teacher_email="lin@pu.edu.tw", time="09:10-10:00", course_type="必修", credits=3),
+    Course(name="微積分", day=1, period=3, startMinute=610, location="理 201", teacher="陳教授", teacher_email="chen@pu.edu.tw", time="10:10-11:00", course_type="必修", credits=4),
+    Course(name="微積分", day=1, period=4, startMinute=670, location="理 201", teacher="陳教授", teacher_email="chen@pu.edu.tw", time="11:10-12:00", course_type="必修", credits=4),
+    Course(name="英文", day=2, period=2, startMinute=550, location="文 301", teacher="王教授", teacher_email="wang@pu.edu.tw", time="09:10-10:00", course_type="通識", credits=2),
+    Course(name="英文", day=2, period=3, startMinute=610, location="文 301", teacher="王教授", teacher_email="wang@pu.edu.tw", time="10:10-11:00", course_type="通識", credits=2),
 ])
 
 MOCK_GRADES = GradesResponse(semesters=[

@@ -1,98 +1,237 @@
 /**
- * 儀表板頁面 / Dashboard Page
- * 穩定無閃爍版本 — 初始使用 localStorage 快取資料渲染
- * Stable no-flicker version — renders cached data from localStorage on first paint.
+ * 儀表板頁面 / Dashboard Page — iOS Native「今天」總覽
+ * Soft card layout with pulsating status dot, progress bar, pastel accents.
  */
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import useDashboardStore from '../stores/dashboardStore';
 import useTimetableStore from '../stores/timetableStore';
 import useTaskStore from '../stores/taskStore';
 import useLibraryStore from '../stores/libraryStore';
 import {
     IconBook, IconMapPin, IconClock,
-    IconCheckSquare, IconCalendar, IconStar, IconPlus, IconLibrary,
+    IconCheckSquare, IconCalendar, IconStar, IconPlus, IconLibrary, IconUser,
+    IconChevronRight,
 } from '../components/Icons';
 
-// ── 問候語 / Greeting ──
-function Greeting() {
-    const hour = new Date().getHours();
-    let greeting = '早安';
-    if (hour >= 12 && hour < 18) greeting = '午安';
-    else if (hour >= 18) greeting = '晚安';
+const PERIOD_TIMES = {
+    1: '08:10-09:00', 2: '09:10-10:00', 3: '10:10-11:00', 4: '11:10-12:00',
+    5: '13:10-14:00', 6: '14:10-15:00', 7: '15:10-16:00', 8: '16:10-17:00',
+    9: '17:10-18:00', 10: '18:05-18:55', 11: '19:00-19:50', 12: '19:55-20:45', 13: '20:50-21:40',
+};
 
-    const dateStr = new Date().toLocaleDateString('zh-TW', {
-        month: 'long', day: 'numeric', weekday: 'long',
-    });
+const PERIOD_START_MINUTES = {
+    1: 490, 2: 550, 3: 610, 4: 670,
+    5: 790, 6: 850, 7: 910, 8: 970,
+    9: 1030, 10: 1085, 11: 1140, 12: 1195, 13: 1250,
+};
+const PERIOD_END_MINUTES = {
+    1: 540, 2: 600, 3: 660, 4: 720,
+    5: 840, 6: 900, 7: 960, 8: 1020,
+    9: 1080, 10: 1135, 11: 1190, 12: 1245, 13: 1300,
+};
 
-    return (
-        <div style={{ paddingBottom: '4px' }}>
-            <h2 style={{ fontSize: '1.625rem', fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.02em' }}>
-                {greeting} 👋
-            </h2>
-            <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)', marginTop: '4px' }}>{dateStr}</p>
-        </div>
-    );
+const DAY_NAMES = ['日', '一', '二', '三', '四', '五', '六'];
+
+function formatDate(date) {
+    const m = date.getMonth() + 1;
+    const d = date.getDate();
+    const day = DAY_NAMES[date.getDay()];
+    return `${m} 月 ${d} 日 星期${day}`;
 }
 
-// ── 下一堂課卡片 / Next Class Card ──
-function NextClassCard() {
+// ── 當前課堂卡片 / Current & Next Class Card ──
+function CurrentClassCard() {
     const getNextClass = useDashboardStore((s) => s.getNextClass);
     const fetchTimetable = useTimetableStore((s) => s.fetchTimetable);
     const timetable = useTimetableStore((s) => s.timetable);
     const isLoading = useTimetableStore((s) => s.isLoadingTimetable);
     const hasFetched = useRef(false);
+    const [now, setNow] = useState(new Date());
 
     useEffect(() => {
         if (!hasFetched.current) { hasFetched.current = true; fetchTimetable(); }
     }, [fetchTimetable]);
 
-    const nextClass = getNextClass();
+    useEffect(() => {
+        const timer = setInterval(() => setNow(new Date()), 30000);
+        return () => clearInterval(timer);
+    }, []);
 
-    // 只在完全無資料且正在第一次載入時顯示骨架屏
+    const dayIndex = now.getDay();
+    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+
+    const todayClasses = timetable
+        .filter((c) => c.day === dayIndex)
+        .sort((a, b) => (a.period || 0) - (b.period || 0));
+
+    let currentClass = null;
+    let nextClass = null;
+    for (const c of todayClasses) {
+        const start = PERIOD_START_MINUTES[c.period] ?? c.startMinute;
+        const end = PERIOD_END_MINUTES[c.period] ?? (start + 50);
+        if (currentMinutes >= start && currentMinutes < end) {
+            currentClass = { ...c, startMin: start, endMin: end };
+        } else if (currentMinutes < start && !nextClass) {
+            nextClass = { ...c, startMin: start, endMin: end };
+        }
+    }
+
+    if (!currentClass && !nextClass) {
+        nextClass = getNextClass();
+    }
+
     if (isLoading && !timetable.length) {
         return (
-            <div className="card">
-                <div className="skeleton" style={{ height: '16px', width: '96px', marginBottom: '16px' }} />
-                <div className="skeleton" style={{ height: '24px', width: '192px', marginBottom: '12px' }} />
-                <div className="skeleton" style={{ height: '16px', width: '128px' }} />
+            <div className="card" style={{ padding: '24px' }}>
+                <div className="skeleton" style={{ height: '14px', width: '80px', marginBottom: '16px', borderRadius: '8px' }} />
+                <div className="skeleton" style={{ height: '22px', width: '180px', marginBottom: '14px', borderRadius: '8px' }} />
+                <div className="skeleton" style={{ height: '6px', width: '100%', borderRadius: '8px' }} />
             </div>
         );
     }
 
-    if (!nextClass) {
-        return (
-            <div className="card">
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-muted)', marginBottom: '12px' }}>
-                    <IconBook size={16} />
-                    <span style={{ fontSize: '13px' }}>下一堂課</span>
-                </div>
-                <p style={{ fontSize: '1.125rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
-                    今天沒有更多課程了 🎉
-                </p>
-            </div>
-        );
+    let progress = 0;
+    let remainingMin = 0;
+    if (currentClass) {
+        const elapsed = currentMinutes - currentClass.startMin;
+        const total = currentClass.endMin - currentClass.startMin;
+        progress = Math.min(Math.max(elapsed / total, 0), 1);
+        remainingMin = Math.max(currentClass.endMin - currentMinutes, 0);
     }
+
+    const timeStr = (c) => PERIOD_TIMES[c.period] || c.time || '';
 
     return (
-        <div className="card card-hover">
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-muted)', marginBottom: '12px' }}>
-                <IconBook size={16} />
-                <span style={{ fontSize: '13px' }}>下一堂課</span>
-            </div>
-            <h3 style={{ fontSize: '1.125rem', fontWeight: 700, color: 'var(--text)' }}>{nextClass.name}</h3>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '20px', marginTop: '12px', fontSize: '13px', color: 'var(--text-secondary)' }}>
-                <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <IconMapPin size={14} /> {nextClass.location || '未指定'}
-                </span>
-                <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <IconClock size={14} /> {nextClass.time || ''}
-                </span>
-            </div>
-            {nextClass.minutesUntil !== null && (
-                <div style={{ marginTop: '14px' }}>
-                    <span className="badge" style={{ background: 'var(--color-brand-subtle)', color: 'var(--color-brand)' }}>
-                        {nextClass.minutesUntil} 分鐘後上課
-                    </span>
+        <div className="dash-class-section" style={{ gap: '12px' }}>
+            {currentClass ? (
+                <div className="card dash-current-card" style={{ padding: '20px 22px' }}>
+                    {/* Status row */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+                        <span className="dash-status-badge dash-status-active">
+                            <span className="dash-status-dot" />
+                            上課中
+                        </span>
+                        <span style={{
+                            fontSize: '12px',
+                            fontWeight: 500,
+                            color: 'var(--text-muted)',
+                            background: 'var(--bg-secondary)',
+                            padding: '3px 10px',
+                            borderRadius: '20px',
+                        }}>
+                            剩餘 {remainingMin} 分鐘
+                        </span>
+                    </div>
+
+                    {/* Course name */}
+                    <h3 style={{
+                        fontSize: '1.375rem',
+                        fontWeight: 700,
+                        color: 'var(--text)',
+                        marginBottom: '14px',
+                        letterSpacing: '-0.02em',
+                    }}>
+                        {currentClass.name}
+                    </h3>
+
+                    {/* Progress bar */}
+                    <div className="dash-progress-track" style={{ height: '5px', borderRadius: '5px' }}>
+                        <div className="dash-progress-fill" style={{ width: `${progress * 100}%` }} />
+                    </div>
+
+                    {/* Meta info */}
+                    <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '18px',
+                        marginTop: '14px',
+                        fontSize: '13px',
+                        color: 'var(--text-muted)',
+                    }}>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                            <IconMapPin size={14} /> {currentClass.location || '未指定'}
+                        </span>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                            <IconClock size={14} /> {timeStr(currentClass)}
+                        </span>
+                        {currentClass.teacher && (
+                            <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                <IconUser size={14} /> {currentClass.teacher}
+                            </span>
+                        )}
+                    </div>
+                </div>
+            ) : (
+                !nextClass && (
+                    <div className="card" style={{
+                        padding: '32px 24px',
+                        textAlign: 'center',
+                        background: 'var(--bg-card)',
+                    }}>
+                        <p style={{
+                            fontSize: '2rem',
+                            marginBottom: '8px',
+                        }}>🎉</p>
+                        <p style={{
+                            fontSize: '1rem',
+                            fontWeight: 600,
+                            color: 'var(--text-secondary)',
+                        }}>
+                            今天沒有更多課程了
+                        </p>
+                        <p style={{
+                            fontSize: '0.8125rem',
+                            color: 'var(--text-muted)',
+                            marginTop: '4px',
+                        }}>
+                            好好休息吧
+                        </p>
+                    </div>
+                )
+            )}
+
+            {nextClass && (
+                <div className="dash-next-class">
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{
+                            fontSize: '12px',
+                            fontWeight: 600,
+                            color: 'var(--color-warning)',
+                            background: 'rgba(255,149,0,0.1)',
+                            padding: '2px 10px',
+                            borderRadius: '20px',
+                        }}>
+                            下一堂
+                        </span>
+                        <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                            {nextClass.minutesUntil != null ? `${nextClass.minutesUntil} 分鐘後` : timeStr(nextClass)}
+                        </span>
+                    </div>
+                    <p style={{
+                        fontSize: '15px',
+                        fontWeight: 600,
+                        color: 'var(--text)',
+                        marginTop: '6px',
+                    }}>
+                        {nextClass.name}
+                    </p>
+                    <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '14px',
+                        marginTop: '4px',
+                        fontSize: '12px',
+                        color: 'var(--text-muted)',
+                    }}>
+                        {nextClass.location && (
+                            <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                <IconMapPin size={12} /> {nextClass.location}
+                            </span>
+                        )}
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <IconClock size={12} /> {timeStr(nextClass)}
+                        </span>
+                    </div>
                 </div>
             )}
         </div>
@@ -100,121 +239,117 @@ function NextClassCard() {
 }
 
 
-// ── 任務預覽卡片 / Task Preview Card ──
-function TaskPreviewCard() {
+// ── 待辦事項區塊 / Task Section ──
+function TaskSection() {
     const loadTasks = useTaskStore((s) => s.loadTasks);
     const tasks = useTaskStore((s) => s.tasks);
     const isLoading = useTaskStore((s) => s.isLoading);
-    const toggleTask = useTaskStore((s) => s.toggleTask);
     const hasFetched = useRef(false);
 
     useEffect(() => {
         if (!hasFetched.current) { hasFetched.current = true; loadTasks(); }
     }, [loadTasks]);
 
-    const pendingTasks = tasks.filter((t) => !t.completed).slice(0, 4);
-    const completedCount = tasks.filter((t) => t.completed).length;
+    const pendingTasks = tasks.filter((t) => !t.completed).slice(0, 3);
 
-    // 骨架屏
-    if (isLoading && !tasks.length) {
-        return (
-            <div className="card">
-                <div className="skeleton" style={{ height: '16px', width: '96px', marginBottom: '16px' }} />
-                <div className="skeleton" style={{ height: '20px', width: '160px', marginBottom: '10px' }} />
-                <div className="skeleton" style={{ height: '16px', width: '128px' }} />
-            </div>
-        );
-    }
-
-    if (!pendingTasks.length) {
-        return (
-            <div className="card">
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-muted)', marginBottom: '12px' }}>
-                    <IconCheckSquare size={16} />
-                    <span style={{ fontSize: '13px' }}>待辦任務</span>
-                </div>
-                <p style={{ fontSize: '1.125rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
-                    所有任務已完成 🎉
-                </p>
-                {tasks.length > 0 && (
-                    <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '8px' }}>
-                        已完成 {completedCount} 項任務
-                    </p>
-                )}
-                <a href="#/tasks" className="btn btn-soft" style={{ marginTop: '14px', fontSize: '13px', gap: '6px' }}>
-                    <IconPlus size={14} /> 新增任務
-                </a>
-            </div>
-        );
-    }
+    if (isLoading && !tasks.length) return null;
+    if (!pendingTasks.length && !tasks.length) return null;
 
     return (
-        <div className="card">
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-muted)' }}>
-                    <IconCheckSquare size={16} />
-                    <span style={{ fontSize: '13px' }}>待辦任務</span>
-                </div>
-                <a href="#/tasks" style={{ fontSize: '12px', color: 'var(--color-brand)', textDecoration: 'none', fontWeight: 500 }} aria-label="查看全部任務">
-                    查看全部
+        <div className="dash-section">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <h3 className="dash-section-title">待辦事項</h3>
+                <a href="#/tasks" style={{
+                    fontSize: '13px',
+                    color: 'var(--color-brand)',
+                    textDecoration: 'none',
+                    fontWeight: 500,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '2px',
+                }}>
+                    查看全部 <IconChevronRight size={14} />
                 </a>
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {pendingTasks.map((task) => (
-                    <div
-                        key={task.id}
-                        style={{
-                            display: 'flex', alignItems: 'center', gap: '10px',
-                            padding: '8px 0',
-                            borderBottom: '1px solid var(--border-light)',
-                        }}
-                    >
-                        <button
-                            onClick={() => toggleTask(task.id)}
-                            style={{
-                                width: '20px', height: '20px', borderRadius: '6px',
-                                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                flexShrink: 0, cursor: 'pointer',
-                                border: '2px solid var(--border)', background: 'transparent',
-                                color: 'transparent',
-                            }}
-                            aria-label="完成任務"
-                        />
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                            <p style={{
-                                fontSize: '13px', fontWeight: 500, color: 'var(--text)',
-                                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                            }}>
-                                {task.title}
-                            </p>
-                            {task.due_date && (
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
-                                    <IconCalendar size={10} style={{ color: 'var(--color-warning)' }} />
-                                    <span style={{ fontSize: '11px', color: 'var(--color-warning)' }}>{task.due_date}</span>
+            {pendingTasks.length === 0 ? (
+                <div className="card" style={{ padding: '24px', textAlign: 'center' }}>
+                    <p style={{ fontSize: '1.25rem', marginBottom: '4px' }}>🎉</p>
+                    <p style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text-secondary)' }}>
+                        所有任務已完成
+                    </p>
+                </div>
+            ) : (
+                <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+                    {pendingTasks.map((task, i) => {
+                        const isOverdue = task.due_date && new Date(task.due_date) < new Date();
+                        return (
+                            <a
+                                key={task.id}
+                                href="#/tasks"
+                                className="dash-task-row"
+                                style={{
+                                    borderBottom: i < pendingTasks.length - 1
+                                        ? '1px solid var(--border-light)'
+                                        : 'none',
+                                    padding: '16px 20px',
+                                }}
+                            >
+                                {/* Colored dot indicator */}
+                                <span style={{
+                                    width: '8px',
+                                    height: '8px',
+                                    borderRadius: '50%',
+                                    background: isOverdue
+                                        ? 'var(--color-danger)'
+                                        : task.priority > 0
+                                            ? 'var(--color-warning)'
+                                            : 'var(--color-brand)',
+                                    flexShrink: 0,
+                                }} />
+
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                    <p style={{
+                                        fontSize: '15px',
+                                        fontWeight: 500,
+                                        color: 'var(--text)',
+                                        overflow: 'hidden',
+                                        textOverflow: 'ellipsis',
+                                        whiteSpace: 'nowrap',
+                                    }}>
+                                        {task.title}
+                                    </p>
+                                    {task.due_date && (
+                                        <p style={{
+                                            fontSize: '12px',
+                                            color: isOverdue ? 'var(--color-danger)' : 'var(--text-muted)',
+                                            marginTop: '2px',
+                                            fontWeight: isOverdue ? 500 : 400,
+                                        }}>
+                                            {isOverdue ? '已逾期 · ' : ''}{task.due_date}
+                                        </p>
+                                    )}
                                 </div>
-                            )}
-                        </div>
-                        {task.priority > 0 && (
-                            <span style={{ display: 'flex', gap: '1px', flexShrink: 0 }}>
-                                {Array.from({ length: Math.min(task.priority, 3) }, (_, i) => (
-                                    <IconStar key={i} size={10} style={{ color: 'var(--color-warning)', fill: 'var(--color-warning)' }} />
-                                ))}
-                            </span>
-                        )}
-                    </div>
-                ))}
-            </div>
-            {tasks.length > 0 && (
-                <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '10px' }}>
-                    {pendingTasks.length} 項待辦 · {completedCount} 項已完成
-                </p>
+
+                                {task.priority > 0 && !isOverdue && (
+                                    <span style={{ display: 'flex', gap: '2px', flexShrink: 0 }}>
+                                        {Array.from({ length: Math.min(task.priority, 3) }, (_, j) => (
+                                            <IconStar key={j} size={12} style={{ color: 'var(--color-warning)', fill: 'var(--color-warning)' }} />
+                                        ))}
+                                    </span>
+                                )}
+
+                                <IconChevronRight size={14} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+                            </a>
+                        );
+                    })}
+                </div>
             )}
         </div>
     );
 }
 
-// ── 圖書館借閱預覽 / Library Preview Card ──
-function LibraryPreviewCard() {
+// ── 圖書館借閱預覽 / Library Preview ──
+function LibrarySection() {
     const loans = useLibraryStore((s) => s.loans);
     const overdueBooks = loans.filter(b => b.is_overdue);
     const dueSoonBooks = loans.filter(b => {
@@ -226,43 +361,75 @@ function LibraryPreviewCard() {
     if (!loans.length) return null;
 
     return (
-        <div className="card card-hover">
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-muted)' }}>
-                    <IconLibrary size={16} />
-                    <span style={{ fontSize: '13px' }}>圖書館借閱</span>
-                </div>
-                <a href="#/library" style={{ fontSize: '12px', color: 'var(--color-brand)', textDecoration: 'none', fontWeight: 500 }} aria-label="查看全部借閱">
-                    查看全部
+        <div className="dash-section">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <h3 className="dash-section-title">圖書館借閱</h3>
+                <a href="#/library" style={{
+                    fontSize: '13px',
+                    color: 'var(--color-brand)',
+                    textDecoration: 'none',
+                    fontWeight: 500,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '2px',
+                }}>
+                    查看全部 <IconChevronRight size={14} />
                 </a>
             </div>
-            <p style={{ fontSize: '1.125rem', fontWeight: 700, color: 'var(--text)' }}>
-                {loans.length} 本借閱中
-            </p>
-            {overdueBooks.length > 0 && (
-                <p style={{ fontSize: '13px', color: 'var(--color-danger)', marginTop: '8px', fontWeight: 600 }}>
-                    ⚠️ {overdueBooks.length} 本已逾期
-                </p>
-            )}
-            {dueSoonBooks.length > 0 && overdueBooks.length === 0 && (
-                <p style={{ fontSize: '13px', color: 'var(--color-warning)', marginTop: '8px' }}>
-                    📅 {dueSoonBooks.length} 本即將到期
-                </p>
-            )}
+            <div className="card" style={{ padding: '18px 22px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div style={{
+                        width: '40px',
+                        height: '40px',
+                        borderRadius: '12px',
+                        background: 'var(--color-pastel-blue, #D3E4FD)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0,
+                    }}>
+                        <IconLibrary size={20} style={{ color: 'var(--color-brand)' }} />
+                    </div>
+                    <div style={{ flex: 1 }}>
+                        <p style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text)' }}>
+                            {loans.length} 本借閱中
+                        </p>
+                        {overdueBooks.length > 0 && (
+                            <p style={{ fontSize: '13px', color: 'var(--color-danger)', marginTop: '3px', fontWeight: 600 }}>
+                                {overdueBooks.length} 本已逾期
+                            </p>
+                        )}
+                        {dueSoonBooks.length > 0 && overdueBooks.length === 0 && (
+                            <p style={{ fontSize: '13px', color: 'var(--color-warning)', marginTop: '3px' }}>
+                                {dueSoonBooks.length} 本即將到期
+                            </p>
+                        )}
+                        {overdueBooks.length === 0 && dueSoonBooks.length === 0 && (
+                            <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '3px' }}>
+                                借閱狀態正常
+                            </p>
+                        )}
+                    </div>
+                    <IconChevronRight size={18} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+                </div>
+            </div>
         </div>
     );
 }
 
 // ── 主頁面 / Main Page ──
 export default function Dashboard() {
+    const now = new Date();
+
     return (
-        <div className="section-stack dash-page">
-            <Greeting />
-            <div className="dash-cards-grid">
-                <NextClassCard />
-                <TaskPreviewCard />
-                <LibraryPreviewCard />
+        <div className="dash-page animate-fade-in">
+            <div>
+                <h1 className="dash-hero-title">今天</h1>
+                <p className="dash-hero-date">{formatDate(now)}</p>
             </div>
+            <CurrentClassCard />
+            <TaskSection />
+            <LibrarySection />
         </div>
     );
 }
