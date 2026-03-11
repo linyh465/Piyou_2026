@@ -7,9 +7,18 @@ import { MemoryRouter } from 'react-router-dom';
 
 // Mock stores
 vi.mock('../stores/themeStore', () => {
-  const store = { theme: 'system', resolvedTheme: 'light', setTheme: vi.fn(), toggle: vi.fn() };
+  const store = { theme: 'system', resolvedTheme: 'light', setTheme: vi.fn(), toggle: vi.fn(), colorTheme: 'default', setColorTheme: vi.fn() };
   return {
     __esModule: true,
+    COLOR_THEMES: [
+      { id: 'default', label: '預設', labelEn: 'Default', description: '經典藍', color: '#007AFF' },
+      { id: 'azure', label: '晴空', labelEn: 'Azure', description: '天藍澄澈', color: '#0A84FF' },
+      { id: 'violet', label: '暮紫', labelEn: 'Violet', description: '幽蘭暮靄', color: '#8B5CF6' },
+      { id: 'amber', label: '琥珀', labelEn: 'Amber', description: '暖陽流金', color: '#D97706' },
+      { id: 'crimson', label: '緋紅', labelEn: 'Crimson', description: '丹霞映雪', color: '#DC2626' },
+      { id: 'emerald', label: '翠柏', labelEn: 'Emerald', description: '蒼松斂翠', color: '#059669' },
+      { id: 'rose', label: '薔薇', labelEn: 'Rose', description: '春庭薔薇', color: '#E11D48' },
+    ],
     default: Object.assign(vi.fn((selector) => (selector ? selector(store) : store)), {
       getState: () => store,
       setState: vi.fn(),

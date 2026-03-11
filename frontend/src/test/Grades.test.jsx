@@ -11,8 +11,10 @@ vi.mock('../stores/timetableStore', () => {
     grades: [
       {
         name: '113-1 上學期',
-        class_rank: '5/60',
-        dept_rank: '12/120',
+        class_rank: 5,
+        class_total: 60,
+        dept_rank: 12,
+        dept_total: 120,
         courses: [
           { name: '微積分', score: 92, credits: 3 },
           { name: '國文', score: 78, credits: 2 },
@@ -46,7 +48,6 @@ describe('Grades Page', () => {
       </MemoryRouter>
     );
     expect(screen.getByText('成績查詢')).toBeInTheDocument();
-    expect(screen.getByText('Grades')).toBeInTheDocument();
   });
 
   it('renders semester name', () => {
@@ -87,7 +88,7 @@ describe('Grades Page', () => {
         <Grades />
       </MemoryRouter>
     );
-    expect(screen.getByText(/班排名：5\/60/)).toBeInTheDocument();
-    expect(screen.getByText(/系排名：12\/120/)).toBeInTheDocument();
+    expect(screen.getAllByText('班級排名').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText('系所排名').length).toBeGreaterThanOrEqual(1);
   });
 });

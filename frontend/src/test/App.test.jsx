@@ -16,8 +16,8 @@ describe('App', () => {
 
   it('shows the dashboard route by default', async () => {
     render(<App />);
-    // Dashboard 的問候語 — 總會出現早安/午安/晚安之一
-    const greeting = await screen.findByText(/早安|午安|晚安/);
-    expect(greeting).toBeInTheDocument();
+    // Dashboard 的標題「今天」
+    const title = await screen.findByText('今天');
+    expect(title).toBeInTheDocument();
   });
 });
