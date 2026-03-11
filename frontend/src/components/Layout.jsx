@@ -2,13 +2,12 @@
  * 應用佈局外殼 / App Layout Shell — iOS 風格
  * 桌面版 (md+)：群組化側邊欄；行動版：底部 4-Tab 導航
  */
-import { useState, useRef, useEffect, useCallback } from 'react';
-import { NavLink, Outlet, useLocation } from 'react-router-dom';
+import { NavLink, Outlet } from 'react-router-dom';
 import useTimetableStore from '../stores/timetableStore';
 import {
     IconHome, IconCalendar, IconCheckSquare,
     IconSettings, IconChartBar, IconCloudLightning, IconCloudOff, IconBus,
-    IconBook, IconLibrary, IconUser
+    IconLibrary
 } from './Icons';
 
 // ── 側邊欄群組 / Sidebar Menu Groups ──
@@ -36,46 +35,19 @@ const menuGroups = [
     },
 ];
 
-// ── 「更多」子選單項 / "More" Sub-menu Items ──
-const moreSubItems = [
-    { to: '/tasks', icon: IconCheckSquare, label: '任務' },
-    { to: '/transport', icon: IconBus, label: '交通' },
+// ── 行動版底部導航項 / Mobile Bottom Nav Items ──
+const mobileNavItems = [
+    { to: '/', icon: IconHome, label: '首頁', end: true },
+    { to: '/timetable', icon: IconCalendar, label: '課表' },
     { to: '/library', icon: IconLibrary, label: '圖書館' },
+    { to: '/grades', icon: IconChartBar, label: '成績' },
     { to: '/settings', icon: IconSettings, label: '設定' },
 ];
-const morePaths = moreSubItems.map((i) => i.to);
 
 export default function Layout() {
     const timetable = useTimetableStore((s) => s.timetable);
     const grades = useTimetableStore((s) => s.grades);
     const syncStatus = (timetable.length > 0 || grades.length > 0) ? 'synced' : 'error';
-
-    // ── 更多子選單狀態 / More popover state ──
-    const [moreOpen, setMoreOpen] = useState(false);
-    const moreRef = useRef(null);
-    const location = useLocation();
-    const isMoreActive = morePaths.some((p) => location.pathname === p || location.pathname.startsWith(p + '/'));
-
-    const [prevPathname, setPrevPathname] = useState(location.pathname);
-    if (prevPathname !== location.pathname) {
-        setPrevPathname(location.pathname);
-        setMoreOpen(false);
-    }
-
-    useEffect(() => {
-        if (!moreOpen) return;
-        const handler = (e) => {
-            if (moreRef.current && !moreRef.current.contains(e.target)) {
-                setMoreOpen(false);
-            }
-        };
-        document.addEventListener('pointerdown', handler);
-        return () => document.removeEventListener('pointerdown', handler);
-    }, [moreOpen]);
-
-    const handleMoreClick = useCallback(() => {
-        setMoreOpen((prev) => !prev);
-    }, []);
 
     return (
         <div className="sidebar-layout">
@@ -149,92 +121,28 @@ export default function Layout() {
                 <Outlet />
             </main>
 
-            {/* ═══ 行動版底部導航 / Mobile Bottom Nav — 4 Tab iOS 風格 ═══ */}
+            {/* ═══ 行動版底部導航 / Mobile Bottom Nav — 浮動動態島 ═══ */}
             <nav className="mobile-bottom-nav">
                 <div className="mobile-bottom-nav-inner">
-                    {/* 今天 */}
-                    <NavLink
-                        to="/"
-                        end
-                        className={({ isActive }) =>
-                            `mobile-nav-item ${isActive ? 'active' : ''}`
-                        }
-                    >
-                        {({ isActive }) => (
-                            <>
-                                <IconHome size={22} />
-                                <span className={`mobile-nav-label ${isActive ? 'font-semibold' : ''}`}>
-                                    今天
-                                </span>
-                            </>
-                        )}
-                    </NavLink>
-
-                    {/* 課表 */}
-                    <NavLink
-                        to="/timetable"
-                        className={({ isActive }) =>
-                            `mobile-nav-item ${isActive ? 'active' : ''}`
-                        }
-                    >
-                        {({ isActive }) => (
-                            <>
-                                <IconCalendar size={22} />
-                                <span className={`mobile-nav-label ${isActive ? 'font-semibold' : ''}`}>
-                                    課表
-                                </span>
-                            </>
-                        )}
-                    </NavLink>
-
-                    {/* 成績 */}
-                    <NavLink
-                        to="/grades"
-                        className={({ isActive }) =>
-                            `mobile-nav-item ${isActive ? 'active' : ''}`
-                        }
-                    >
-                        {({ isActive }) => (
-                            <>
-                                <IconChartBar size={22} />
-                                <span className={`mobile-nav-label ${isActive ? 'font-semibold' : ''}`}>
-                                    成績
-                                </span>
-                            </>
-                        )}
-                    </NavLink>
-
-                    {/* 更多（含彈出子選單） */}
-                    <div className="mobile-nav-study-wrapper" ref={moreRef}>
-                        {moreOpen && (
-                            <div className="mobile-study-popover">
-                                {moreSubItems.map((sub) => (
-                                    <NavLink
-                                        key={sub.to}
-                                        to={sub.to}
-                                        className={({ isActive }) =>
-                                            `mobile-study-popover-item ${isActive ? 'active' : ''}`
-                                        }
-                                    >
-                                        <sub.icon size={20} />
-                                        <span>{sub.label}</span>
-                                    </NavLink>
-                                ))}
-                            </div>
-                        )}
-                        <button
-                            type="button"
-                            className={`mobile-nav-item mobile-nav-btn ${isMoreActive ? 'active' : ''}`}
-                            onClick={handleMoreClick}
-                            aria-expanded={moreOpen}
-                            aria-label="更多選單"
+                    {mobileNavItems.map((item) => (
+                        <NavLink
+                            key={item.to}
+                            to={item.to}
+                            end={item.end}
+                            className={({ isActive }) =>
+                                `mobile-nav-item ${isActive ? 'active' : ''}`
+                            }
                         >
-                            <IconUser size={22} />
-                            <span className={`mobile-nav-label ${isMoreActive ? 'font-semibold' : ''}`}>
-                                更多
-                            </span>
-                        </button>
-                    </div>
+                            {({ isActive }) => (
+                                <>
+                                    <item.icon size={22} />
+                                    <span className={`mobile-nav-label ${isActive ? 'font-semibold' : ''}`}>
+                                        {item.label}
+                                    </span>
+                                </>
+                            )}
+                        </NavLink>
+                    ))}
                 </div>
             </nav>
         </div>
