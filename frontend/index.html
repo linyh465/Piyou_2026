@@ -12,11 +12,13 @@
     <meta name="apple-mobile-web-app-title" content="披呦" />
     <title>披呦 Piyou</title>
     <script>
-      // 同步套用主題，防止淺色閃爍 / Apply theme synchronously to prevent FOUC
+      // 同步套用主題，防止閃爍 / Apply theme + color theme synchronously to prevent FOUC
       (function () {
         var t = localStorage.getItem('piyou_theme') || 'system';
         var dark = t === 'dark' || (t === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
         if (dark) document.documentElement.classList.add('dark');
+        var c = localStorage.getItem('piyou_color_theme');
+        if (c && c !== 'default') document.documentElement.classList.add('theme-' + c);
       })();
     </script>
   </head>
