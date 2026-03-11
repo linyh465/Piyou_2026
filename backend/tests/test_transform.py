@@ -27,6 +27,7 @@ class TestTransformTimetable:
                     "day": "Mon",
                     "periods": "1",
                     "room": "理101",
+                    "teacher_name": "林教授",
                     "teacher_email": "lin@pu.edu.tw",
                     "type": "必修",
                     "credits": 3,
@@ -43,7 +44,8 @@ class TestTransformTimetable:
         assert c.period == 1
         assert c.startMinute == 490  # period 1 → 490
         assert c.location == "理101"
-        assert c.teacher == "lin"  # email split
+        assert c.teacher == "林教授"
+        assert c.teacher_email == "lin@pu.edu.tw"
         assert c.time == "08:10-09:00"
         assert c.course_type == "必修"
         assert c.credits == 3
