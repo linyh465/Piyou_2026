@@ -23,11 +23,19 @@ export default function SyncLoginModal({ show, onClose }) {
     const [syncSuccess, setSyncSuccess] = useState(false);
     const [isSyncing, setIsSyncing] = useState(false);
 
+    // show 切換為 true 時重置成功狀態（React 建議的 render 時調整 state 模式）
+    const [prevShow, setPrevShow] = useState(false);
+    if (show !== prevShow) {
+        setPrevShow(show);
+        if (show) {
+            setSyncSuccess(false);
+        }
+    }
+
     useEffect(() => {
         if (show) {
             canSync();
             clearError();
-            setSyncSuccess(false);
         }
     }, [show, canSync, clearError]);
 

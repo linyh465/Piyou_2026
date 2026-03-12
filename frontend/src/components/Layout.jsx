@@ -2,7 +2,7 @@
  * 應用佈局外殼 / App Layout Shell — iOS 風格
  * 桌面版 (md+)：群組化側邊欄；行動版：底部兩層導航 + 滑動動畫
  */
-import { useState, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import useTimetableStore from '../stores/timetableStore';
 import {
@@ -62,27 +62,20 @@ export default function Layout() {
     const location = useLocation();
     const navigate = useNavigate();
 
-    // 導航層級狀態 / Navigation layer state
-    const [navLayer, setNavLayer] = useState(() =>
-        schoolPaths.some((p) => location.pathname.startsWith(p)) ? 'school' : 'main'
+    // 導航層級：從路徑直接推導 / Navigation layer: derived from pathname
+    const navLayer = useMemo(
+        () => schoolPaths.some((p) => location.pathname.startsWith(p)) ? 'school' : 'main',
+        [location.pathname]
     );
 
     // 進入學校前的路徑 / Path before entering school
     const [prevPath, setPrevPath] = useState('/');
 
-    // 路由變化時自動切換層級 / Auto-switch layer on route change
-    useEffect(() => {
-        const isSchoolPage = schoolPaths.some((p) => location.pathname.startsWith(p));
-        setNavLayer(isSchoolPage ? 'school' : 'main');
-    }, [location.pathname]);
-
     const handleSchoolClick = () => {
         setPrevPath(location.pathname);
-        setNavLayer('school');
         navigate('/timetable');
     };
     const handleBackClick = () => {
-        setNavLayer('main');
         navigate(prevPath);
     };
 

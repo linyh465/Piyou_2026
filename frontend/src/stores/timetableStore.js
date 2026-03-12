@@ -198,14 +198,30 @@ const useTimetableStore = create((set, get) => ({
         if (!timetable.length) return null;
 
         const now = new Date();
-        const nextClass = timetable.find(cls => new Date(cls.start_time) > now);
+        const dayIndex = now.getDay();
+        const currentMinutes = now.getHours() * 60 + now.getMinutes();
 
-        if (!nextClass) {
-            console.warn('No upcoming classes found.');
-            return null;
+        // 今天剩餘的課 / Remaining classes today
+        const todayRemaining = timetable
+            .filter(c => c.day === dayIndex && (c.startMinute ?? 0) > currentMinutes)
+            .sort((a, b) => (a.startMinute ?? 0) - (b.startMinute ?? 0));
+
+        if (todayRemaining.length) {
+            return { ...todayRemaining[0], isToday: true };
         }
 
-        return nextClass;
+        // 未來幾天的第一堂課 / First class in upcoming days
+        for (let offset = 1; offset <= 6; offset++) {
+            const targetDay = (dayIndex + offset) % 7;
+            const dayClasses = timetable
+                .filter(c => c.day === targetDay)
+                .sort((a, b) => (a.startMinute ?? 0) - (b.startMinute ?? 0));
+            if (dayClasses.length) {
+                return { ...dayClasses[0], isToday: false };
+            }
+        }
+
+        return null;
     },
 }));
 
