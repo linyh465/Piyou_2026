@@ -22,9 +22,13 @@ RUN npm run build
 FROM nginx:stable-alpine
 
 COPY --from=build /app/dist /usr/share/nginx/html
-# 以 template 形式複製，啟動時用 envsubst 注入 $PORT
-# Copy as template, inject $PORT at startup via envsubst
-COPY nginx.conf /etc/nginx/templates/default.conf.template
+
+# 模板放在 /tmp，避免 nginx entrypoint 自動 envsubst 替換所有環境變數
+# （會破壞 nginx 內建的 $host / $uri 等變數，導致設定檔無效）
+COPY nginx.conf /tmp/default.conf.template
+
+# 移除 nginx 預設 server 設定，避免監聽埠衝突
+RUN rm -f /etc/nginx/conf.d/default.conf
 
 # Railway 透過 PORT 環境變數指定埠號，本地預設 80
 # Railway assigns port via PORT env var, default 80 for local
@@ -34,4 +38,4 @@ ENV PORT=80
 ENV BACKEND_URL=http://backend:8000
 EXPOSE ${PORT}
 
-CMD ["/bin/sh", "-c", "NAMESERVER=$(awk '/^nameserver/{print $2; exit}' /etc/resolv.conf); export NAMESERVER=${NAMESERVER:-8.8.8.8}; envsubst '${PORT} ${BACKEND_URL} ${NAMESERVER}' < /etc/nginx/templates/default.conf.template > /etc/nginx/conf.d/default.conf && nginx -g 'daemon off;'"]
+CMD ["/bin/sh", "-c", "NAMESERVER=$(awk '/^nameserver/{print $2; exit}' /etc/resolv.conf); export NAMESERVER=${NAMESERVER:-8.8.8.8}; envsubst '${PORT} ${BACKEND_URL} ${NAMESERVER}' < /tmp/default.conf.template > /etc/nginx/conf.d/default.conf && exec nginx -g 'daemon off;'"]
