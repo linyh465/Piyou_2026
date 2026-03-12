@@ -34,4 +34,4 @@ ENV PORT=80
 ENV BACKEND_URL=http://backend:8000
 EXPOSE ${PORT}
 
-CMD ["/bin/sh", "-c", "export NAMESERVER=$(awk '/^nameserver/{print $2; exit}' /etc/resolv.conf || echo '8.8.8.8') && envsubst '${PORT} ${BACKEND_URL} ${NAMESERVER}' < /etc/nginx/templates/default.conf.template > /etc/nginx/conf.d/default.conf && nginx -g 'daemon off;'"]
+CMD ["/bin/sh", "-c", "NAMESERVER=$(awk '/^nameserver/{print $2; exit}' /etc/resolv.conf); export NAMESERVER=${NAMESERVER:-8.8.8.8}; envsubst '${PORT} ${BACKEND_URL} ${NAMESERVER}' < /etc/nginx/templates/default.conf.template > /etc/nginx/conf.d/default.conf && nginx -g 'daemon off;'"]
