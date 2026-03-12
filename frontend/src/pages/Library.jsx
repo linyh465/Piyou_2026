@@ -8,7 +8,8 @@
  */
 import { useState, useEffect, useRef } from 'react';
 import useLibraryStore from '../stores/libraryStore';
-import { IconBook, IconRefresh, IconTrash, IconClock, IconCheckCircle, IconStar } from '../components/Icons';
+import { IconBook, IconRefresh, IconTrash, IconClock, IconCheckCircle, IconStar, IconUser } from '../components/Icons';
+import SyncLoginModal from '../components/SyncLoginModal';
 
 /** 到期日顏色 / Due date color */
 function dueDateColor(book) {
@@ -157,6 +158,7 @@ export default function Library() {
     } = useLibraryStore();
 
     const [activeTab, setActiveTab] = useState('loans');
+    const [showSyncModal, setShowSyncModal] = useState(false);
     const hasFetched = useRef(false);
 
     useEffect(() => {
@@ -165,6 +167,16 @@ export default function Library() {
             fetchLibrary();
         }
     }, [fetchLibrary, loans.length, reserves.length]);
+
+    useEffect(() => {
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === 'visible') {
+                fetchLibrary();
+            }
+        };
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+        return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+    }, [fetchLibrary]);
 
     const overdueBooks = loans.filter(b => b.is_overdue);
     const dueSoonBooks = loans.filter(b => {
@@ -183,6 +195,13 @@ export default function Library() {
                     <span className="page-subtitle">Library</span>
                 </div>
                 <div style={{ display: 'flex', gap: '8px' }}>
+                    <button
+                        onClick={() => setShowSyncModal(true)}
+                        className="btn btn-soft"
+                        style={{ fontSize: '13px', display: 'flex', alignItems: 'center', gap: '4px' }}
+                    >
+                        <IconUser size={14} /> 一鍵登入
+                    </button>
                     <button
                         onClick={fetchLibrary}
                         disabled={isLoading}
@@ -431,6 +450,9 @@ export default function Library() {
             {!isLoading && loans.length === 0 && reserves.length === 0 && history.length === 0 && !error && (
                 <EmptyState icon={IconBook} title="尚無圖書館資料" subtitle="請先登入以同步借閱資料" />
             )}
+
+            {/* 同步登入 Modal */}
+            <SyncLoginModal show={showSyncModal} onClose={() => setShowSyncModal(false)} />
         </div>
     );
 }

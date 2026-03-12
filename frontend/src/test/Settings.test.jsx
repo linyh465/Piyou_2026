@@ -89,7 +89,7 @@ describe('Settings Page', () => {
       </MemoryRouter>
     );
     expect(screen.getByText('同學你好')).toBeInTheDocument();
-    expect(screen.getByText('同步校務資料')).toBeInTheDocument();
+    expect(screen.getByText('同步校園資料')).toBeInTheDocument();
   });
 
   it('renders theme options', () => {

@@ -1,16 +1,20 @@
 /**
  * 應用佈局外殼 / App Layout Shell — iOS 風格
- * 桌面版 (md+)：群組化側邊欄；行動版：底部 4-Tab 導航
+ * 桌面版 (md+)：群組化側邊欄；行動版：底部兩層導航 + 滑動動畫
  */
-import { NavLink, Outlet } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import useTimetableStore from '../stores/timetableStore';
 import {
-    IconHome, IconCalendar, IconCheckSquare,
+    IconHome, IconCalendar,
     IconSettings, IconChartBar, IconCloudLightning, IconCloudOff, IconBus,
-    IconLibrary
+    IconLibrary, IconArrowLeft, IconSchool
 } from './Icons';
 
-// ── 側邊欄群組 / Sidebar Menu Groups ──
+// ── 學校相關路徑 / School-related paths ──
+const schoolPaths = ['/timetable', '/grades', '/library'];
+
+// ── 側邊欄群組 / Sidebar Menu Groups ──（桌面版不變）
 const menuGroups = [
     {
         label: '總覽',
@@ -28,26 +32,116 @@ const menuGroups = [
     {
         label: '生活',
         items: [
-            { to: '/tasks', icon: IconCheckSquare, label: '任務' },
             { to: '/transport', icon: IconBus, label: '交通' },
             { to: '/library', icon: IconLibrary, label: '圖書館' },
         ],
     },
 ];
 
-// ── 行動版底部導航項 / Mobile Bottom Nav Items ──
-const mobileNavItems = [
+// ── 行動版第一層導航 / Mobile Level 1 Nav ──
+const mobileMainItems = [
     { to: '/', icon: IconHome, label: '首頁', end: true },
+    { to: '/transport', icon: IconBus, label: '交通' },
+    { key: 'school', icon: IconSchool, label: '學校', isCategory: true },
+    { to: '/settings', icon: IconSettings, label: '設定' },
+];
+
+// ── 行動版第二層導航（學校）/ Mobile Level 2 Nav (School) ──
+const mobileSchoolItems = [
+    { to: '/grades', icon: IconChartBar, label: '成績' },
     { to: '/timetable', icon: IconCalendar, label: '課表' },
     { to: '/library', icon: IconLibrary, label: '圖書館' },
-    { to: '/grades', icon: IconChartBar, label: '成績' },
-    { to: '/settings', icon: IconSettings, label: '設定' },
+    { key: 'back', icon: IconArrowLeft, label: '上一頁', isBack: true },
 ];
 
 export default function Layout() {
     const timetable = useTimetableStore((s) => s.timetable);
     const grades = useTimetableStore((s) => s.grades);
     const syncStatus = (timetable.length > 0 || grades.length > 0) ? 'synced' : 'error';
+
+    const location = useLocation();
+    const navigate = useNavigate();
+
+    // 導航層級狀態 / Navigation layer state
+    const [navLayer, setNavLayer] = useState(() =>
+        schoolPaths.some((p) => location.pathname.startsWith(p)) ? 'school' : 'main'
+    );
+
+    // 進入學校前的路徑 / Path before entering school
+    const [prevPath, setPrevPath] = useState('/');
+
+    // 路由變化時自動切換層級 / Auto-switch layer on route change
+    useEffect(() => {
+        const isSchoolPage = schoolPaths.some((p) => location.pathname.startsWith(p));
+        setNavLayer(isSchoolPage ? 'school' : 'main');
+    }, [location.pathname]);
+
+    const handleSchoolClick = () => {
+        setPrevPath(location.pathname);
+        setNavLayer('school');
+        navigate('/timetable');
+    };
+    const handleBackClick = () => {
+        setNavLayer('main');
+        navigate(prevPath);
+    };
+
+    /** 渲染單個導航項 / Render a single nav item */
+    const renderNavItem = (item) => {
+        // 「學校」分類按鈕
+        if (item.isCategory) {
+            const isSchoolActive = schoolPaths.some((p) => location.pathname.startsWith(p));
+            return (
+                <button
+                    key={item.key}
+                    type="button"
+                    className={`mobile-nav-item ${isSchoolActive ? 'active' : ''}`}
+                    onClick={handleSchoolClick}
+                >
+                    <item.icon size={22} />
+                    <span className={`mobile-nav-label ${isSchoolActive ? 'font-semibold' : ''}`}>
+                        {item.label}
+                    </span>
+                </button>
+            );
+        }
+
+        // 「上一頁」返回按鈕
+        if (item.isBack) {
+            return (
+                <button
+                    key={item.key}
+                    type="button"
+                    className="mobile-nav-item mobile-nav-back"
+                    onClick={handleBackClick}
+                >
+                    <item.icon size={22} />
+                    <span className="mobile-nav-label">{item.label}</span>
+                </button>
+            );
+        }
+
+        // 一般導航連結
+        return (
+            <NavLink
+                key={item.to}
+                to={item.to}
+                end={item.end}
+                className={({ isActive }) =>
+                    `mobile-nav-item ${isActive ? 'active' : ''}`
+                }
+            >
+                {({ isActive }) => (
+                    <>
+                        <item.icon size={22} />
+                        <span className={`mobile-nav-label ${isActive ? 'font-semibold' : ''}`}>
+                            {item.label}
+                        </span>
+                    </>
+                )}
+            </NavLink>
+        );
+    };
 
     return (
         <div className="sidebar-layout">
@@ -121,28 +215,17 @@ export default function Layout() {
                 <Outlet />
             </main>
 
-            {/* ═══ 行動版底部導航 / Mobile Bottom Nav — 浮動動態島 ═══ */}
+            {/* ═══ 行動版底部導航 / Mobile Bottom Nav — 兩層滑動導航 ═══ */}
             <nav className="mobile-bottom-nav">
-                <div className="mobile-bottom-nav-inner">
-                    {mobileNavItems.map((item) => (
-                        <NavLink
-                            key={item.to}
-                            to={item.to}
-                            end={item.end}
-                            className={({ isActive }) =>
-                                `mobile-nav-item ${isActive ? 'active' : ''}`
-                            }
-                        >
-                            {({ isActive }) => (
-                                <>
-                                    <item.icon size={22} />
-                                    <span className={`mobile-nav-label ${isActive ? 'font-semibold' : ''}`}>
-                                        {item.label}
-                                    </span>
-                                </>
-                            )}
-                        </NavLink>
-                    ))}
+                <div className="mobile-nav-slider">
+                    {/* 第一層：主導航 */}
+                    <div className={`mobile-nav-layer ${navLayer === 'main' ? 'mobile-nav-layer--active' : 'mobile-nav-layer--left'}`}>
+                        {mobileMainItems.map(renderNavItem)}
+                    </div>
+                    {/* 第二層：學校子導航 */}
+                    <div className={`mobile-nav-layer ${navLayer === 'school' ? 'mobile-nav-layer--active' : 'mobile-nav-layer--right'}`}>
+                        {mobileSchoolItems.map(renderNavItem)}
+                    </div>
                 </div>
             </nav>
         </div>

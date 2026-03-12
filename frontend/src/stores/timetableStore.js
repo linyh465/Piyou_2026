@@ -198,31 +198,14 @@ const useTimetableStore = create((set, get) => ({
         if (!timetable.length) return null;
 
         const now = new Date();
-        const dayIndex = now.getDay(); // 0=Sun, 1=Mon...
-        const currentMinutes = now.getHours() * 60 + now.getMinutes();
+        const nextClass = timetable.find(cls => new Date(cls.start_time) > now);
 
-        const todayClasses = timetable
-            .filter((c) => c.day === dayIndex)
-            .sort((a, b) => a.startMinute - b.startMinute);
-
-        // 找到今天還未開始的下一堂課 / Find next upcoming class today
-        const next = todayClasses.find((c) => c.startMinute > currentMinutes);
-        if (next) {
-            const minutesUntil = next.startMinute - currentMinutes;
-            return { ...next, minutesUntil, isToday: true };
+        if (!nextClass) {
+            console.warn('No upcoming classes found.');
+            return null;
         }
 
-        // 若今天沒有，找明天的第一堂 / If none today, find tomorrow's first
-        const tomorrowDay = (dayIndex + 1) % 7;
-        const tomorrowClasses = timetable
-            .filter((c) => c.day === tomorrowDay)
-            .sort((a, b) => a.startMinute - b.startMinute);
-
-        if (tomorrowClasses.length) {
-            return { ...tomorrowClasses[0], minutesUntil: null, isToday: false };
-        }
-
-        return null;
+        return nextClass;
     },
 }));
 

@@ -4,7 +4,8 @@
  */
 import { useState, useEffect } from 'react';
 import useTimetableStore from '../stores/timetableStore';
-import { IconCalendar, IconRefresh, IconTrash, IconMapPin, IconClock } from '../components/Icons';
+import { IconCalendar, IconRefresh, IconTrash, IconMapPin, IconClock, IconUser } from '../components/Icons';
+import SyncLoginModal from '../components/SyncLoginModal';
 
 const DAYS = ['一', '二', '三', '四', '五'];
 const PERIODS_MORNING = [1, 2, 3, 4];
@@ -290,13 +291,14 @@ export default function Timetable() {
     const { timetable, isLoadingTimetable, timetableError, isTimeout, fetchTimetable, clearTimetableData, canSync } = useTimetableStore();
     const [view, setView] = useState('week');
     const [selectedCourse, setSelectedCourse] = useState(null);
+    const [showSyncModal, setShowSyncModal] = useState(false);
 
     const handleClearTimetable = async () => {
         const syncCheck = await canSync();
         let msg = '確定要清除課表資料嗎？';
         if (!syncCheck.allowed) {
             const mins = Math.ceil((syncCheck.remainingMs || 0) / 60000);
-            msg += `\n\n⚠️ 冷卻時間: ${mins}分，需待冷卻結束後才可再次同步校務資料。`;
+            msg += `\n\n⚠️ 冷卻時間: ${mins}分，需待冷卻結束後才可再次同步校園資料。`;
         }
         if (window.confirm(msg)) clearTimetableData();
     };
@@ -307,6 +309,9 @@ export default function Timetable() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <h1 className="dash-hero-title" style={{ paddingBottom: 0 }}>課表</h1>
                 <div style={{ display: 'flex', gap: '8px', paddingTop: '6px' }}>
+                    <button onClick={() => setShowSyncModal(true)} className="btn btn-soft" style={{ fontSize: '13px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <IconUser size={14} /> 一鍵登入
+                    </button>
                     <button onClick={fetchTimetable} disabled={isLoadingTimetable} className="btn btn-ghost" style={{ fontSize: '13px' }}>
                         <IconRefresh size={15} className={isLoadingTimetable ? 'animate-spin' : ''} />
                     </button>
@@ -363,6 +368,9 @@ export default function Timetable() {
 
             {/* 課程詳細 Modal */}
             <CourseDetailModal course={selectedCourse} onClose={() => setSelectedCourse(null)} />
+
+            {/* 同步登入 Modal */}
+            <SyncLoginModal show={showSyncModal} onClose={() => setShowSyncModal(false)} />
         </div>
     );
 }

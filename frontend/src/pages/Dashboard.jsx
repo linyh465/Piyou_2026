@@ -12,6 +12,7 @@ import {
     IconCheckSquare, IconCalendar, IconStar, IconPlus, IconLibrary, IconUser,
     IconChevronRight,
 } from '../components/Icons';
+import { useNavigate } from 'react-router-dom';
 
 const PERIOD_TIMES = {
     1: '08:10-09:00', 2: '09:10-10:00', 3: '10:10-11:00', 4: '11:10-12:00',
@@ -419,6 +420,8 @@ function LibrarySection() {
 
 // ── 主頁面 / Main Page ──
 export default function Dashboard() {
+    const navigate = useNavigate();
+
     const now = new Date();
 
     return (

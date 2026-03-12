@@ -11,11 +11,17 @@ const apiClient = axios.create({
 });
 
 // ── HTTPS Enforcement ──
+// Docker 本地部署使用 http://localhost，需排除 localhost 以免所有請求被攔截
+// Exclude localhost so Docker local deployment works over HTTP
 apiClient.interceptors.request.use((config) => {
     if (import.meta.env.PROD) {
-        const url = new URL(config.baseURL, window.location.origin);
-        if (url.protocol !== 'https:') {
-            return Promise.reject(new Error('HTTPS is required for all API requests in production.'));
+        const host = window.location.hostname;
+        const isLocal = host === 'localhost' || host === '127.0.0.1';
+        if (!isLocal) {
+            const url = new URL(config.baseURL, window.location.origin);
+            if (url.protocol !== 'https:') {
+                return Promise.reject(new Error('HTTPS is required for all API requests in production.'));
+            }
         }
     }
     return config;

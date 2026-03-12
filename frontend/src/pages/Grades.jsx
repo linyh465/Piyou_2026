@@ -4,7 +4,8 @@
  */
 import { useState } from 'react';
 import useTimetableStore from '../stores/timetableStore';
-import { IconChartBar, IconRefresh, IconBook, IconTrash } from '../components/Icons';
+import { IconChartBar, IconRefresh, IconBook, IconTrash, IconUser } from '../components/Icons';
+import SyncLoginModal from '../components/SyncLoginModal';
 import { scoreToGPA } from '../utils/scoreToGPA';
 
 function isNumericCourse(course) {
@@ -93,6 +94,7 @@ function RankBar({ label, rank, total }) {
 export default function Grades() {
     const { grades, isLoadingGrades, gradesError, fetchGrades, clearGradesData, canSync } = useTimetableStore();
     const [selectedSemester, setSelectedSemester] = useState(null);
+    const [showSyncModal, setShowSyncModal] = useState(false);
 
     // 預設選第一個學期
     const activeSemester = selectedSemester || (grades.length ? grades[0].name : null);
@@ -103,7 +105,7 @@ export default function Grades() {
         let msg = '確定要清除成績資料嗎？';
         if (!syncCheck.allowed) {
             const mins = Math.ceil((syncCheck.remainingMs || 0) / 60000);
-            msg += `\n\n⚠️ 冷卻時間: ${mins}分，需待冷卻結束後才可再次同步校務資料。`;
+            msg += `\n\n⚠️ 冷卻時間: ${mins}分，需待冷卻結束後才可再次同步校園資料。`;
         }
         if (window.confirm(msg)) clearGradesData();
     };
@@ -138,6 +140,9 @@ export default function Grades() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <h1 className="dash-hero-title" style={{ paddingBottom: 0 }}>成績查詢</h1>
                 <div style={{ display: 'flex', gap: '8px', paddingTop: '6px' }}>
+                    <button onClick={() => setShowSyncModal(true)} className="btn btn-soft" style={{ fontSize: '13px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <IconUser size={14} /> 一鍵登入
+                    </button>
                     <button onClick={fetchGrades} disabled={isLoadingGrades} className="btn btn-ghost" style={{ fontSize: '13px' }}>
                         <IconRefresh size={15} className={isLoadingGrades ? 'animate-spin' : ''} />
                     </button>
@@ -259,6 +264,9 @@ export default function Grades() {
                     <p style={{ fontSize: '13px', marginTop: '6px', color: 'var(--text-muted)' }}>請先登入以取得成績</p>
                 </div>
             )}
+
+            {/* 同步登入 Modal */}
+            <SyncLoginModal show={showSyncModal} onClose={() => setShowSyncModal(false)} />
         </div>
     );
 }

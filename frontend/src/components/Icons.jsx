@@ -241,6 +241,21 @@ export const IconChevronRight = icon(
     <polyline points="9 18 15 12 9 6" />
 );
 
+export const IconArrowLeft = icon(
+    <>
+        <line x1="19" y1="12" x2="5" y2="12" />
+        <polyline points="12 19 5 12 12 5" />
+    </>
+);
+
+export const IconSchool = icon(
+    <>
+        <path d="M2 10l10-6 10 6-10 6-10-6z" />
+        <path d="M6 12v5c0 1 2 3 6 3s6-2 6-3v-5" />
+        <line x1="22" y1="10" x2="22" y2="16" />
+    </>
+);
+
 export const IconLibrary = icon(
     <>
         <path d="M3 21h18M3 10h18M5 6l7-3 7 3" />

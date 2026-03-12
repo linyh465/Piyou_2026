@@ -217,7 +217,7 @@ export default function Settings() {
                                 {hasCachedData() ? (
                                     <>
                                         <IconCheckCircle size={14} style={{ color: 'var(--color-success)' }} />
-                                        <span>已同步校務資料</span>
+                                        <span>已同步校園資料</span>
                                         {lastSyncTime > 0 && (
                                             <span style={{ fontSize: '12px' }}>
                                                 ({new Date(lastSyncTime).toLocaleString('zh-TW')})
@@ -227,7 +227,7 @@ export default function Settings() {
                                 ) : (
                                     <>
                                         <IconXCircle size={14} />
-                                        <span>未同步校務資料</span>
+                                        <span>未同步校園資料</span>
                                     </>
                                 )}
                             </p>
@@ -237,7 +237,7 @@ export default function Settings() {
                     <div style={{ paddingTop: '4px' }}>
                         <SettingItem
                             icon={IconBook}
-                            label="同步校務資料"
+                            label="同步校園資料"
                             labelEn="Sync portal data"
                             onClick={() => { clearError(); setShowSyncModal(true); setSyncSuccess(false); }}
                         />
@@ -257,7 +257,7 @@ export default function Settings() {
                 }} className="animate-fade-in">
                     <div className="card" style={{ width: '100%', maxWidth: '400px' }}>
                         <h3 style={{ fontSize: '1.125rem', fontWeight: 700, color: 'var(--text)', marginBottom: '8px' }}>
-                            同步校務資料
+                            同步校園資料
                         </h3>
                         <p style={{ fontSize: '14px', color: 'var(--text-muted)', marginBottom: '8px' }}>
                             請輸入校務系統帳號密碼，以擈取最新課表與成績至本機端。
