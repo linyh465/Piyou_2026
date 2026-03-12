@@ -29,6 +29,9 @@ COPY nginx.conf /etc/nginx/templates/default.conf.template
 # Railway 透過 PORT 環境變數指定埠號，本地預設 80
 # Railway assigns port via PORT env var, default 80 for local
 ENV PORT=80
+# Docker Compose 預設後端位址；Railway 請設定為後端公開 URL
+# Default backend URL for Docker Compose; set to public URL on Railway
+ENV BACKEND_URL=http://backend:8000
 EXPOSE ${PORT}
 
-CMD ["/bin/sh", "-c", "envsubst '${PORT}' < /etc/nginx/templates/default.conf.template > /etc/nginx/conf.d/default.conf && nginx -g 'daemon off;'"]
+CMD ["/bin/sh", "-c", "envsubst '${PORT} ${BACKEND_URL}' < /etc/nginx/templates/default.conf.template > /etc/nginx/conf.d/default.conf && nginx -g 'daemon off;'"]
