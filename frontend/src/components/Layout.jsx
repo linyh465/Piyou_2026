@@ -14,6 +14,10 @@ import {
 // ── 學校相關路徑 / School-related paths ──
 const schoolPaths = ['/timetable', '/grades', '/library'];
 
+// 上次瀏覽的學校子頁面（預設課表）/ Last visited school sub-page (default: timetable)
+// 模組層級變數，僅在事件處理器中更新 / Module-level variable, updated only in event handlers
+let _lastSchoolPath = '/timetable';
+
 // ── 側邊欄群組 / Sidebar Menu Groups ──（桌面版不變）
 const menuGroups = [
     {
@@ -84,7 +88,11 @@ export default function Layout() {
 
     const handleSchoolClick = () => {
         setPrevPath(location.pathname);
+<<<<<<< HEAD
         navigate(lastSchoolPath);
+=======
+        navigate(_lastSchoolPath);
+>>>>>>> main
     };
     const handleBackClick = () => {
         navigate(prevPath);
@@ -125,12 +133,16 @@ export default function Layout() {
             );
         }
 
+        // 學校子頁面連結 — 點擊時記錄路徑 / School sub-page link — record path on click
+        const isSchoolLink = item.to && schoolPaths.some((p) => item.to.startsWith(p));
+
         // 一般導航連結
         return (
             <NavLink
                 key={item.to}
                 to={item.to}
                 end={item.end}
+                onClick={isSchoolLink ? () => { _lastSchoolPath = item.to; } : undefined}
                 className={({ isActive }) =>
                     `mobile-nav-item ${isActive ? 'active' : ''}`
                 }
