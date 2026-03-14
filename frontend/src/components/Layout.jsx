@@ -17,6 +17,7 @@ const schoolPaths = ['/timetable', '/grades', '/library'];
 // 上次瀏覽的學校子頁面（預設課表）/ Last visited school sub-page (default: timetable)
 // 模組層級變數，僅在事件處理器中更新 / Module-level variable, updated only in event handlers
 let _lastSchoolPath = '/timetable';
+let _touchStartX = 0;
 
 // ── 側邊欄群組 / Sidebar Menu Groups ──（桌面版不變）
 const menuGroups = [
@@ -82,6 +83,19 @@ export default function Layout() {
     };
     const handleBackClick = () => {
         navigate(prevPath);
+    };
+
+    const handleTouchStart = (e) => {
+        _touchStartX = e.touches[0].clientX;
+    };
+    const handleTouchEnd = (e) => {
+        const dx = e.changedTouches[0].clientX - _touchStartX;
+        if (Math.abs(dx) < 50) return;
+        if (dx < 0 && navLayer === 'main') {
+            handleSchoolClick();
+        } else if (dx > 0 && navLayer === 'school') {
+            handleBackClick();
+        }
     };
 
     /** 渲染單個導航項 / Render a single nav item */
@@ -218,7 +232,9 @@ export default function Layout() {
             </main>
 
             {/* ═══ 行動版底部導航 / Mobile Bottom Nav — 兩層滑動導航 ═══ */}
-            <nav className="mobile-bottom-nav">
+            <nav className="mobile-bottom-nav"
+                 onTouchStart={handleTouchStart}
+                 onTouchEnd={handleTouchEnd}>
                 <div className="mobile-nav-slider">
                     {/* 第一層：主導航 */}
                     <div className={`mobile-nav-layer ${navLayer === 'main' ? 'mobile-nav-layer--active' : 'mobile-nav-layer--left'}`}>
