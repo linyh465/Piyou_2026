@@ -12,6 +12,7 @@ import { COLOR_THEMES } from '../stores/themeStore';
 import useAuthStore from '../stores/authStore';
 import useTimetableStore from '../stores/timetableStore';
 import useTaskStore from '../stores/taskStore';
+import useLibraryStore from '../stores/libraryStore';
 import {
     IconUser, IconSun, IconMoon, IconBell, IconSettings,
     IconLogOut, IconChevronRight, IconBook, IconCheckCircle, IconXCircle
@@ -93,6 +94,7 @@ export default function Settings() {
     const { user, isAuthenticated, login, logout, error, clearError } = useAuthStore();
     const { fetchTimetable, fetchGrades, canSync, recordSyncSuccess, recordSyncError, hasCachedData, lastSyncTime, clearSchoolData, serverCooldown } = useTimetableStore();
     const { syncTasksFromServer, syncTasksToServer } = useTaskStore();
+    const { clearLibraryData } = useLibraryStore();
 
     const [busNotify, setBusNotify] = useState(() => {
         try { return JSON.parse(localStorage.getItem('piyou_busNotify') ?? 'true'); } catch { return true; }
@@ -106,6 +108,14 @@ export default function Settings() {
     useEffect(() => { localStorage.setItem('piyou_taskNotify', JSON.stringify(taskNotify)); }, [taskNotify]);
 
     const [showSyncModal, setShowSyncModal] = useState(false);
+    const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+
+    // 開啟彈窗時將捲動容器滾到頂部，確保手機版使用者能看到彈窗
+    // Scroll the main container to top when opening modals so mobile users can see them
+    const scrollToTop = () => {
+        const main = document.querySelector('.sidebar-main');
+        if (main) main.scrollTo({ top: 0, behavior: 'smooth' });
+    };
     const [studentId, setStudentId] = useState('');
     const [password, setPassword] = useState('');
     const [syncSuccess, setSyncSuccess] = useState(false);
@@ -166,8 +176,14 @@ export default function Settings() {
     };
 
     const handleLogout = () => {
+        setShowLogoutConfirm(true);
+        scrollToTop();
+    };
+
+    const confirmLogout = () => {
         logout();
         clearSchoolData();
+        clearLibraryData();
         // 注意：不再清除冷卻相關 localStorage，冷卻由伺服器端 IP 追蹤強制執行
         // Note: cooldown localStorage is NOT cleared; enforced server-side via IP tracking
         window.location.reload();
@@ -239,7 +255,7 @@ export default function Settings() {
                             icon={IconBook}
                             label="同步校園資料"
                             labelEn="Sync portal data"
-                            onClick={() => { clearError(); setShowSyncModal(true); setSyncSuccess(false); }}
+                            onClick={() => { clearError(); setShowSyncModal(true); setSyncSuccess(false); scrollToTop(); }}
                         />
                         {(isAuthenticated || localStorage.getItem('piyou_timetable')) && (
                             <SettingItem icon={IconLogOut} label="清除資料與登出" labelEn="Sign out & Clear Data" onClick={handleLogout} />
@@ -341,6 +357,46 @@ export default function Settings() {
                                 </button>
                             </div>
                         </form>
+                    </div>
+                </div>
+            )}
+
+            {/* ── Logout Confirmation Modal ── */}
+            {showLogoutConfirm && (
+                <div style={{
+                    position: 'fixed', inset: 0, zIndex: 50,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    padding: '16px', background: 'rgba(0,0,0,0.5)',
+                }} className="animate-fade-in">
+                    <div className="card" style={{ width: '100%', maxWidth: '380px' }}>
+                        <h3 style={{ fontSize: '1.125rem', fontWeight: 700, color: 'var(--text)', marginBottom: '8px' }}>
+                            確認登出
+                        </h3>
+                        <p style={{ fontSize: '14px', color: 'var(--text-muted)', marginBottom: '20px', lineHeight: 1.6 }}>
+                            此操作將清除所有已同步的校園資料（課表、成績等）並登出帳號，確定要繼續嗎？
+                        </p>
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                            <button
+                                type="button"
+                                onClick={() => setShowLogoutConfirm(false)}
+                                className="btn btn-ghost"
+                                style={{ flex: 1, padding: '12px', fontSize: '15px' }}
+                            >
+                                取消
+                            </button>
+                            <button
+                                type="button"
+                                onClick={confirmLogout}
+                                className="btn"
+                                style={{
+                                    flex: 1, padding: '12px', fontSize: '15px',
+                                    background: 'var(--color-danger)', color: 'white',
+                                    border: 'none', borderRadius: '10px', cursor: 'pointer',
+                                }}
+                            >
+                                確認登出
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}

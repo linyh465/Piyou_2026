@@ -69,6 +69,26 @@ vi.mock('../stores/timetableStore', () => {
   };
 });
 
+vi.mock('../stores/libraryStore', () => {
+  const store = {
+    loans: [],
+    reserves: [],
+    history: [],
+    isLoading: false,
+    error: null,
+    clearLibraryData: vi.fn(),
+    fetchLibrary: vi.fn(),
+  };
+  return {
+    __esModule: true,
+    default: Object.assign(vi.fn((selector) => (selector ? selector(store) : store)), {
+      getState: () => store,
+      setState: vi.fn(),
+      subscribe: vi.fn(() => vi.fn()),
+    }),
+  };
+});
+
 import Settings from '../pages/Settings';
 
 describe('Settings Page', () => {
