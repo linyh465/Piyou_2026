@@ -2,11 +2,11 @@
  * 應用佈局外殼 / App Layout Shell — iOS 風格
  * 桌面版 (md+)：群組化側邊欄；行動版：底部兩層導航 + 滑動動畫
  */
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import useTimetableStore from '../stores/timetableStore';
 import {
-    IconHome, IconCalendar,
+    IconHome, IconCalendar, IconCheckSquare,
     IconSettings, IconChartBar, IconCloudLightning, IconCloudOff, IconBus,
     IconLibrary, IconArrowLeft, IconSchool
 } from './Icons';
@@ -40,10 +40,11 @@ const menuGroups = [
 
 // ── 行動版第一層導航 / Mobile Level 1 Nav ──
 const mobileMainItems = [
+    { to: '/settings', icon: IconSettings, label: '設定' },
+    { to: '/tasks', icon: IconCheckSquare, label: '任務' },
     { to: '/', icon: IconHome, label: '首頁', end: true },
     { to: '/transport', icon: IconBus, label: '交通' },
     { key: 'school', icon: IconSchool, label: '學校', isCategory: true },
-    { to: '/settings', icon: IconSettings, label: '設定' },
 ];
 
 // ── 行動版第二層導航（學校）/ Mobile Level 2 Nav (School) ──
@@ -71,9 +72,19 @@ export default function Layout() {
     // 進入學校前的路徑 / Path before entering school
     const [prevPath, setPrevPath] = useState('/');
 
+    // 上次瀏覽的學校子頁面（預設課表）/ Last visited school sub-page (default: timetable)
+    const [lastSchoolPath, setLastSchoolPath] = useState('/timetable');
+
+    // 當路徑在學校範圍內時，自動更新記憶 / Auto-update memory when on school path
+    useEffect(() => {
+        if (schoolPaths.some((p) => location.pathname.startsWith(p))) {
+            setLastSchoolPath(location.pathname);
+        }
+    }, [location.pathname]);
+
     const handleSchoolClick = () => {
         setPrevPath(location.pathname);
-        navigate('/timetable');
+        navigate(lastSchoolPath);
     };
     const handleBackClick = () => {
         navigate(prevPath);
