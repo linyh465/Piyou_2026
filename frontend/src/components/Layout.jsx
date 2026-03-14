@@ -6,13 +6,17 @@ import { useState, useMemo } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import useTimetableStore from '../stores/timetableStore';
 import {
-    IconHome, IconCalendar,
+    IconHome, IconCalendar, IconCheckSquare,
     IconSettings, IconChartBar, IconCloudLightning, IconCloudOff, IconBus,
     IconLibrary, IconArrowLeft, IconSchool
 } from './Icons';
 
 // ── 學校相關路徑 / School-related paths ──
 const schoolPaths = ['/timetable', '/grades', '/library'];
+
+// 上次瀏覽的學校子頁面（預設課表）/ Last visited school sub-page (default: timetable)
+// 模組層級變數，僅在事件處理器中更新 / Module-level variable, updated only in event handlers
+let _lastSchoolPath = '/timetable';
 
 // ── 側邊欄群組 / Sidebar Menu Groups ──（桌面版不變）
 const menuGroups = [
@@ -40,10 +44,11 @@ const menuGroups = [
 
 // ── 行動版第一層導航 / Mobile Level 1 Nav ──
 const mobileMainItems = [
+    { to: '/settings', icon: IconSettings, label: '設定' },
+    { to: '/tasks', icon: IconCheckSquare, label: '任務' },
     { to: '/', icon: IconHome, label: '首頁', end: true },
     { to: '/transport', icon: IconBus, label: '交通' },
     { key: 'school', icon: IconSchool, label: '學校', isCategory: true },
-    { to: '/settings', icon: IconSettings, label: '設定' },
 ];
 
 // ── 行動版第二層導航（學校）/ Mobile Level 2 Nav (School) ──
@@ -73,7 +78,7 @@ export default function Layout() {
 
     const handleSchoolClick = () => {
         setPrevPath(location.pathname);
-        navigate('/timetable');
+        navigate(_lastSchoolPath);
     };
     const handleBackClick = () => {
         navigate(prevPath);
@@ -114,12 +119,16 @@ export default function Layout() {
             );
         }
 
+        // 學校子頁面連結 — 點擊時記錄路徑 / School sub-page link — record path on click
+        const isSchoolLink = item.to && schoolPaths.some((p) => item.to.startsWith(p));
+
         // 一般導航連結
         return (
             <NavLink
                 key={item.to}
                 to={item.to}
                 end={item.end}
+                onClick={isSchoolLink ? () => { _lastSchoolPath = item.to; } : undefined}
                 className={({ isActive }) =>
                     `mobile-nav-item ${isActive ? 'active' : ''}`
                 }
