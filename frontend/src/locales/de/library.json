@@ -1,0 +1,38 @@
+{
+  "title": "Bibliothek",
+  "tabs": {
+    "loans": "Aktuelle Ausleihen",
+    "reserves": "Vormerkungen",
+    "history": "Ausleihhistorie"
+  },
+  "currentLoans": "Aktuelle Ausleihen",
+  "reservations": "Vormerkungen",
+  "borrowHistory": "Ausleihhistorie",
+  "loansOverview": "📚 Ausleihübersicht",
+  "borrowing": "Ausgeliehen",
+  "overdue": "Überfällig",
+  "dueSoon": "Bald fällig",
+  "reserving": "Vorgemerkt",
+  "queuePosition": "Warteschlangenplatz {{n}}",
+  "renewCount": "{{n}}× verlängert",
+  "overdueBooksAlert": "⚠️ {{count}} Buch/Bücher überfällig",
+  "dueDate": "Rückgabe {{date}}",
+  "dueSoonAlert": "📅 {{count}} Buch/Bücher in 7 Tagen fällig",
+  "countBooks": "{{n}} Buch/Bücher",
+  "countRecords": "{{n}} Einträge",
+  "noBooksLoaned": "Keine Bücher ausgeliehen",
+  "goToBorrow": "Besuche die Bibliothek, um Bücher auszuleihen",
+  "noReservations": "Keine Vormerkungen",
+  "reservationsHint": "Vorgemerkte Bücher werden hier angezeigt",
+  "noHistory": "Keine Ausleihhistorie",
+  "historyHint": "Früher ausgeliehene Bücher werden hier angezeigt",
+  "noData": "Keine Bibliotheksdaten",
+  "loginHint": "Bitte einloggen, um Ausleih-Daten zu synchronisieren",
+  "clearConfirm": "Bibliotheksdaten wirklich löschen?",
+  "dueDateStatus": {
+    "overdue": "Überfällig ({{date}})",
+    "today": "Heute fällig",
+    "tomorrow": "Morgen fällig",
+    "daysLater": "Fällig in {{n}} Tag(en)"
+  }
+}

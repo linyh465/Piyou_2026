@@ -1,0 +1,26 @@
+{
+  "title": "Orario",
+  "weekView": "Settimana",
+  "todayView": "Oggi",
+  "timeHeader": "Ora",
+  "days": ["Lun", "Mar", "Mer", "Gio", "Ven"],
+  "noClassesToday": "Nessuna lezione oggi 🎉",
+  "enjoyRest": "Goditi il giorno libero",
+  "totalCourses": "{{count}} corsi, {{periods}} lezioni questo semestre",
+  "requestTimeout": "Timeout richiesta",
+  "clearData": "Cancella dati",
+  "clearConfirm": "Cancellare i dati dell'orario?",
+  "cooldownWarning": "⚠️ Cooldown: prossima sincronizzazione disponibile tra {{mins}} min.",
+  "classInProgress": "Lezione in corso",
+  "modal": {
+    "time": "⏰ Orario",
+    "classroom": "📍 Aula",
+    "teacher": "👤 Docente",
+    "email": "📧 Email",
+    "type": "📋 Tipo",
+    "credits": "🎓 Crediti",
+    "creditsUnit": "{{n}} crediti",
+    "close": "Chiudi",
+    "dayPeriod": "Ora {{period}} ・ {{timeRange}}"
+  }
+}

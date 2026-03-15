@@ -1,0 +1,16 @@
+{
+  "home": "Home",
+  "tasks": "Tasks",
+  "timetable": "Timetable",
+  "grades": "Grades",
+  "transport": "Transport",
+  "library": "Library",
+  "settings": "Settings",
+  "overview": "Overview",
+  "school": "School",
+  "life": "Life",
+  "schoolCategory": "School",
+  "back": "Back",
+  "syncedStatus": "Portal data synced",
+  "notSyncedStatus": "Portal data not synced"
+}

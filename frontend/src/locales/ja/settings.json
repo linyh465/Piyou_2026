@@ -1,0 +1,28 @@
+{
+  "title": "設定",
+  "account": "アカウント",
+  "appearance": "外観",
+  "notifications": "通知",
+  "about": "について",
+  "language": "言語",
+  "syncPortal": "キャンパスデータを同期",
+  "syncPortalDesc": "Sync portal data",
+  "signOut": "サインアウトとデータ削除",
+  "signOutDesc": "Sign out & Clear Data",
+  "themeMode": "テーマモード",
+  "theme": {
+    "light": "ライト",
+    "dark": "ダーク",
+    "system": "システム"
+  },
+  "colorTheme": "カラーテーマ",
+  "busAlerts": "バス到着アラート",
+  "busAlertsDesc": "Bus arrival alerts",
+  "taskReminders": "タスク期限リマインダー",
+  "taskRemindersDesc": "Task deadline reminders",
+  "version": "バージョン",
+  "confirmLogoutTitle": "サインアウトの確認",
+  "confirmLogoutDesc": "この操作により、同期済みのすべてのキャンパスデータ（時間割、成績など）が削除され、サインアウトされます。続けますか？",
+  "syncModalTitle": "キャンパスデータを同期",
+  "syncModalBody": "最新の時間割と成績を端末に取得するため、ポータルの認証情報を入力してください。"
+}

@@ -1,0 +1,38 @@
+{
+  "title": "図書館",
+  "tabs": {
+    "loans": "貸出中",
+    "reserves": "予約",
+    "history": "利用履歴"
+  },
+  "currentLoans": "貸出中",
+  "reservations": "予約",
+  "borrowHistory": "借用履歴",
+  "loansOverview": "📚 貸出概要",
+  "borrowing": "貸出中",
+  "overdue": "延滞中",
+  "dueSoon": "もうすぐ返却期限",
+  "reserving": "予約中",
+  "queuePosition": "第{{n}}順位",
+  "renewCount": "{{n}}回更新済み",
+  "overdueBooksAlert": "⚠️ {{count}}冊延滞中",
+  "dueDate": "返却期限 {{date}}",
+  "dueSoonAlert": "📅 {{count}}冊が7日以内に返却期限",
+  "countBooks": "{{n}}冊",
+  "countRecords": "{{n}}件",
+  "noBooksLoaned": "貸出中の本はありません",
+  "goToBorrow": "図書館に行って本を借りてみましょう",
+  "noReservations": "予約はありません",
+  "reservationsHint": "予約した本がここに表示されます",
+  "noHistory": "利用履歴なし",
+  "historyHint": "過去に借りた本がここに表示されます",
+  "noData": "図書館データなし",
+  "loginHint": "ログインして貸出データを同期してください",
+  "clearConfirm": "図書館データを削除しますか？",
+  "dueDateStatus": {
+    "overdue": "延滞中 ({{date}})",
+    "today": "本日返却期限",
+    "tomorrow": "明日返却期限",
+    "daysLater": "あと{{n}}日で返却期限"
+  }
+}

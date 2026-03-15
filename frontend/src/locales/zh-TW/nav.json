@@ -1,0 +1,16 @@
+{
+  "home": "首頁",
+  "tasks": "任務",
+  "timetable": "課表",
+  "grades": "成績",
+  "transport": "交通",
+  "library": "圖書館",
+  "settings": "系統設定",
+  "overview": "總覽",
+  "school": "校務",
+  "life": "生活",
+  "schoolCategory": "學校",
+  "back": "上一頁",
+  "syncedStatus": "校務資料已同步",
+  "notSyncedStatus": "校務資料未同步"
+}

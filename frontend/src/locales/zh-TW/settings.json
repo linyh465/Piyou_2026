@@ -1,0 +1,28 @@
+{
+  "title": "系統設定",
+  "account": "個人帳戶",
+  "appearance": "外觀",
+  "notifications": "通知",
+  "about": "關於",
+  "language": "語言",
+  "syncPortal": "同步校園資料",
+  "syncPortalDesc": "Sync portal data",
+  "signOut": "清除資料與登出",
+  "signOutDesc": "Sign out & Clear Data",
+  "themeMode": "主題模式",
+  "theme": {
+    "light": "淺色",
+    "dark": "深色",
+    "system": "系統"
+  },
+  "colorTheme": "色彩主題",
+  "busAlerts": "公車到站提醒",
+  "busAlertsDesc": "Bus arrival alerts",
+  "taskReminders": "任務截止提醒",
+  "taskRemindersDesc": "Task deadline reminders",
+  "version": "版本",
+  "confirmLogoutTitle": "確認登出",
+  "confirmLogoutDesc": "此操作將清除所有已同步的校園資料（課表、成績等）並登出帳號，確定要繼續嗎？",
+  "syncModalTitle": "同步校園資料",
+  "syncModalBody": "請輸入校務系統帳號密碼，以擷取最新課表與成績至本機端。"
+}

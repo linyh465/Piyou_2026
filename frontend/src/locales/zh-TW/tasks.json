@@ -1,0 +1,32 @@
+{
+  "title": "任務管理",
+  "addTask": "新增任務",
+  "editTask": "編輯任務",
+  "taskTitlePlaceholder": "任務標題",
+  "taskDescPlaceholder": "描述（選填）",
+  "update": "更新",
+  "add": "新增",
+  "noTasks": "沒有任務",
+  "noTasksHint": "按「新增」建立第一個任務",
+  "completedCount": "{{done}}/{{total}} 已完成",
+  "markDone": "標記完成",
+  "cancelDone": "取消完成",
+  "filter": {
+    "all": "全部",
+    "active": "進行中",
+    "done": "已完成"
+  },
+  "category": {
+    "general": "一般",
+    "homework": "作業",
+    "exam": "考試",
+    "project": "專案",
+    "personal": "個人"
+  },
+  "priority": {
+    "normal": "普通",
+    "high": "重要",
+    "urgent": "緊急",
+    "critical": "最高"
+  }
+}

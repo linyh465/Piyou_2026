@@ -1,0 +1,32 @@
+{
+  "title": "Tasks",
+  "addTask": "New Task",
+  "editTask": "Edit Task",
+  "taskTitlePlaceholder": "Task title",
+  "taskDescPlaceholder": "Description (optional)",
+  "update": "Update",
+  "add": "Add",
+  "noTasks": "No tasks",
+  "noTasksHint": "Tap \"New Task\" to create your first task",
+  "completedCount": "{{done}}/{{total}} completed",
+  "markDone": "Mark complete",
+  "cancelDone": "Mark incomplete",
+  "filter": {
+    "all": "All",
+    "active": "Active",
+    "done": "Done"
+  },
+  "category": {
+    "general": "General",
+    "homework": "Homework",
+    "exam": "Exam",
+    "project": "Project",
+    "personal": "Personal"
+  },
+  "priority": {
+    "normal": "Normal",
+    "high": "High",
+    "urgent": "Urgent",
+    "critical": "Critical"
+  }
+}

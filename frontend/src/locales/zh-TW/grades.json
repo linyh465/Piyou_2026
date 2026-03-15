@@ -1,0 +1,15 @@
+{
+  "title": "成績查詢",
+  "overallGpa": "歷年 GPA",
+  "classRank": "班級排名",
+  "deptRank": "系所排名",
+  "gradeRankTitle": "成績排名",
+  "courseGrades": "修課成績",
+  "average": "平均 {{avg}}",
+  "credits": "{{n}} 學分",
+  "noGrades": "尚無成績資料",
+  "noGradesHint": "請先登入以取得成績",
+  "unnamed": "未命名",
+  "clearConfirm": "確定要清除成績資料嗎？",
+  "cooldownWarning": "⚠️ 冷卻時間: {{mins}}分，需待冷卻結束後才可再次同步校園資料。"
+}

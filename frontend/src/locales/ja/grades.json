@@ -1,0 +1,15 @@
+{
+  "title": "成績照会",
+  "overallGpa": "累積GPA",
+  "classRank": "クラス順位",
+  "deptRank": "学科順位",
+  "gradeRankTitle": "成績順位",
+  "courseGrades": "科目成績",
+  "average": "平均 {{avg}}",
+  "credits": "{{n}}単位",
+  "noGrades": "成績データなし",
+  "noGradesHint": "成績を取得するにはログインしてください",
+  "unnamed": "名称未設定",
+  "clearConfirm": "成績データを削除しますか？",
+  "cooldownWarning": "⚠️ クールダウン: 次の同期まであと{{mins}}分。"
+}

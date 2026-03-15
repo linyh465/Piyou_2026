@@ -1,0 +1,15 @@
+{
+  "title": "성적 조회",
+  "overallGpa": "누적 GPA",
+  "classRank": "학급 순위",
+  "deptRank": "학과 순위",
+  "gradeRankTitle": "성적 순위",
+  "courseGrades": "과목별 성적",
+  "average": "평균 {{avg}}",
+  "credits": "{{n}}학점",
+  "noGrades": "성적 데이터 없음",
+  "noGradesHint": "성적을 가져오려면 로그인하세요",
+  "unnamed": "이름 없음",
+  "clearConfirm": "성적 데이터를 삭제하시겠습니까?",
+  "cooldownWarning": "⚠️ 쿨다운: 다음 동기화까지 {{mins}}분 남았습니다."
+}

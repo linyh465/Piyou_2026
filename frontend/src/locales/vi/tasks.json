@@ -1,0 +1,32 @@
+{
+  "title": "Quản lý nhiệm vụ",
+  "addTask": "Thêm nhiệm vụ",
+  "editTask": "Sửa nhiệm vụ",
+  "taskTitlePlaceholder": "Tiêu đề nhiệm vụ",
+  "taskDescPlaceholder": "Mô tả (tùy chọn)",
+  "update": "Cập nhật",
+  "add": "Thêm",
+  "noTasks": "Không có nhiệm vụ",
+  "noTasksHint": "Nhấn \"Thêm\" để tạo nhiệm vụ đầu tiên",
+  "completedCount": "{{done}}/{{total}} hoàn thành",
+  "markDone": "Đánh dấu hoàn thành",
+  "cancelDone": "Đánh dấu chưa hoàn thành",
+  "filter": {
+    "all": "Tất cả",
+    "active": "Đang làm",
+    "done": "Hoàn thành"
+  },
+  "category": {
+    "general": "Chung",
+    "homework": "Bài tập",
+    "exam": "Thi cử",
+    "project": "Dự án",
+    "personal": "Cá nhân"
+  },
+  "priority": {
+    "normal": "Bình thường",
+    "high": "Quan trọng",
+    "urgent": "Khẩn cấp",
+    "critical": "Tối cao"
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "title": "Library",
+  "tabs": {
+    "loans": "Current Loans",
+    "reserves": "Reservations",
+    "history": "History"
+  },
+  "currentLoans": "Current Loans",
+  "reservations": "Reservations",
+  "borrowHistory": "Borrow History",
+  "loansOverview": "📚 Loan Overview",
+  "borrowing": "Borrowed",
+  "overdue": "Overdue",
+  "dueSoon": "Due Soon",
+  "reserving": "Reserved",
+  "queuePosition": "Queue #{{n}}",
+  "renewCount": "Renewed {{n}} time(s)",
+  "overdueBooksAlert": "⚠️ {{count}} book(s) overdue",
+  "dueDate": "Due {{date}}",
+  "dueSoonAlert": "📅 {{count}} book(s) due within 7 days",
+  "countBooks": "{{n}} book(s)",
+  "countRecords": "{{n}} record(s)",
+  "noBooksLoaned": "No books currently borrowed",
+  "goToBorrow": "Visit the library to borrow books",
+  "noReservations": "No reservations",
+  "reservationsHint": "Your reservations will appear here",
+  "noHistory": "No borrow history",
+  "historyHint": "Previously borrowed books will appear here",
+  "noData": "No library data",
+  "loginHint": "Please log in to sync library data",
+  "clearConfirm": "Are you sure you want to clear library data?",
+  "dueDateStatus": {
+    "overdue": "Overdue ({{date}})",
+    "today": "Due today",
+    "tomorrow": "Due tomorrow",
+    "daysLater": "Due in {{n}} day(s)"
+  }
+}

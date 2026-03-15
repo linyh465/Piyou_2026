@@ -1,0 +1,26 @@
+{
+  "title": "Stundenplan",
+  "weekView": "Woche",
+  "todayView": "Heute",
+  "timeHeader": "Zeit",
+  "days": ["Mo", "Di", "Mi", "Do", "Fr"],
+  "noClassesToday": "Heute keine Kurse 🎉",
+  "enjoyRest": "Genieße deinen freien Tag",
+  "totalCourses": "{{count}} Kurse, {{periods}} Einheiten dieses Semester",
+  "requestTimeout": "Anfrage-Timeout",
+  "clearData": "Daten löschen",
+  "clearConfirm": "Stundenplan-Daten wirklich löschen?",
+  "cooldownWarning": "⚠️ Cooldown: Noch {{mins}} Min. bis zur nächsten Synchronisierung.",
+  "classInProgress": "Im Unterricht",
+  "modal": {
+    "time": "⏰ Zeit",
+    "classroom": "📍 Raum",
+    "teacher": "👤 Lehrkraft",
+    "email": "📧 E-Mail",
+    "type": "📋 Typ",
+    "credits": "🎓 Credits",
+    "creditsUnit": "{{n}} Credits",
+    "close": "Schließen",
+    "dayPeriod": "Einheit {{period}} ・ {{timeRange}}"
+  }
+}

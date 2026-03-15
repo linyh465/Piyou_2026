@@ -1,0 +1,32 @@
+{
+  "title": "タスク管理",
+  "addTask": "タスクを追加",
+  "editTask": "タスクを編集",
+  "taskTitlePlaceholder": "タスクのタイトル",
+  "taskDescPlaceholder": "説明（任意）",
+  "update": "更新",
+  "add": "追加",
+  "noTasks": "タスクなし",
+  "noTasksHint": "「追加」ボタンで最初のタスクを作成",
+  "completedCount": "{{done}}/{{total}} 完了",
+  "markDone": "完了にする",
+  "cancelDone": "未完了に戻す",
+  "filter": {
+    "all": "すべて",
+    "active": "進行中",
+    "done": "完了"
+  },
+  "category": {
+    "general": "一般",
+    "homework": "宿題",
+    "exam": "試験",
+    "project": "プロジェクト",
+    "personal": "個人"
+  },
+  "priority": {
+    "normal": "普通",
+    "high": "重要",
+    "urgent": "緊急",
+    "critical": "最優先"
+  }
+}

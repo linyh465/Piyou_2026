@@ -1,0 +1,28 @@
+{
+  "title": "Impostazioni",
+  "account": "Account",
+  "appearance": "Aspetto",
+  "notifications": "Notifiche",
+  "about": "Informazioni",
+  "language": "Lingua",
+  "syncPortal": "Sincronizza dati universitari",
+  "syncPortalDesc": "Sync portal data",
+  "signOut": "Disconnetti e cancella dati",
+  "signOutDesc": "Sign out & Clear Data",
+  "themeMode": "Modalità tema",
+  "theme": {
+    "light": "Chiaro",
+    "dark": "Scuro",
+    "system": "Sistema"
+  },
+  "colorTheme": "Schema colori",
+  "busAlerts": "Avvisi arrivo autobus",
+  "busAlertsDesc": "Bus arrival alerts",
+  "taskReminders": "Promemoria scadenze attività",
+  "taskRemindersDesc": "Task deadline reminders",
+  "version": "Versione",
+  "confirmLogoutTitle": "Conferma disconnessione",
+  "confirmLogoutDesc": "Questa operazione eliminerà tutti i dati universitari sincronizzati (orario, voti, ecc.) e ti disconnetterà. Continuare?",
+  "syncModalTitle": "Sincronizza dati universitari",
+  "syncModalBody": "Inserisci le credenziali del portale per scaricare l'orario e i voti più recenti sul dispositivo."
+}

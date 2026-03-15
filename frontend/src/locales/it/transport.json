@@ -1,0 +1,32 @@
+{
+  "title": "Autobus",
+  "subtitle": "Informazioni arrivi in tempo reale",
+  "updatedAt": "Aggiornato {{time}}",
+  "swipeHint": "Scorri per cambiare direzione",
+  "stopOverview": "Tutte le fermate",
+  "busesRunning": "🚌 {{count}} autobus in servizio",
+  "stopsArriving": "{{count}} fermata/e in arrivo",
+  "totalStops": "{{count}} fermate totali",
+  "outbound": "Andata",
+  "inbound": "Ritorno",
+  "toDestination": "Verso {{dest}}",
+  "noStopData": "Nessun dato per questa linea",
+  "loadingOrNotOperating": "Caricamento o non in servizio oggi",
+  "autoUpdateBadge": "🕐 Aggiornamento auto ogni 2 min",
+  "tdxBadge": "📊 Dati in tempo reale TDX",
+  "loadingBadge": "⏳ Caricamento...",
+  "refreshCooldown": "Attendi {{s}} sec",
+  "stopSequence": "Fermata {{n}}",
+  "dataSource": "Fonte dati: TDX Servizio scambio dati trasporti (ETA + RealTimeNearStop + StopOfRoute)",
+  "status": {
+    "notDeparted": "Non ancora partito",
+    "noStop": "Non si ferma",
+    "lastPassed": "Ultimo passato",
+    "notOperating": "Non in servizio oggi",
+    "arriving": "In arrivo",
+    "departed": "Partito",
+    "approaching": "Quasi arrivato",
+    "minutesUnit": "{{min}} min",
+    "secondsUnit": "{{sec}} sec"
+  }
+}

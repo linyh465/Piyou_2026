@@ -99,7 +99,6 @@ describe('Settings Page', () => {
       </MemoryRouter>
     );
     expect(screen.getByText('系統設定')).toBeInTheDocument();
-    expect(screen.getByText('Settings')).toBeInTheDocument();
   });
 
   it('renders account section', () => {
@@ -118,9 +117,9 @@ describe('Settings Page', () => {
         <Settings />
       </MemoryRouter>
     );
-    expect(screen.getByText('淺色 Light')).toBeInTheDocument();
-    expect(screen.getByText('深色 Dark')).toBeInTheDocument();
-    expect(screen.getByText('系統 System')).toBeInTheDocument();
+    expect(screen.getByText('淺色')).toBeInTheDocument();
+    expect(screen.getByText('深色')).toBeInTheDocument();
+    expect(screen.getByText('系統')).toBeInTheDocument();
   });
 
   it('renders notification toggles', () => {

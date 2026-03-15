@@ -1,0 +1,15 @@
+{
+  "title": "Grades",
+  "overallGpa": "Cumulative GPA",
+  "classRank": "Class Rank",
+  "deptRank": "Dept. Rank",
+  "gradeRankTitle": "Rankings",
+  "courseGrades": "Course Grades",
+  "average": "Avg {{avg}}",
+  "credits": "{{n}} credits",
+  "noGrades": "No grade data",
+  "noGradesHint": "Please log in to fetch grades",
+  "unnamed": "Unnamed",
+  "clearConfirm": "Are you sure you want to clear grade data?",
+  "cooldownWarning": "⚠️ Cooldown: {{mins}} min until next sync is available."
+}

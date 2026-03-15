@@ -5,6 +5,7 @@
  */
 import '@testing-library/jest-dom';
 import { vi } from 'vitest';
+import '../i18n/index.js'; // 初始化 i18n，確保 useTranslation() 可回傳翻譯值
 
 // Mock window.matchMedia (jsdom 不支援)
 Object.defineProperty(window, 'matchMedia', {

@@ -1,0 +1,16 @@
+{
+  "home": "홈",
+  "tasks": "할 일",
+  "timetable": "시간표",
+  "grades": "성적",
+  "transport": "교통",
+  "library": "도서관",
+  "settings": "설정",
+  "overview": "개요",
+  "school": "학교",
+  "life": "생활",
+  "schoolCategory": "학교",
+  "back": "뒤로",
+  "syncedStatus": "캠퍼스 데이터 동기화됨",
+  "notSyncedStatus": "캠퍼스 데이터 미동기화"
+}

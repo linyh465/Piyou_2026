@@ -1,0 +1,38 @@
+{
+  "title": "도서관",
+  "tabs": {
+    "loans": "현재 대출",
+    "reserves": "예약",
+    "history": "대출 이력"
+  },
+  "currentLoans": "현재 대출",
+  "reservations": "예약",
+  "borrowHistory": "대출 이력",
+  "loansOverview": "📚 대출 개요",
+  "borrowing": "대출 중",
+  "overdue": "연체 중",
+  "dueSoon": "반납 기한 임박",
+  "reserving": "예약 중",
+  "queuePosition": "{{n}}번째 순위",
+  "renewCount": "{{n}}회 연장",
+  "overdueBooksAlert": "⚠️ {{count}}권 연체 중",
+  "dueDate": "반납 기한 {{date}}",
+  "dueSoonAlert": "📅 {{count}}권이 7일 이내 반납 기한",
+  "countBooks": "{{n}}권",
+  "countRecords": "{{n}}건",
+  "noBooksLoaned": "현재 대출 중인 책이 없습니다",
+  "goToBorrow": "도서관에 가서 책을 빌려보세요",
+  "noReservations": "예약이 없습니다",
+  "reservationsHint": "예약한 책이 여기에 표시됩니다",
+  "noHistory": "대출 이력 없음",
+  "historyHint": "이전에 빌린 책이 여기에 표시됩니다",
+  "noData": "도서관 데이터 없음",
+  "loginHint": "대출 데이터를 동기화하려면 로그인하세요",
+  "clearConfirm": "도서관 데이터를 삭제하시겠습니까?",
+  "dueDateStatus": {
+    "overdue": "연체 중 ({{date}})",
+    "today": "오늘 반납",
+    "tomorrow": "내일 반납",
+    "daysLater": "{{n}}일 후 반납"
+  }
+}

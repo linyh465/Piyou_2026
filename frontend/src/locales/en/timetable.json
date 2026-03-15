@@ -1,0 +1,26 @@
+{
+  "title": "Timetable",
+  "weekView": "Weekly",
+  "todayView": "Today",
+  "timeHeader": "Time",
+  "days": ["Mon", "Tue", "Wed", "Thu", "Fri"],
+  "noClassesToday": "No classes today 🎉",
+  "enjoyRest": "Enjoy your day off",
+  "totalCourses": "{{count}} courses, {{periods}} periods this semester",
+  "requestTimeout": "Request timed out",
+  "clearData": "Clear Data",
+  "clearConfirm": "Are you sure you want to clear timetable data?",
+  "cooldownWarning": "⚠️ Cooldown: {{mins}} min until next sync is available.",
+  "classInProgress": "In Class",
+  "modal": {
+    "time": "⏰ Time",
+    "classroom": "📍 Classroom",
+    "teacher": "👤 Teacher",
+    "email": "📧 Email",
+    "type": "📋 Type",
+    "credits": "🎓 Credits",
+    "creditsUnit": "{{n}} credits",
+    "close": "Close",
+    "dayPeriod": "Period {{period}} ・ {{timeRange}}"
+  }
+}

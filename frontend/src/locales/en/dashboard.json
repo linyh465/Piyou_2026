@@ -1,0 +1,18 @@
+{
+  "title": "Today",
+  "classInProgress": "In Class",
+  "remaining": "{{min}} min remaining",
+  "nextClass": "Next",
+  "minutesUntil": "in {{min}} min",
+  "noMoreClasses": "No more classes today",
+  "restWell": "Enjoy your free time",
+  "locationUnset": "No location",
+  "todos": "To-Do",
+  "allDone": "All tasks completed",
+  "overdue": "Overdue",
+  "libraryLoans": "Library Loans",
+  "borrowingCount": "{{count}} book(s) borrowed",
+  "overdueCount": "{{count}} book(s) overdue",
+  "dueSoonCount": "{{count}} book(s) due soon",
+  "loanStatusNormal": "All loans in good standing"
+}

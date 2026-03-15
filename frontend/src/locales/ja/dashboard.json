@@ -1,0 +1,18 @@
+{
+  "title": "今日",
+  "classInProgress": "授業中",
+  "remaining": "残り{{min}}分",
+  "nextClass": "次の授業",
+  "minutesUntil": "{{min}}分後",
+  "noMoreClasses": "今日の授業はもうありません",
+  "restWell": "ゆっくり休んでください",
+  "locationUnset": "場所未定",
+  "todos": "やること",
+  "allDone": "すべてのタスク完了",
+  "overdue": "期限切れ",
+  "libraryLoans": "図書館の貸出",
+  "borrowingCount": "{{count}}冊貸出中",
+  "overdueCount": "{{count}}冊延滞中",
+  "dueSoonCount": "{{count}}冊もうすぐ返却期限",
+  "loanStatusNormal": "貸出状況は正常です"
+}

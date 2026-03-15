@@ -7,6 +7,7 @@
  * RWD: mobile stacked cards, desktop wide cards.
  */
 import { useState, useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import useLibraryStore from '../stores/libraryStore';
 import { IconBook, IconRefresh, IconTrash, IconClock, IconCheckCircle, IconStar, IconUser, IconDotsVertical } from '../components/Icons';
 import SyncLoginModal from '../components/SyncLoginModal';
@@ -24,19 +25,20 @@ function dueDateColor(book) {
 }
 
 /** 到期日文字 / Due date display text */
-function dueDateText(book) {
+function dueDateText(book, t) {
     if (!book.due_date) return '--';
-    if (book.is_overdue) return `已逾期 (${book.due_date})`;
+    if (book.is_overdue) return t('dueDateStatus.overdue', { date: book.due_date });
     const now = new Date();
     const due = new Date(book.due_date);
     const days = Math.ceil((due - now) / (1000 * 60 * 60 * 24));
-    if (days <= 0) return `今日到期`;
-    if (days === 1) return `明日到期`;
-    return `${days} 天後到期`;
+    if (days <= 0) return t('dueDateStatus.today');
+    if (days === 1) return t('dueDateStatus.tomorrow');
+    return t('dueDateStatus.daysLater', { n: days });
 }
 
 /** 借閱書籍卡片 / Loan Book Card */
 function LoanCard({ book }) {
+    const { t } = useTranslation('library');
     return (
         <div style={{
             display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between',
@@ -56,7 +58,7 @@ function LoanCard({ book }) {
                 }}>
                     {book.author && <span>{book.author}</span>}
                     {book.location && <span>📍 {book.location}</span>}
-                    {book.renew_count != null && <span>續借 {book.renew_count} 次</span>}
+                    {book.renew_count != null && <span>{t('renewCount', { n: book.renew_count })}</span>}
                 </div>
             </div>
             <div style={{ textAlign: 'right', flexShrink: 0 }}>
@@ -65,7 +67,7 @@ function LoanCard({ book }) {
                     color: dueDateColor(book),
                     whiteSpace: 'nowrap',
                 }}>
-                    {dueDateText(book)}
+                    {dueDateText(book, t)}
                 </p>
                 <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
                     {book.due_date || ''}
@@ -77,6 +79,7 @@ function LoanCard({ book }) {
 
 /** 預約書籍卡片 / Reservation Card */
 function ReserveCard({ book }) {
+    const { t } = useTranslation('library');
     return (
         <div style={{
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -103,7 +106,7 @@ function ReserveCard({ book }) {
                     <span className="badge" style={{
                         background: 'var(--color-brand-subtle)', color: 'var(--color-brand)', fontWeight: 600,
                     }}>
-                        第 {book.queue_position} 順位
+                        {t('queuePosition', { n: book.queue_position })}
                     </span>
                 )}
                 {book.status && (
@@ -143,14 +146,22 @@ function HistoryCard({ book }) {
     );
 }
 
-/** 標籤切換 / Tab buttons */
-const TABS = [
-    { key: 'loans', label: '當前借閱', icon: IconBook },
-    { key: 'reserves', label: '預約紀錄', icon: IconClock },
-    { key: 'history', label: '借閱歷史', icon: IconCheckCircle },
-];
+/** 空資料狀態 / Empty State */
+function EmptyState({ icon: Icon, title, subtitle }) {
+    return (
+        <div className="card" style={{ textAlign: 'center', padding: '40px 20px' }}>
+            <Icon size={36} style={{ color: 'var(--text-muted)', margin: '0 auto 16px' }} />
+            <p style={{ color: 'var(--text-secondary)', fontSize: '15px' }}>{title}</p>
+            <p style={{ fontSize: '13px', marginTop: '6px', color: 'var(--text-muted)' }}>
+                {subtitle}
+            </p>
+        </div>
+    );
+}
 
 export default function Library() {
+    const { t } = useTranslation('library');
+    const { t: tCommon } = useTranslation('common');
     const {
         loans, reserves, history,
         isLoading, error,
@@ -162,6 +173,12 @@ export default function Library() {
     const [showMenu, setShowMenu] = useState(false);
     const hasFetched = useRef(false);
     const menuRef = useRef(null);
+
+    const tabs = [
+        { key: 'loans', label: t('tabs.loans'), icon: IconBook },
+        { key: 'reserves', label: t('tabs.reserves'), icon: IconClock },
+        { key: 'history', label: t('tabs.history'), icon: IconCheckCircle },
+    ];
 
     useEffect(() => {
         if (!showMenu) return;
@@ -202,56 +219,53 @@ export default function Library() {
             <div className="page-header">
                 <div className="page-title-group">
                     <IconBook size={22} style={{ color: 'var(--text-muted)' }} />
-                    <h2 className="page-title">圖書館</h2>
-                    <span className="page-subtitle">Library</span>
+                    <h2 className="page-title">{t('title')}</h2>
                 </div>
                 <div className="page-menu-wrapper" ref={menuRef}>
-                    {/* 桌面：直接顯示按鈕 */}
                     <div className="page-header-actions">
                         <button
                             onClick={() => setShowSyncModal(true)}
                             className="btn btn-soft"
                             style={{ fontSize: '13px', display: 'flex', alignItems: 'center', gap: '4px' }}
                         >
-                            <IconUser size={14} /> 一鍵登入
+                            <IconUser size={14} /> {tCommon('signIn')}
                         </button>
                         <button
                             onClick={fetchLibrary}
                             disabled={isLoading}
                             className="btn btn-ghost"
                             style={{ fontSize: '13px' }}
-                            aria-label="重新整理圖書館資料"
+                            aria-label={tCommon('refresh')}
                         >
                             <IconRefresh size={15} className={isLoading ? 'animate-spin' : ''} />
-                            {isLoading ? '載入中...' : '重新整理'}
+                            {isLoading ? tCommon('loading') : tCommon('refresh')}
                         </button>
                         {(loans.length > 0 || reserves.length > 0 || history.length > 0) && (
                             <button
-                                onClick={() => { if (window.confirm('確定要清除圖書館資料嗎？')) clearLibraryData(); }}
+                                onClick={() => { if (window.confirm(t('clearConfirm'))) clearLibraryData(); }}
                                 className="btn btn-ghost"
                                 style={{ fontSize: '13px', color: 'var(--color-danger)' }}
-                                aria-label="清除圖書館資料"
+                                aria-label={tCommon('clear')}
                             >
                                 <IconTrash size={15} />
-                                清除
+                                {tCommon('clear')}
                             </button>
                         )}
                     </div>
-                    {/* 手機：收納按鈕 */}
-                    <button className="page-header-menu-btn" onClick={() => setShowMenu(v => !v)} aria-label="更多操作">
+                    <button className="page-header-menu-btn" onClick={() => setShowMenu(v => !v)} aria-label={tCommon('moreActions')}>
                         <IconDotsVertical size={18} />
                     </button>
                     {showMenu && (
                         <div className="page-menu-dropdown">
                             <button onClick={() => { setShowSyncModal(true); setShowMenu(false); }} className="btn btn-soft">
-                                <IconUser size={14} /> 一鍵登入
+                                <IconUser size={14} /> {tCommon('signIn')}
                             </button>
                             <button onClick={() => { fetchLibrary(); setShowMenu(false); }} disabled={isLoading} className="btn btn-ghost">
-                                <IconRefresh size={14} className={isLoading ? 'animate-spin' : ''} /> 重新整理
+                                <IconRefresh size={14} className={isLoading ? 'animate-spin' : ''} /> {tCommon('refresh')}
                             </button>
                             {(loans.length > 0 || reserves.length > 0 || history.length > 0) && (
-                                <button onClick={() => { setShowMenu(false); if (window.confirm('確定要清除圖書館資料嗎？')) clearLibraryData(); }} className="btn btn-ghost" style={{ color: 'var(--color-danger)' }}>
-                                    <IconTrash size={14} /> 清除資料
+                                <button onClick={() => { setShowMenu(false); if (window.confirm(t('clearConfirm'))) clearLibraryData(); }} className="btn btn-ghost" style={{ color: 'var(--color-danger)' }}>
+                                    <IconTrash size={14} /> {tCommon('clear')}
                                 </button>
                             )}
                         </div>
@@ -274,11 +288,11 @@ export default function Library() {
                     borderLeft: '4px solid var(--color-danger)',
                 }}>
                     <p style={{ fontSize: '14px', fontWeight: 600, color: 'var(--color-danger)', marginBottom: '6px' }}>
-                        ⚠️ {overdueBooks.length} 本書已逾期
+                        {t('overdueBooksAlert', { count: overdueBooks.length })}
                     </p>
                     {overdueBooks.map((b, i) => (
                         <p key={i} style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '2px' }}>
-                            • {b.title} — 到期日 {b.due_date}
+                            • {b.title} — {t('dueDate', { date: b.due_date })}
                         </p>
                     ))}
                 </div>
@@ -292,11 +306,11 @@ export default function Library() {
                     borderLeft: '4px solid var(--color-warning)',
                 }}>
                     <p style={{ fontSize: '14px', fontWeight: 600, color: 'var(--color-warning)', marginBottom: '6px' }}>
-                        📅 {dueSoonBooks.length} 本書即將到期（7 日內）
+                        {t('dueSoonAlert', { count: dueSoonBooks.length })}
                     </p>
                     {dueSoonBooks.map((b, i) => (
                         <p key={i} style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '2px' }}>
-                            • {b.title} — {dueDateText(b)}
+                            • {b.title} — {dueDateText(b, t)}
                         </p>
                     ))}
                 </div>
@@ -311,29 +325,29 @@ export default function Library() {
                         fontSize: '12px', fontWeight: 600, color: 'var(--color-brand)',
                         marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.05em',
                     }}>
-                        📚 借閱總覽
+                        {t('loansOverview')}
                     </p>
                     <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
                         <div>
                             <p style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text)' }}>{loans.length}</p>
-                            <p style={{ fontSize: '11px', color: 'var(--text-muted)' }}>借閱中</p>
+                            <p style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{t('borrowing')}</p>
                         </div>
                         {overdueBooks.length > 0 && (
                             <div>
                                 <p style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--color-danger)' }}>{overdueBooks.length}</p>
-                                <p style={{ fontSize: '11px', color: 'var(--text-muted)' }}>已逾期</p>
+                                <p style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{t('overdue')}</p>
                             </div>
                         )}
                         {dueSoonBooks.length > 0 && (
                             <div>
                                 <p style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--color-warning)' }}>{dueSoonBooks.length}</p>
-                                <p style={{ fontSize: '11px', color: 'var(--text-muted)' }}>即將到期</p>
+                                <p style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{t('dueSoon')}</p>
                             </div>
                         )}
                         {reserves.length > 0 && (
                             <div>
                                 <p style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text)' }}>{reserves.length}</p>
-                                <p style={{ fontSize: '11px', color: 'var(--text-muted)' }}>預約中</p>
+                                <p style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{t('reserving')}</p>
                             </div>
                         )}
                     </div>
@@ -342,10 +356,8 @@ export default function Library() {
 
             {/* 標籤切換 / Tab Navigation */}
             {!isLoading && (loans.length > 0 || reserves.length > 0 || history.length > 0) && (
-                <div style={{
-                    display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '4px',
-                }}>
-                    {TABS.map(tab => (
+                <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '4px' }}>
+                    {tabs.map(tab => (
                         <button
                             key={tab.key}
                             onClick={() => setActiveTab(tab.key)}
@@ -394,17 +406,15 @@ export default function Library() {
                 <div className="card-stack">
                     {loans.length > 0 ? (
                         <div className="card">
-                            <div style={{
-                                display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px',
-                            }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
                                 <IconBook size={18} style={{ color: 'var(--color-brand)' }} />
                                 <h3 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text)' }}>
-                                    當前借閱
+                                    {t('currentLoans')}
                                 </h3>
                                 <span className="badge" style={{
                                     background: 'var(--color-brand-subtle)', color: 'var(--color-brand)', fontWeight: 700,
                                 }}>
-                                    {loans.length} 本
+                                    {t('countBooks', { n: loans.length })}
                                 </span>
                             </div>
                             <div style={{ display: 'flex', flexDirection: 'column' }}>
@@ -414,7 +424,7 @@ export default function Library() {
                             </div>
                         </div>
                     ) : (
-                        <EmptyState icon={IconBook} title="沒有借閱中的書籍" subtitle="前往蓋夏圖書館借閱書籍吧" />
+                        <EmptyState icon={IconBook} title={t('noBooksLoaned')} subtitle={t('goToBorrow')} />
                     )}
                 </div>
             )}
@@ -424,17 +434,15 @@ export default function Library() {
                 <div className="card-stack">
                     {reserves.length > 0 ? (
                         <div className="card">
-                            <div style={{
-                                display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px',
-                            }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
                                 <IconClock size={18} style={{ color: 'var(--color-brand)' }} />
                                 <h3 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text)' }}>
-                                    預約紀錄
+                                    {t('reservations')}
                                 </h3>
                                 <span className="badge" style={{
                                     background: 'var(--color-brand-subtle)', color: 'var(--color-brand)', fontWeight: 700,
                                 }}>
-                                    {reserves.length} 筆
+                                    {t('countRecords', { n: reserves.length })}
                                 </span>
                             </div>
                             <div style={{ display: 'flex', flexDirection: 'column' }}>
@@ -444,7 +452,7 @@ export default function Library() {
                             </div>
                         </div>
                     ) : (
-                        <EmptyState icon={IconClock} title="沒有預約紀錄" subtitle="預約的書籍會顯示在這裡" />
+                        <EmptyState icon={IconClock} title={t('noReservations')} subtitle={t('reservationsHint')} />
                     )}
                 </div>
             )}
@@ -454,17 +462,15 @@ export default function Library() {
                 <div className="card-stack">
                     {history.length > 0 ? (
                         <div className="card">
-                            <div style={{
-                                display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px',
-                            }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
                                 <IconCheckCircle size={18} style={{ color: 'var(--color-brand)' }} />
                                 <h3 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text)' }}>
-                                    借閱歷史
+                                    {t('borrowHistory')}
                                 </h3>
                                 <span className="badge" style={{
                                     background: 'var(--color-brand-subtle)', color: 'var(--color-brand)', fontWeight: 700,
                                 }}>
-                                    {history.length} 筆
+                                    {t('countRecords', { n: history.length })}
                                 </span>
                             </div>
                             <div style={{ display: 'flex', flexDirection: 'column' }}>
@@ -474,31 +480,18 @@ export default function Library() {
                             </div>
                         </div>
                     ) : (
-                        <EmptyState icon={IconCheckCircle} title="沒有借閱歷史" subtitle="借閱過的書籍會顯示在這裡" />
+                        <EmptyState icon={IconCheckCircle} title={t('noHistory')} subtitle={t('historyHint')} />
                     )}
                 </div>
             )}
 
             {/* 初始空狀態 / Initial empty state */}
             {!isLoading && loans.length === 0 && reserves.length === 0 && history.length === 0 && !error && (
-                <EmptyState icon={IconBook} title="尚無圖書館資料" subtitle="請先登入以同步借閱資料" />
+                <EmptyState icon={IconBook} title={t('noData')} subtitle={t('loginHint')} />
             )}
 
             {/* 同步登入 Modal */}
             <SyncLoginModal show={showSyncModal} onClose={() => setShowSyncModal(false)} />
-        </div>
-    );
-}
-
-/** 空資料狀態 / Empty State */
-function EmptyState({ icon: Icon, title, subtitle }) {
-    return (
-        <div className="card" style={{ textAlign: 'center', padding: '40px 20px' }}>
-            <Icon size={36} style={{ color: 'var(--text-muted)', margin: '0 auto 16px' }} />
-            <p style={{ color: 'var(--text-secondary)', fontSize: '15px' }}>{title}</p>
-            <p style={{ fontSize: '13px', marginTop: '6px', color: 'var(--text-muted)' }}>
-                {subtitle}
-            </p>
         </div>
     );
 }

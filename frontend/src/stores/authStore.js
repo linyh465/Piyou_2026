@@ -6,6 +6,7 @@
 import { create } from 'zustand';
 import { api } from '../services/apiClient';
 import secureStorage from '../services/secureStorage';
+import i18n from '../i18n/index';
 
 /**
  * 解碼 JWT payload 並檢查是否已過期
@@ -41,7 +42,7 @@ const useAuthStore = create((set, get) => ({
 
         const currentErrors = get().loginErrorCount;
         if (currentErrors >= 2) {
-            set({ isLoading: false, error: '登入錯誤次數過多，請稍後再試 / Too many failed attempts' });
+            set({ isLoading: false, error: i18n.t('common:loginErrorTooMany') });
             return false;
         }
         try {
@@ -69,7 +70,7 @@ const useAuthStore = create((set, get) => ({
 
             return true;
         } catch (err) {
-            const message = err.response?.data?.detail || '登入失敗，請確認帳號密碼 / Login failed, please check credentials';
+            const message = err.response?.data?.detail || i18n.t('common:loginFailed');
             const isCooldown = err.response?.status === 429;
             set((state) => ({
                 isLoading: false,

@@ -4,12 +4,14 @@
  * Reusable login & sync modal for Timetable, Grades, Library pages.
  */
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import useAuthStore from '../stores/authStore';
 import useTimetableStore from '../stores/timetableStore';
 import useTaskStore from '../stores/taskStore';
 import useLibraryStore from '../stores/libraryStore';
 
 export default function SyncLoginModal({ show, onClose }) {
+    const { t } = useTranslation('common');
     const { login, error, clearError } = useAuthStore();
     const {
         fetchTimetable, fetchGrades, canSync,
@@ -90,13 +92,13 @@ export default function SyncLoginModal({ show, onClose }) {
         >
             <div className="card" style={{ width: '100%', maxWidth: '400px' }}>
                 <h3 style={{ fontSize: '1.125rem', fontWeight: 700, color: 'var(--text)', marginBottom: '8px' }}>
-                    同步校園資料
+                    {t('syncPortalTitle')}
                 </h3>
                 <p style={{ fontSize: '14px', color: 'var(--text-muted)', marginBottom: '8px' }}>
-                    請輸入校務系統帳號密碼，以擷取最新課表、成績與圖書館資料至本機端。
+                    {t('syncPortalBody')}
                 </p>
                 <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '16px' }}>
-                    🔒 帳密不會被儲存，資料僅存於您的裝置。
+                    {t('syncSecureNote')}
                 </p>
 
                 {serverCooldown && !serverCooldown.allowed && (() => {
@@ -107,8 +109,8 @@ export default function SyncLoginModal({ show, onClose }) {
                             background: 'rgba(245,158,11,0.1)', color: 'var(--color-warning)', fontSize: '14px',
                         }}>
                             {serverCooldown.reason === 'locked'
-                                ? `🔒 同步錯誤過多，已暫時鎖定，請 ${mins} 分鐘後重試`
-                                : `⏳ 同步冷卻中，距離下次可同步還有 ${mins} 分鐘`}
+                                ? t('syncCooldownLocked', { mins })
+                                : t('syncCooldownWait', { mins })}
                         </div>
                     );
                 })()}
@@ -126,7 +128,7 @@ export default function SyncLoginModal({ show, onClose }) {
                         padding: '12px', borderRadius: '10px', marginBottom: '12px',
                         background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', fontSize: '14px',
                     }}>
-                        同步成功！
+                        {t('syncSuccess')}
                     </div>
                 )}
 
@@ -134,22 +136,22 @@ export default function SyncLoginModal({ show, onClose }) {
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                         <input
                             type="text"
-                            placeholder="學號 Student ID"
+                            placeholder={t('studentId')}
                             value={studentId}
                             onChange={(e) => setStudentId(e.target.value)}
                             className="input"
                             style={{ padding: '12px 16px', fontSize: '15px' }}
-                            aria-label="學號"
+                            aria-label={t('studentId')}
                             autoComplete="username"
                         />
                         <input
                             type="password"
-                            placeholder="密碼 Password"
+                            placeholder={t('password')}
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
                             className="input"
                             style={{ padding: '12px 16px', fontSize: '15px' }}
-                            aria-label="密碼"
+                            aria-label={t('password')}
                             autoComplete="current-password"
                         />
                     </div>
@@ -161,7 +163,7 @@ export default function SyncLoginModal({ show, onClose }) {
                             className="btn btn-ghost"
                             style={{ flex: 1, padding: '12px', fontSize: '15px' }}
                         >
-                            取消
+                            {t('cancel')}
                         </button>
                         <button
                             type="submit"
@@ -172,7 +174,7 @@ export default function SyncLoginModal({ show, onClose }) {
                                 opacity: (isSyncing || !studentId.trim() || !password.trim() || (serverCooldown && !serverCooldown.allowed)) ? 0.5 : 1,
                             }}
                         >
-                            {isSyncing ? '同步中...' : (serverCooldown && !serverCooldown.allowed) ? '暫不可用' : '同步'}
+                            {isSyncing ? t('syncing') : (serverCooldown && !serverCooldown.allowed) ? t('unavailable') : t('sync')}
                         </button>
                     </div>
                 </form>

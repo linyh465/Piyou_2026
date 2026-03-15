@@ -1,0 +1,38 @@
+{
+  "title": "Thư viện",
+  "tabs": {
+    "loans": "Đang mượn",
+    "reserves": "Đặt trước",
+    "history": "Lịch sử"
+  },
+  "currentLoans": "Đang mượn",
+  "reservations": "Đặt trước",
+  "borrowHistory": "Lịch sử mượn",
+  "loansOverview": "📚 Tổng quan mượn sách",
+  "borrowing": "Đang mượn",
+  "overdue": "Quá hạn",
+  "dueSoon": "Sắp đến hạn",
+  "reserving": "Đang đặt",
+  "queuePosition": "Thứ {{n}} trong hàng đợi",
+  "renewCount": "Đã gia hạn {{n}} lần",
+  "overdueBooksAlert": "⚠️ {{count}} cuốn quá hạn",
+  "dueDate": "Hạn trả {{date}}",
+  "dueSoonAlert": "📅 {{count}} cuốn đến hạn trong 7 ngày",
+  "countBooks": "{{n}} cuốn",
+  "countRecords": "{{n}} bản ghi",
+  "noBooksLoaned": "Không có sách đang mượn",
+  "goToBorrow": "Hãy đến thư viện để mượn sách",
+  "noReservations": "Không có đặt trước",
+  "reservationsHint": "Sách đặt trước sẽ hiển thị ở đây",
+  "noHistory": "Không có lịch sử mượn",
+  "historyHint": "Sách đã mượn trước đây sẽ hiển thị ở đây",
+  "noData": "Chưa có dữ liệu thư viện",
+  "loginHint": "Hãy đăng nhập để đồng bộ dữ liệu mượn sách",
+  "clearConfirm": "Bạn có chắc muốn xóa dữ liệu thư viện?",
+  "dueDateStatus": {
+    "overdue": "Quá hạn ({{date}})",
+    "today": "Hạn trả hôm nay",
+    "tomorrow": "Hạn trả ngày mai",
+    "daysLater": "Còn {{n}} ngày đến hạn"
+  }
+}

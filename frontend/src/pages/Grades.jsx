@@ -1,8 +1,8 @@
 /**
  * 成績頁面 / Grades Page — iOS 風格
- * 圓形 GPA 儀錶、排名進度條、課程成績列表
  */
 import { useState, useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import useTimetableStore from '../stores/timetableStore';
 import { IconChartBar, IconRefresh, IconBook, IconTrash, IconUser, IconDotsVertical } from '../components/Icons';
 import SyncLoginModal from '../components/SyncLoginModal';
@@ -42,7 +42,6 @@ function displayScore(course) {
     return '--';
 }
 
-// ── 圓形 GPA 儀錶 / Circular GPA Gauge ──
 function GpaGauge({ gpa, label }) {
     const numGpa = parseFloat(gpa) || 0;
     const ratio = Math.min(numGpa / 4.3, 1);
@@ -57,8 +56,7 @@ function GpaGauge({ gpa, label }) {
                 <circle
                     cx="60" cy="60" r="52" fill="none"
                     stroke={color} strokeWidth="8" strokeLinecap="round"
-                    strokeDasharray={circumference}
-                    strokeDashoffset={offset}
+                    strokeDasharray={circumference} strokeDashoffset={offset}
                     style={{ transform: 'rotate(-90deg)', transformOrigin: '50% 50%', transition: 'stroke-dashoffset 0.8s ease' }}
                 />
             </svg>
@@ -70,11 +68,10 @@ function GpaGauge({ gpa, label }) {
     );
 }
 
-// ── 排名進度條 / Rank Progress Bar ──
 function RankBar({ label, rank, total }) {
     if (!rank || !total) return null;
     const pct = ((rank / total) * 100).toFixed(1);
-    const fillPct = Math.min((1 - rank / total) * 100 + 5, 100); // 越前面越多
+    const fillPct = Math.min((1 - rank / total) * 100 + 5, 100);
     return (
         <div style={{ marginBottom: '12px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
@@ -92,6 +89,8 @@ function RankBar({ label, rank, total }) {
 }
 
 export default function Grades() {
+    const { t } = useTranslation('grades');
+    const { t: tCommon } = useTranslation('common');
     const { grades, isLoadingGrades, gradesError, fetchGrades, clearGradesData, canSync } = useTimetableStore();
     const [selectedSemester, setSelectedSemester] = useState(null);
     const [showSyncModal, setShowSyncModal] = useState(false);
@@ -107,21 +106,19 @@ export default function Grades() {
         return () => document.removeEventListener('mousedown', handler);
     }, [showMenu]);
 
-    // 預設選第一個學期
     const activeSemester = selectedSemester || (grades.length ? grades[0].name : null);
     const currentSem = grades.find(s => s.name === activeSemester) || grades[0];
 
     const handleClearGrades = async () => {
         const syncCheck = await canSync();
-        let msg = '確定要清除成績資料嗎？';
+        let msg = t('clearConfirm');
         if (!syncCheck.allowed) {
             const mins = Math.ceil((syncCheck.remainingMs || 0) / 60000);
-            msg += `\n\n⚠️ 冷卻時間: ${mins}分，需待冷卻結束後才可再次同步校園資料。`;
+            msg += `\n\n${t('cooldownWarning', { mins })}`;
         }
         if (window.confirm(msg)) clearGradesData();
     };
 
-    // 整體累計 GPA
     const overallStats = (() => {
         if (!grades.length) return null;
         const allNumeric = grades.flatMap(s => (s.courses || []).filter(isNumericCourse));
@@ -139,7 +136,6 @@ export default function Grades() {
     const semGpa = currentSem?.gpa ?? semStats.gpa;
     const semAvg = currentSem?.weighted_average ?? semStats.weightedAvg;
 
-    // 排名
     const classRank = currentSem?.class_rank ?? currentSem?.rank;
     const classTotal = currentSem?.class_total ?? 45;
     const deptRank = currentSem?.dept_rank;
@@ -147,14 +143,12 @@ export default function Grades() {
 
     return (
         <div className="section-stack animate-fade-in">
-            {/* 標題 */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <h1 className="dash-hero-title" style={{ paddingBottom: 0 }}>成績查詢</h1>
+                <h1 className="dash-hero-title" style={{ paddingBottom: 0 }}>{t('title')}</h1>
                 <div className="page-menu-wrapper" style={{ paddingTop: '6px' }} ref={menuRef}>
-                    {/* 桌面：直接顯示按鈕 */}
                     <div className="page-header-actions">
                         <button onClick={() => setShowSyncModal(true)} className="btn btn-soft" style={{ fontSize: '13px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                            <IconUser size={14} /> 一鍵登入
+                            <IconUser size={14} /> {tCommon('signIn')}
                         </button>
                         <button onClick={fetchGrades} disabled={isLoadingGrades} className="btn btn-ghost" style={{ fontSize: '13px' }}>
                             <IconRefresh size={15} className={isLoadingGrades ? 'animate-spin' : ''} />
@@ -165,21 +159,20 @@ export default function Grades() {
                             </button>
                         )}
                     </div>
-                    {/* 手機：收納按鈕 */}
-                    <button className="page-header-menu-btn" onClick={() => setShowMenu(v => !v)} aria-label="更多操作">
+                    <button className="page-header-menu-btn" onClick={() => setShowMenu(v => !v)} aria-label={tCommon('moreActions')}>
                         <IconDotsVertical size={18} />
                     </button>
                     {showMenu && (
                         <div className="page-menu-dropdown">
                             <button onClick={() => { setShowSyncModal(true); setShowMenu(false); }} className="btn btn-soft">
-                                <IconUser size={14} /> 一鍵登入
+                                <IconUser size={14} /> {tCommon('signIn')}
                             </button>
                             <button onClick={() => { fetchGrades(); setShowMenu(false); }} disabled={isLoadingGrades} className="btn btn-ghost">
-                                <IconRefresh size={14} className={isLoadingGrades ? 'animate-spin' : ''} /> 重新整理
+                                <IconRefresh size={14} className={isLoadingGrades ? 'animate-spin' : ''} /> {tCommon('refresh')}
                             </button>
                             {grades.length > 0 && (
                                 <button onClick={() => { handleClearGrades(); setShowMenu(false); }} className="btn btn-ghost" style={{ color: 'var(--color-danger)' }}>
-                                    <IconTrash size={14} /> 清除資料
+                                    <IconTrash size={14} /> {tCommon('clear')}
                                 </button>
                             )}
                         </div>
@@ -193,7 +186,6 @@ export default function Grades() {
                 </div>
             )}
 
-            {/* 學期選擇 */}
             {!isLoadingGrades && grades.length > 0 && (
                 <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px' }}>
                     {grades.map((s) => (
@@ -202,7 +194,7 @@ export default function Grades() {
                             onClick={() => setSelectedSemester(s.name)}
                             className={`grade-sem-tab ${activeSemester === s.name ? 'active' : ''}`}
                         >
-                            {s.name || '未命名'}
+                            {s.name || t('unnamed')}
                         </button>
                     ))}
                 </div>
@@ -215,19 +207,18 @@ export default function Grades() {
                 </div>
             ) : currentSem ? (
                 <>
-                    {/* GPA 與排名卡片 */}
                     <div className="card">
                         <div className="grade-overview">
-                            <GpaGauge gpa={overallStats?.gpa ?? semGpa} label="歷年 GPA" />
+                            <GpaGauge gpa={overallStats?.gpa ?? semGpa} label={t('overallGpa')} />
                             <div className="grade-rank-section">
                                 <div className="grade-rank-item">
-                                    <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>班級排名</span>
+                                    <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{t('classRank')}</span>
                                     <p style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text)' }}>
                                         {classRank ?? '--'}<span style={{ fontSize: '14px', color: 'var(--text-muted)', fontWeight: 400 }}>/ {classTotal}</span>
                                     </p>
                                 </div>
                                 <div className="grade-rank-item">
-                                    <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>系所排名</span>
+                                    <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{t('deptRank')}</span>
                                     <p style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text)' }}>
                                         {deptRank ?? '--'}<span style={{ fontSize: '14px', color: 'var(--text-muted)', fontWeight: 400 }}>/ {deptTotal}</span>
                                     </p>
@@ -236,28 +227,24 @@ export default function Grades() {
                         </div>
                     </div>
 
-                    {/* 成績排名進度條 */}
                     <div className="card">
-                        <h3 style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '16px', color: 'var(--text)' }}>成績排名</h3>
-                        <RankBar label="班級排名" rank={classRank} total={classTotal} />
-                        <RankBar label="系所排名" rank={deptRank} total={deptTotal} />
+                        <h3 style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '16px', color: 'var(--text)' }}>{t('gradeRankTitle')}</h3>
+                        <RankBar label={t('classRank')} rank={classRank} total={classTotal} />
+                        <RankBar label={t('deptRank')} rank={deptRank} total={deptTotal} />
                     </div>
 
-                    {/* 修課成績列表 */}
                     <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px 8px' }}>
-                            <h3 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text)' }}>修課成績</h3>
+                            <h3 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text)' }}>{t('courseGrades')}</h3>
                             {semAvg && (
-                                <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-success)' }}>平均 {semAvg}</span>
+                                <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-success)' }}>{t('average', { avg: semAvg })}</span>
                             )}
                         </div>
                         {(currentSem.courses || []).map((course, ci) => (
                             <div
                                 key={ci}
                                 className="grade-course-row"
-                                style={{
-                                    borderBottom: ci < (currentSem.courses || []).length - 1 ? '1px solid var(--border-light)' : 'none',
-                                }}
+                                style={{ borderBottom: ci < (currentSem.courses || []).length - 1 ? '1px solid var(--border-light)' : 'none' }}
                             >
                                 <div style={{ flex: 1, minWidth: 0 }}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -271,7 +258,7 @@ export default function Grades() {
                                         )}
                                     </div>
                                     <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>
-                                        {course.credits || 0} 學分
+                                        {t('credits', { n: course.credits || 0 })}
                                     </p>
                                 </div>
                                 <div style={{ textAlign: 'right', flexShrink: 0 }}>
@@ -293,12 +280,11 @@ export default function Grades() {
             ) : (
                 <div className="card" style={{ textAlign: 'center', padding: '40px 20px' }}>
                     <IconChartBar size={36} style={{ color: 'var(--text-muted)', margin: '0 auto 16px' }} />
-                    <p style={{ color: 'var(--text-secondary)', fontSize: '15px' }}>尚無成績資料</p>
-                    <p style={{ fontSize: '13px', marginTop: '6px', color: 'var(--text-muted)' }}>請先登入以取得成績</p>
+                    <p style={{ color: 'var(--text-secondary)', fontSize: '15px' }}>{t('noGrades')}</p>
+                    <p style={{ fontSize: '13px', marginTop: '6px', color: 'var(--text-muted)' }}>{t('noGradesHint')}</p>
                 </div>
             )}
 
-            {/* 同步登入 Modal */}
             <SyncLoginModal show={showSyncModal} onClose={() => setShowSyncModal(false)} />
         </div>
     );

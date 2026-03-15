@@ -47,7 +47,6 @@ describe('Tasks Page', () => {
       </MemoryRouter>
     );
     expect(screen.getByText('任務管理')).toBeInTheDocument();
-    expect(screen.getByText('Tasks')).toBeInTheDocument();
   });
 
   it('renders task items', () => {
@@ -66,9 +65,9 @@ describe('Tasks Page', () => {
         <Tasks />
       </MemoryRouter>
     );
-    expect(screen.getByText('全部 All')).toBeInTheDocument();
-    expect(screen.getByText('進行中 Active')).toBeInTheDocument();
-    expect(screen.getByText('已完成 Done')).toBeInTheDocument();
+    expect(screen.getByText('全部')).toBeInTheDocument();
+    expect(screen.getByText('進行中')).toBeInTheDocument();
+    expect(screen.getByText('已完成')).toBeInTheDocument();
   });
 
   it('renders new task and export buttons', () => {
@@ -78,6 +77,6 @@ describe('Tasks Page', () => {
       </MemoryRouter>
     );
     expect(screen.getByRole('button', { name: '新增任務' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: '匯出為 Markdown' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '匯出 Markdown' })).toBeInTheDocument();
   });
 });

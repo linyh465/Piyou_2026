@@ -1,0 +1,18 @@
+{
+  "title": "Oggi",
+  "classInProgress": "Lezione in corso",
+  "remaining": "{{min}} min rimanenti",
+  "nextClass": "Prossima lezione",
+  "minutesUntil": "tra {{min}} min",
+  "noMoreClasses": "Nessun'altra lezione oggi",
+  "restWell": "Goditi il tempo libero",
+  "locationUnset": "Aula non specificata",
+  "todos": "Attività",
+  "allDone": "Tutte le attività completate",
+  "overdue": "Scaduto",
+  "libraryLoans": "Prestiti biblioteca",
+  "borrowingCount": "{{count}} libro/i in prestito",
+  "overdueCount": "{{count}} libro/i scaduto/i",
+  "dueSoonCount": "{{count}} libro/i in scadenza",
+  "loanStatusNormal": "Tutti i prestiti in regola"
+}

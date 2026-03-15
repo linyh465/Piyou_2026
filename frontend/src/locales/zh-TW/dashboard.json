@@ -1,0 +1,18 @@
+{
+  "title": "今天",
+  "classInProgress": "上課中",
+  "remaining": "剩餘 {{min}} 分鐘",
+  "nextClass": "下一堂",
+  "minutesUntil": "{{min}} 分鐘後",
+  "noMoreClasses": "今天沒有更多課程了",
+  "restWell": "好好休息吧",
+  "locationUnset": "未指定",
+  "todos": "待辦事項",
+  "allDone": "所有任務已完成",
+  "overdue": "已逾期",
+  "libraryLoans": "圖書館借閱",
+  "borrowingCount": "{{count}} 本借閱中",
+  "overdueCount": "{{count}} 本已逾期",
+  "dueSoonCount": "{{count}} 本即將到期",
+  "loanStatusNormal": "借閱狀態正常"
+}

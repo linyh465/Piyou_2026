@@ -1,0 +1,38 @@
+{
+  "title": "圖書館",
+  "tabs": {
+    "loans": "當前借閱",
+    "reserves": "預約紀錄",
+    "history": "借閱歷史"
+  },
+  "currentLoans": "當前借閱",
+  "reservations": "預約紀錄",
+  "borrowHistory": "借閱歷史",
+  "loansOverview": "📚 借閱總覽",
+  "borrowing": "借閱中",
+  "overdue": "已逾期",
+  "dueSoon": "即將到期",
+  "reserving": "預約中",
+  "queuePosition": "第 {{n}} 順位",
+  "renewCount": "續借 {{n}} 次",
+  "overdueBooksAlert": "⚠️ {{count}} 本書已逾期",
+  "dueDate": "到期日 {{date}}",
+  "dueSoonAlert": "📅 {{count}} 本書即將到期（7 日內）",
+  "countBooks": "{{n}} 本",
+  "countRecords": "{{n}} 筆",
+  "noBooksLoaned": "沒有借閱中的書籍",
+  "goToBorrow": "前往蓋夏圖書館借閱書籍吧",
+  "noReservations": "沒有預約紀錄",
+  "reservationsHint": "預約的書籍會顯示在這裡",
+  "noHistory": "沒有借閱歷史",
+  "historyHint": "借閱過的書籍會顯示在這裡",
+  "noData": "尚無圖書館資料",
+  "loginHint": "請先登入以同步借閱資料",
+  "clearConfirm": "確定要清除圖書館資料嗎？",
+  "dueDateStatus": {
+    "overdue": "已逾期 ({{date}})",
+    "today": "今日到期",
+    "tomorrow": "明日到期",
+    "daysLater": "{{n}} 天後到期"
+  }
+}

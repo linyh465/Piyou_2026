@@ -4,6 +4,7 @@
  * 顯示整條路線所有站牌的即時到站資訊
  */
 import { useEffect, useState, useMemo, useRef, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import useThemeStore from '../stores/themeStore';
 import useBusStore from '../stores/busStore';
 import { busRoutes } from '../data/transportData';
@@ -34,27 +35,29 @@ function getStatusBg(arrival) {
     return 'transparent';
 }
 
-// ── 格式化到站時間（顯示分秒）──
-function formatArrivalTime(arrival) {
-    if (!arrival) return { main: '--', sub: '' };
+// ── 格式化到站時間（顯示分秒）── accepts t for translation
+function formatArrivalTime(arrival, t) {
+    if (!arrival) return { main: '--', sub: '', isText: false };
     const code = arrival.stopStatusCode;
-    if (code === 1) return { main: '尚未發車', sub: '' };
-    if (code === 2) return { main: '交管不停靠', sub: '' };
-    if (code === 3) return { main: '末班已過', sub: '' };
-    if (code === 4) return { main: '今日未營運', sub: '' };
+    if (code === 1) return { main: t('status.notDeparted'), sub: '', isText: true };
+    if (code === 2) return { main: t('status.noStop'), sub: '', isText: true };
+    if (code === 3) return { main: t('status.lastPassed'), sub: '', isText: true };
+    if (code === 4) return { main: t('status.notOperating'), sub: '', isText: true };
 
     const secs = arrival.estimatedSeconds;
-    if (secs === null || secs === undefined) return { main: '--', sub: '' };
-    if (secs <= 60) return { main: '進站中', sub: '' };
+    if (secs === null || secs === undefined) return { main: '--', sub: '', isText: false };
+    if (secs <= 60) return { main: t('status.arriving'), sub: '', isText: true };
     const mins = Math.floor(secs / 60);
     const remainSecs = secs % 60;
     return {
-        main: `${mins} 分`,
-        sub: remainSecs > 0 ? `${remainSecs} 秒` : '',
+        main: t('status.minutesUnit', { min: mins }),
+        sub: remainSecs > 0 ? t('status.secondsUnit', { sec: remainSecs }) : '',
+        isText: false,
     };
 }
 
 export default function Transport() {
+    const { t } = useTranslation('transport');
     const isDarkMode = useThemeStore((s) => s.isDarkMode);
     const {
         arrivals, routeStops, isLoading, error, updatedAt,
@@ -66,6 +69,7 @@ export default function Transport() {
     const [selectedRoute, setSelectedRoute] = useState('301');
     // ── 方向：0 = 去程, 1 = 返程 ──
     const [dirIndex, setDirIndex] = useState(0);
+    // direction stays as Chinese — used as API key from TDX data
     const direction = dirIndex === 0 ? '去程' : '返程';
 
     // ── 觸控滑動 ──
@@ -100,13 +104,10 @@ export default function Transport() {
         const diffY = endY - startY;
         const elapsed = Date.now() - startTime;
 
-        // 必須是水平滑動（水平距離 > 垂直距離）且距離 > 50px 且時間 < 500ms
         if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 50 && elapsed < 500) {
             if (diffX > 0) {
-                // 右滑 → 去程
                 setDirIndex(0);
             } else {
-                // 左滑 → 返程
                 setDirIndex(1);
             }
         }
@@ -119,11 +120,9 @@ export default function Transport() {
 
     // 取得當前方向的站牌列表（從 routeStops API 或 arrivals 推斷）
     const currentStops = useMemo(() => {
-        // 優先使用 StopOfRoute API 的站牌資料
         const stopsData = routeStops[selectedRoute];
         if (stopsData && stopsData[direction]) {
             const apiStops = stopsData[direction];
-            // 若 API 回傳的是物件陣列
             if (apiStops.length > 0) {
                 return apiStops.map(s => ({
                     stopName: s.stopName,
@@ -132,12 +131,10 @@ export default function Transport() {
             }
         }
 
-        // fallback: 從 arrivals 中提取此路線此方向的站牌
         const fromArrivals = arrivals
             .filter(a => a.routeName === selectedRoute && a.direction === direction)
             .sort((a, b) => (a.stopSequence || 0) - (b.stopSequence || 0));
 
-        // 去重
         const seen = new Set();
         return fromArrivals.filter(a => {
             if (seen.has(a.stopName)) return false;
@@ -155,7 +152,6 @@ export default function Transport() {
         arrivals
             .filter(a => a.routeName === selectedRoute && a.direction === direction)
             .forEach(a => {
-                // 以站名為 key（同一站可能有多筆，取最近的）
                 if (!map[a.stopName] || (a.estimatedSeconds !== null &&
                     (map[a.stopName].estimatedSeconds === null || a.estimatedSeconds < map[a.stopName].estimatedSeconds))) {
                     map[a.stopName] = a;
@@ -164,22 +160,19 @@ export default function Transport() {
         return map;
     }, [arrivals, selectedRoute, direction]);
 
-    // ── 車輛位置追蹤：使用 RealTimeNearStop 進離站事件精確定位每台公車 ──
+    // ── 車輛位置追蹤 ──
     const busIndicatorMap = useMemo(() => {
-        // map: stopName → { label, color, bgColor, plate, source }
+        // map: stopName → { labelKey, color, bgColor, plate, source }
         const indicators = {};
 
-        // ── 1. RealTimeNearStop 位置資料（eventType 只有真實公車位置才會有）──
         const positionEntries = arrivals.filter(
             a => a.routeName === selectedRoute && a.direction === direction && a.eventType
         );
 
-        // 建立站序 → 站名 的對照（用於「即將進站」標記下一站）
         const seqToStop = {};
         currentStops.forEach(s => { seqToStop[s.stopSequence] = s.stopName; });
         const sequences = currentStops.map(s => s.stopSequence).sort((a, b) => a - b);
 
-        // 依車牌分組
         const byPlate = {};
         positionEntries.forEach(entry => {
             const plate = entry.plateNumb || 'unknown';
@@ -188,37 +181,33 @@ export default function Transport() {
         });
 
         Object.entries(byPlate).forEach(([plate, entries]) => {
-            // 每輛車通常只有一筆 RealTimeNearStop 記錄
             entries.forEach(entry => {
                 const stopName = entry.stopName;
                 const seq = entry.stopSequence || 0;
 
                 if (entry.eventType === '進站') {
-                    // 車輛正在此站 → 進站中
                     indicators[stopName] = {
-                        label: '進站中',
+                        labelKey: 'arriving',
                         color: 'var(--color-danger, #ef4444)',
                         bgColor: 'rgba(239,68,68,0.10)',
                         plate,
                         source: 'position',
                     };
                 } else {
-                    // 車輛已離此站 → 已離站
                     indicators[stopName] = {
-                        label: '已離站',
+                        labelKey: 'departed',
                         color: 'var(--color-info, #3b82f6)',
                         bgColor: 'rgba(59,130,246,0.10)',
                         plate,
                         source: 'position',
                     };
-                    // 找到下一站，標記「即將進站」
                     const seqIdx = sequences.indexOf(seq);
                     if (seqIdx !== -1 && seqIdx < sequences.length - 1) {
                         const nextSeq = sequences[seqIdx + 1];
                         const nextStopName = seqToStop[nextSeq];
                         if (nextStopName && !indicators[nextStopName]) {
                             indicators[nextStopName] = {
-                                label: '即將進站',
+                                labelKey: 'approaching',
                                 color: '#f97316',
                                 bgColor: 'rgba(249,115,22,0.08)',
                                 plate,
@@ -230,15 +219,14 @@ export default function Transport() {
             });
         });
 
-        // ── 2. ETA 補充：若 ETA ≤ 60 秒（進站中）但無 RealTimeNearStop，補上指標以同步 ──
         arrivals
             .filter(a => a.routeName === selectedRoute && a.direction === direction)
             .forEach(a => {
-                if (indicators[a.stopName]) return; // 已有位置資料，不覆蓋
+                if (indicators[a.stopName]) return;
                 if (a.estimatedSeconds !== null && a.estimatedSeconds !== undefined && a.estimatedSeconds <= 60 &&
                     (a.stopStatusCode === 0 || a.stopStatusCode === undefined || a.stopStatusCode === null)) {
                     indicators[a.stopName] = {
-                        label: '進站中',
+                        labelKey: 'arriving',
                         color: 'var(--color-danger, #ef4444)',
                         bgColor: 'rgba(239,68,68,0.06)',
                         plate: a.plateNumb || null,
@@ -250,15 +238,13 @@ export default function Transport() {
         return indicators;
     }, [arrivals, selectedRoute, direction, currentStops]);
 
-    // 計算統計資訊（以唯一車牌數統計行駛中公車）
     const stats = useMemo(() => {
         const arriving = Object.values(arrivalMap).filter(
             a => a.estimatedMinutes !== null && a.estimatedMinutes <= 3 && (a.stopStatusCode === 0 || a.stopStatusCode === undefined)
         ).length;
-        // 以唯一車牌計算行駛中公車數量（只算 RealTimeNearStop 來源的進站/離站）
         const busPlates = new Set();
         Object.values(busIndicatorMap).forEach(ind => {
-            if (ind.source === 'position' && ind.plate && (ind.label === '進站中' || ind.label === '已離站')) {
+            if (ind.source === 'position' && ind.plate && (ind.labelKey === 'arriving' || ind.labelKey === 'departed')) {
                 busPlates.add(ind.plate);
             }
         });
@@ -280,12 +266,12 @@ export default function Transport() {
                         <IconBus size={24} />
                     </div>
                     <div>
-                        <h1 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text)' }}>公車動態</h1>
+                        <h1 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text)' }}>{t('title')}</h1>
                         <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>
-                            即時到站資訊
+                            {t('subtitle')}
                             {updatedAt && (
                                 <span style={{ marginLeft: 8, fontSize: '0.75rem', opacity: 0.6 }}>
-                                    更新 {updatedAt}
+                                    {t('updatedAt', { time: updatedAt })}
                                 </span>
                             )}
                         </p>
@@ -296,8 +282,8 @@ export default function Transport() {
                     disabled={manualCooldown > 0}
                     className="btn btn-ghost"
                     style={{ minWidth: 40, padding: '8px', borderRadius: 12 }}
-                    title={manualCooldown > 0 ? `請稍候 ${manualCooldown} 秒` : '重新整理'}
-                    aria-label={manualCooldown > 0 ? `請稍候 ${manualCooldown} 秒` : '重新整理公車資訊'}
+                    title={manualCooldown > 0 ? t('refreshCooldown', { s: manualCooldown }) : t('refresh', { ns: 'common' })}
+                    aria-label={manualCooldown > 0 ? t('refreshCooldown', { s: manualCooldown }) : t('refresh', { ns: 'common' })}
                 >
                     {manualCooldown > 0 ? (
                         <span style={{ fontSize: '12px', fontWeight: 700 }}>{manualCooldown}s</span>
@@ -344,11 +330,11 @@ export default function Transport() {
                     style={{ '--tab-color': routeInfo.color }}
                     role="tab"
                     aria-selected={dirIndex === 0}
-                    aria-label={`去程 往${routeInfo.to}`}
+                    aria-label={`${t('outbound')} ${t('toDestination', { dest: routeInfo.to })}`}
                 >
-                    <span style={{ fontSize: '0.75rem', opacity: 0.7 }}>去程</span>
+                    <span style={{ fontSize: '0.75rem', opacity: 0.7 }}>{t('outbound')}</span>
                     <span style={{ fontSize: '0.8125rem', fontWeight: 600 }}>
-                        往 {routeInfo.to}
+                        {t('toDestination', { dest: routeInfo.to })}
                     </span>
                 </button>
                 <button
@@ -357,11 +343,11 @@ export default function Transport() {
                     style={{ '--tab-color': routeInfo.color }}
                     role="tab"
                     aria-selected={dirIndex === 1}
-                    aria-label={`返程 往${routeInfo.from}`}
+                    aria-label={`${t('inbound')} ${t('toDestination', { dest: routeInfo.from })}`}
                 >
-                    <span style={{ fontSize: '0.75rem', opacity: 0.7 }}>返程</span>
+                    <span style={{ fontSize: '0.75rem', opacity: 0.7 }}>{t('inbound')}</span>
                     <span style={{ fontSize: '0.8125rem', fontWeight: 600 }}>
-                        往 {routeInfo.from}
+                        {t('toDestination', { dest: routeInfo.from })}
                     </span>
                 </button>
                 <p style={{
@@ -370,34 +356,31 @@ export default function Transport() {
                     display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
                 }}>
                     <span style={{ display: 'inline-block', animation: 'swipeHintLeft 2s ease-in-out infinite', opacity: 0.7 }}>👈</span>
-                    左右滑動切換方向
+                    {t('swipeHint')}
                     <span style={{ display: 'inline-block', animation: 'swipeHintRight 2s ease-in-out infinite', opacity: 0.7 }}>👉</span>
                 </p>
             </div>
 
             {/* ── 統計列 ── */}
-            <div style={{
-                display: 'flex', alignItems: 'center', gap: 12,
-                padding: '0 4px',
-            }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '0 4px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                     <IconClock size={16} style={{ color: routeInfo.color }} />
                     <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text)' }}>
-                        站牌一覽
+                        {t('stopOverview')}
                     </span>
                 </div>
                 <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginLeft: 'auto' }}>
                     {stats.busCount > 0 && (
                         <span style={{ color: routeInfo.color, fontWeight: 600, marginRight: 8 }}>
-                            🚌 {stats.busCount} 輛行駛中
+                            {t('busesRunning', { count: stats.busCount })}
                         </span>
                     )}
                     {stats.arriving > 0 && (
                         <span style={{ color: '#f97316', fontWeight: 600, marginRight: 8 }}>
-                            {stats.arriving} 站即將到站
+                            {t('stopsArriving', { count: stats.arriving })}
                         </span>
                     )}
-                    共 {stats.total} 站
+                    {t('totalStops', { count: stats.total })}
                 </span>
             </div>
 
@@ -415,7 +398,7 @@ export default function Transport() {
                 onTouchEnd={handleTouchEnd}
                 style={{ minHeight: 200 }}
                 role="region"
-                aria-label={`${selectedRoute} 路線 ${direction}站牌列表`}
+                aria-label={`${selectedRoute} ${dirIndex === 0 ? t('outbound') : t('inbound')}`}
             >
                 {isLoading && currentStops.length === 0 ? (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -427,16 +410,15 @@ export default function Transport() {
                     <div className="transport-stop-list">
                         {currentStops.map((stop, idx) => {
                             const arrival = arrivalMap[stop.stopName];
-                            const { main, sub } = formatArrivalTime(arrival);
+                            const { main, sub, isText } = formatArrivalTime(arrival, t);
                             const isProvidence = stop.stopName.includes('靜宜');
                             const statusColor = getStatusColor(arrival);
                             const statusBg = getStatusBg(arrival);
                             const busIndicator = busIndicatorMap[stop.stopName];
                             const hasBus = !!busIndicator;
 
-                            // ── 同步：進站中的公車指標同步到右側 ETA 顯示 ──
-                            const isBusArriving = busIndicator?.label === '進站中';
-                            const displayMain = isBusArriving ? '進站中' : main;
+                            const isBusArriving = busIndicator?.labelKey === 'arriving';
+                            const displayMain = isBusArriving ? t('status.arriving') : main;
                             const displaySub = isBusArriving ? '' : sub;
                             const displayColor = isBusArriving ? 'var(--color-danger, #ef4444)' : statusColor;
                             const isArriving = isBusArriving || (
@@ -481,11 +463,8 @@ export default function Transport() {
                                             {isProvidence && '📍 '}{stop.stopName}
                                         </span>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                                            <span style={{
-                                                fontSize: '0.6875rem',
-                                                color: 'var(--text-muted)',
-                                            }}>
-                                                第 {stop.stopSequence} 站
+                                            <span style={{ fontSize: '0.6875rem', color: 'var(--text-muted)' }}>
+                                                {t('stopSequence', { n: stop.stopSequence })}
                                             </span>
                                             {busIndicator && (
                                                 <span style={{
@@ -497,9 +476,9 @@ export default function Transport() {
                                                     fontWeight: 600,
                                                     whiteSpace: 'nowrap',
                                                     display: 'inline-flex', alignItems: 'center', gap: 4,
-                                                    ...(busIndicator.label === '進站中' ? { animation: 'pulse 1.5s ease-in-out infinite' } : {}),
+                                                    ...(busIndicator.labelKey === 'arriving' ? { animation: 'pulse 1.5s ease-in-out infinite' } : {}),
                                                 }}>
-                                                    🚌 {busIndicator.label}
+                                                    🚌 {t(`status.${busIndicator.labelKey}`)}
                                                     {busIndicator.plate && busIndicator.plate !== 'unknown' && (
                                                         <span style={{ opacity: 0.75, fontWeight: 500 }}>
                                                             {busIndicator.plate}
@@ -513,7 +492,7 @@ export default function Transport() {
                                     {/* 右側：到站時間（與公車指標同步）*/}
                                     <div className="transport-stop-eta" style={{ color: displayColor }}>
                                         <span style={{
-                                            fontSize: displayMain === '進站中' || displayMain === '尚未發車' ? '0.8125rem' : '1rem',
+                                            fontSize: (isBusArriving || isText) ? '0.8125rem' : '1rem',
                                             fontWeight: 700,
                                             whiteSpace: 'nowrap',
                                             ...(isArriving ? { animation: 'pulse 1.5s ease-in-out infinite' } : {}),
@@ -537,12 +516,8 @@ export default function Transport() {
                         border: '1px dashed var(--border)', color: 'var(--text-muted)',
                     }}>
                         <IconBus size={36} style={{ opacity: 0.3, marginBottom: 12 }} />
-                        <span style={{ fontSize: '0.875rem' }}>
-                            目前無此路線的站牌資訊
-                        </span>
-                        <span style={{ fontSize: '0.75rem', marginTop: 4 }}>
-                            資料載入中或該路線今日未營運
-                        </span>
+                        <span style={{ fontSize: '0.875rem' }}>{t('noStopData')}</span>
+                        <span style={{ fontSize: '0.75rem', marginTop: 4 }}>{t('loadingOrNotOperating')}</span>
                     </div>
                 )}
             </div>
@@ -567,7 +542,7 @@ export default function Transport() {
                             {routeInfo.description}
                         </p>
                         <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                            {direction === '去程'
+                            {dirIndex === 0
                                 ? `${routeInfo.from} → ${routeInfo.to}`
                                 : `${routeInfo.to} → ${routeInfo.from}`
                             }
@@ -576,14 +551,14 @@ export default function Transport() {
                 </div>
                 <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
                     <span className="badge" style={{ fontSize: '0.6875rem', padding: '3px 8px' }}>
-                        🕐 自動更新 2 分鐘
+                        {t('autoUpdateBadge')}
                     </span>
                     <span className="badge" style={{ fontSize: '0.6875rem', padding: '3px 8px' }}>
-                        📊 TDX 即時資料
+                        {t('tdxBadge')}
                     </span>
                     {isLoading && (
                         <span className="badge" style={{ fontSize: '0.6875rem', padding: '3px 8px', color: routeInfo.color }}>
-                            ⏳ 載入中...
+                            {t('loadingBadge')}
                         </span>
                     )}
                 </div>
@@ -591,7 +566,7 @@ export default function Transport() {
 
             {/* ── 資料來源提示 ── */}
             <p style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', textAlign: 'center', padding: '4px 0' }}>
-                資料來源：TDX 運輸資料流通服務（ETA + RealTimeNearStop + StopOfRoute）
+                {t('dataSource')}
             </p>
         </div>
     );

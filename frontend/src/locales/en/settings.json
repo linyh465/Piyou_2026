@@ -1,0 +1,28 @@
+{
+  "title": "Settings",
+  "account": "Account",
+  "appearance": "Appearance",
+  "notifications": "Notifications",
+  "about": "About",
+  "language": "Language",
+  "syncPortal": "Sync Portal Data",
+  "syncPortalDesc": "Sync portal data",
+  "signOut": "Sign Out & Clear Data",
+  "signOutDesc": "Sign out & Clear Data",
+  "themeMode": "Theme Mode",
+  "theme": {
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System"
+  },
+  "colorTheme": "Color Theme",
+  "busAlerts": "Bus Arrival Alerts",
+  "busAlertsDesc": "Bus arrival alerts",
+  "taskReminders": "Task Deadline Reminders",
+  "taskRemindersDesc": "Task deadline reminders",
+  "version": "Version",
+  "confirmLogoutTitle": "Confirm Sign Out",
+  "confirmLogoutDesc": "This will clear all synced portal data (timetable, grades, etc.) and sign you out. Continue?",
+  "syncModalTitle": "Sync Portal Data",
+  "syncModalBody": "Enter your portal credentials to fetch the latest timetable and grades to your device."
+}

@@ -1,0 +1,32 @@
+{
+  "title": "Businfo",
+  "subtitle": "Echtzeit-Ankunftsinformationen",
+  "updatedAt": "Aktualisiert {{time}}",
+  "swipeHint": "Wischen zum Richtungswechsel",
+  "stopOverview": "Alle Haltestellen",
+  "busesRunning": "🚌 {{count}} Bus/Busse im Einsatz",
+  "stopsArriving": "{{count}} Haltestelle(n) bald erreicht",
+  "totalStops": "{{count}} Haltestellen gesamt",
+  "outbound": "Hinfahrt",
+  "inbound": "Rückfahrt",
+  "toDestination": "Richtung {{dest}}",
+  "noStopData": "Keine Haltestellendaten für diese Linie",
+  "loadingOrNotOperating": "Lädt oder heute nicht in Betrieb",
+  "autoUpdateBadge": "🕐 Alle 2 Min. automatisch aktualisiert",
+  "tdxBadge": "📊 TDX Echtzeit-Daten",
+  "loadingBadge": "⏳ Lädt...",
+  "refreshCooldown": "Noch {{s}} Sek. warten",
+  "stopSequence": "Haltestelle {{n}}",
+  "dataSource": "Datenquelle: TDX Transportdatenaustausch (ETA + RealTimeNearStop + StopOfRoute)",
+  "status": {
+    "notDeparted": "Noch nicht abgefahren",
+    "noStop": "Hält nicht",
+    "lastPassed": "Letzter Bus vorbei",
+    "notOperating": "Heute kein Betrieb",
+    "arriving": "Fährt ein",
+    "departed": "Abgefahren",
+    "approaching": "Kommt gleich",
+    "minutesUnit": "{{min}} Min.",
+    "secondsUnit": "{{sec}} Sek."
+  }
+}

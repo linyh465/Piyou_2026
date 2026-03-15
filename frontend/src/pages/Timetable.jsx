@@ -1,16 +1,11 @@
 /**
  * 課表頁面 / Timetable Page — iOS 風格
- * 週課表＋今日課程雙視圖 + 課程詳細 Modal
  */
 import { useState, useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import useTimetableStore from '../stores/timetableStore';
 import { IconCalendar, IconRefresh, IconTrash, IconMapPin, IconClock, IconUser, IconDotsVertical } from '../components/Icons';
 import SyncLoginModal from '../components/SyncLoginModal';
-
-const DAYS = ['一', '二', '三', '四', '五'];
-const PERIODS_MORNING = [1, 2, 3, 4];
-const PERIODS_AFTERNOON = [5, 6, 7, 8, 9];
-const PERIODS_NIGHT = [10, 11, 12, 13];
 
 const PERIOD_TIMES = {
     1: '08:10', 2: '09:10', 3: '10:10', 4: '11:10',
@@ -23,7 +18,10 @@ const PERIOD_END_TIMES = {
     9: '18:00', 10: '18:55', 11: '19:50', 12: '20:45', 13: '21:40',
 };
 
-/* ── 高對比度課程配色 (淺色 / 深色模式) ── */
+const PERIODS_MORNING = [1, 2, 3, 4];
+const PERIODS_AFTERNOON = [5, 6, 7, 8, 9];
+const PERIODS_NIGHT = [10, 11, 12, 13];
+
 const COURSE_COLORS = [
     { light: { bg: '#EDE7F6', text: '#4A148C' }, dark: { bg: '#3C2A5C', text: '#CE93D8' } },
     { light: { bg: '#FFF8E1', text: '#E65100' }, dark: { bg: '#4E3620', text: '#FFB74D' } },
@@ -45,9 +43,11 @@ function getColorForCourse(name) {
     return isDarkMode() ? palette.dark : palette.light;
 }
 
-/* ── 課程詳細 Modal ── */
+// ── 課程詳細 Modal ──
 function CourseDetailModal({ course, onClose }) {
-    // ESC 鍵關閉
+    const { t } = useTranslation('timetable');
+    const { t: tCommon } = useTranslation('common');
+
     useEffect(() => {
         if (!course) return;
         const handler = (e) => { if (e.key === 'Escape') onClose(); };
@@ -57,7 +57,6 @@ function CourseDetailModal({ course, onClose }) {
 
     if (!course) return null;
 
-    // 點擊 backdrop 關閉
     const handleBackdropClick = (e) => {
         if (e.target === e.currentTarget) onClose();
     };
@@ -71,80 +70,70 @@ function CourseDetailModal({ course, onClose }) {
     return (
         <div className="tt-modal-backdrop" onClick={handleBackdropClick}>
             <div className="tt-modal-sheet animate-fade-in">
-                {/* 拖拽指示器 */}
                 <div className="tt-modal-handle" />
-
-                {/* 課程名稱 */}
                 <div className="tt-modal-header" style={{ background: c.bg }}>
                     <h2 className="tt-modal-title" style={{ color: c.text }}>{course.name}</h2>
                     {course.name_en && (
                         <p className="tt-modal-subtitle" style={{ color: c.text, opacity: 0.7 }}>{course.name_en}</p>
                     )}
                 </div>
-
-                {/* 詳細資訊 */}
                 <div className="tt-modal-body">
                     <div className="tt-modal-row">
-                        <span className="tt-modal-label">⏰ 時間</span>
-                        <span className="tt-modal-value">星期{dayName} 第 {course.period} 節 ・ {timeRange}</span>
+                        <span className="tt-modal-label">{t('modal.time')}</span>
+                        <span className="tt-modal-value">{t('modal.dayPeriod', { day: dayName, period: course.period, timeRange })}</span>
                     </div>
-
                     {course.location && (
                         <div className="tt-modal-row">
-                            <span className="tt-modal-label">📍 教室</span>
+                            <span className="tt-modal-label">{t('modal.classroom')}</span>
                             <span className="tt-modal-value">{course.location}</span>
                         </div>
                     )}
-
                     {course.teacher && (
                         <div className="tt-modal-row">
-                            <span className="tt-modal-label">👤 教師</span>
+                            <span className="tt-modal-label">{t('modal.teacher')}</span>
                             <span className="tt-modal-value">{course.teacher}</span>
                         </div>
                     )}
-
                     {course.teacher_email && (
                         <div className="tt-modal-row">
-                            <span className="tt-modal-label">📧 Email</span>
+                            <span className="tt-modal-label">{t('modal.email')}</span>
                             <a className="tt-modal-value tt-modal-link" href={`mailto:${course.teacher_email}`}>
                                 {course.teacher_email}
                             </a>
                         </div>
                     )}
-
                     {course.course_type && (
                         <div className="tt-modal-row">
-                            <span className="tt-modal-label">📋 修別</span>
+                            <span className="tt-modal-label">{t('modal.type')}</span>
                             <span className="tt-modal-value">{course.course_type}</span>
                         </div>
                     )}
-
                     {course.credits != null && (
                         <div className="tt-modal-row">
-                            <span className="tt-modal-label">🎓 學分</span>
-                            <span className="tt-modal-value">{course.credits} 學分</span>
+                            <span className="tt-modal-label">{t('modal.credits')}</span>
+                            <span className="tt-modal-value">{t('modal.creditsUnit', { n: course.credits })}</span>
                         </div>
                     )}
                 </div>
-
-                <button className="tt-modal-close-btn" onClick={onClose}>關閉</button>
+                <button className="tt-modal-close-btn" onClick={onClose}>{t('modal.close')}</button>
             </div>
         </div>
     );
 }
 
 function WeekView({ timetable, isLoading, onCourseClick }) {
+    const { t } = useTranslation('timetable');
+    const DAYS = t('days', { returnObjects: true });
+
     const matrix = {};
     timetable.forEach((course) => { matrix[`${course.day}-${course.period}`] = course; });
 
-    // 判斷有課的時段範圍
     const usedPeriods = new Set(timetable.map(c => c.period));
     const hasNight = [...usedPeriods].some(p => p >= 10);
     const periodsToShow = hasNight
         ? [...PERIODS_MORNING, ...PERIODS_AFTERNOON, ...PERIODS_NIGHT]
         : [...PERIODS_MORNING, ...PERIODS_AFTERNOON];
 
-    // 分組：上午 / 下午
     const morningPeriods = periodsToShow.filter(p => p <= 4);
     const afternoonPeriods = periodsToShow.filter(p => p >= 5);
 
@@ -190,14 +179,12 @@ function WeekView({ timetable, isLoading, onCourseClick }) {
 
     return (
         <div className="card tt-card">
-            {/* Header row */}
             <div className="tt-header-row">
-                <div className="tt-time-cell"><span className="tt-header-label">時間</span></div>
+                <div className="tt-time-cell"><span className="tt-header-label">{t('timeHeader')}</span></div>
                 {DAYS.map((day) => (
                     <div key={day} className="tt-header-cell">{day}</div>
                 ))}
             </div>
-
             {renderBlock(morningPeriods)}
             {afternoonPeriods.length > 0 && (
                 <>
@@ -210,6 +197,7 @@ function WeekView({ timetable, isLoading, onCourseClick }) {
 }
 
 function TodayView({ timetable, isLoading, onCourseClick }) {
+    const { t } = useTranslation('timetable');
     const now = new Date();
     const dayIndex = now.getDay();
     const currentMinutes = now.getHours() * 60 + now.getMinutes();
@@ -234,8 +222,8 @@ function TodayView({ timetable, isLoading, onCourseClick }) {
     if (!todayClasses.length) {
         return (
             <div className="card" style={{ textAlign: 'center', padding: '40px 20px' }}>
-                <p style={{ fontSize: '1.125rem', fontWeight: 600, color: 'var(--text-secondary)' }}>今天沒有課程 🎉</p>
-                <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: 6 }}>享受你的休息日吧</p>
+                <p style={{ fontSize: '1.125rem', fontWeight: 600, color: 'var(--text-secondary)' }}>{t('noClassesToday')}</p>
+                <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: 6 }}>{t('enjoyRest')}</p>
             </div>
         );
     }
@@ -266,7 +254,7 @@ function TodayView({ timetable, isLoading, onCourseClick }) {
                     >
                         {isNow && (
                             <span className="dash-status-badge dash-status-active" style={{ marginBottom: 8 }}>
-                                <span className="dash-status-dot" />上課中
+                                <span className="dash-status-dot" />{t('classInProgress')}
                             </span>
                         )}
                         <h4 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text)' }}>{course.name}</h4>
@@ -288,6 +276,8 @@ function TodayView({ timetable, isLoading, onCourseClick }) {
 }
 
 export default function Timetable() {
+    const { t } = useTranslation('timetable');
+    const { t: tCommon } = useTranslation('common');
     const { timetable, isLoadingTimetable, timetableError, isTimeout, fetchTimetable, clearTimetableData, canSync } = useTimetableStore();
     const [view, setView] = useState('week');
     const [selectedCourse, setSelectedCourse] = useState(null);
@@ -306,24 +296,22 @@ export default function Timetable() {
 
     const handleClearTimetable = async () => {
         const syncCheck = await canSync();
-        let msg = '確定要清除課表資料嗎？';
+        let msg = t('clearConfirm');
         if (!syncCheck.allowed) {
             const mins = Math.ceil((syncCheck.remainingMs || 0) / 60000);
-            msg += `\n\n⚠️ 冷卻時間: ${mins}分，需待冷卻結束後才可再次同步校園資料。`;
+            msg += `\n\n${t('cooldownWarning', { mins })}`;
         }
         if (window.confirm(msg)) clearTimetableData();
     };
 
     return (
         <div className="section-stack animate-fade-in">
-            {/* 標題 */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <h1 className="dash-hero-title" style={{ paddingBottom: 0 }}>課表</h1>
+                <h1 className="dash-hero-title" style={{ paddingBottom: 0 }}>{t('title')}</h1>
                 <div className="page-menu-wrapper" style={{ paddingTop: '6px' }} ref={menuRef}>
-                    {/* 桌面：直接顯示按鈕 */}
                     <div className="page-header-actions">
                         <button onClick={() => setShowSyncModal(true)} className="btn btn-soft" style={{ fontSize: '13px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                            <IconUser size={14} /> 一鍵登入
+                            <IconUser size={14} /> {tCommon('signIn')}
                         </button>
                         <button onClick={fetchTimetable} disabled={isLoadingTimetable} className="btn btn-ghost" style={{ fontSize: '13px' }}>
                             <IconRefresh size={15} className={isLoadingTimetable ? 'animate-spin' : ''} />
@@ -334,21 +322,20 @@ export default function Timetable() {
                             </button>
                         )}
                     </div>
-                    {/* 手機：收納按鈕 */}
-                    <button className="page-header-menu-btn" onClick={() => setShowMenu(v => !v)} aria-label="更多操作">
+                    <button className="page-header-menu-btn" onClick={() => setShowMenu(v => !v)} aria-label={tCommon('moreActions')}>
                         <IconDotsVertical size={18} />
                     </button>
                     {showMenu && (
                         <div className="page-menu-dropdown">
                             <button onClick={() => { setShowSyncModal(true); setShowMenu(false); }} className="btn btn-soft">
-                                <IconUser size={14} /> 一鍵登入
+                                <IconUser size={14} /> {tCommon('signIn')}
                             </button>
                             <button onClick={() => { fetchTimetable(); setShowMenu(false); }} disabled={isLoadingTimetable} className="btn btn-ghost">
-                                <IconRefresh size={14} className={isLoadingTimetable ? 'animate-spin' : ''} /> 重新整理
+                                <IconRefresh size={14} className={isLoadingTimetable ? 'animate-spin' : ''} /> {tCommon('refresh')}
                             </button>
                             {timetable.length > 0 && (
                                 <button onClick={() => { handleClearTimetable(); setShowMenu(false); }} className="btn btn-ghost" style={{ color: 'var(--color-danger)' }}>
-                                    <IconTrash size={14} /> 清除資料
+                                    <IconTrash size={14} /> {t('clearData')}
                                 </button>
                             )}
                         </div>
@@ -356,28 +343,20 @@ export default function Timetable() {
                 </div>
             </div>
 
-            {/* 視圖切換 */}
             <div className="tt-view-toggle">
-                <button
-                    className={`tt-view-btn ${view === 'week' ? 'active' : ''}`}
-                    onClick={() => setView('week')}
-                >
-                    週課表
+                <button className={`tt-view-btn ${view === 'week' ? 'active' : ''}`} onClick={() => setView('week')}>
+                    {t('weekView')}
                 </button>
-                <button
-                    className={`tt-view-btn ${view === 'today' ? 'active' : ''}`}
-                    onClick={() => setView('today')}
-                >
-                    今日課程
+                <button className={`tt-view-btn ${view === 'today' ? 'active' : ''}`} onClick={() => setView('today')}>
+                    {t('todayView')}
                 </button>
             </div>
 
-            {/* 錯誤 */}
             {isTimeout && (
                 <div className="card" style={{ borderColor: 'var(--color-danger)', background: 'rgba(239,68,68,0.04)' }}>
-                    <p style={{ fontWeight: 600, color: 'var(--color-danger)' }}>⏱ 請求逾時</p>
+                    <p style={{ fontWeight: 600, color: 'var(--color-danger)' }}>⏱ {t('requestTimeout')}</p>
                     <p style={{ fontSize: '14px', marginTop: '6px', color: 'var(--text-muted)' }}>{timetableError}</p>
-                    <button onClick={fetchTimetable} className="btn btn-soft" style={{ marginTop: '12px', fontSize: '13px' }}>重試</button>
+                    <button onClick={fetchTimetable} className="btn btn-soft" style={{ marginTop: '12px', fontSize: '13px' }}>{tCommon('retry')}</button>
                 </div>
             )}
             {timetableError && !isTimeout && (
@@ -386,7 +365,6 @@ export default function Timetable() {
                 </div>
             )}
 
-            {/* 內容 */}
             {view === 'week' ? (
                 <WeekView timetable={timetable} isLoading={isLoadingTimetable} onCourseClick={setSelectedCourse} />
             ) : (
@@ -395,14 +373,11 @@ export default function Timetable() {
 
             {!isLoadingTimetable && timetable.length > 0 && (
                 <p style={{ fontSize: '13px', color: 'var(--text-muted)', textAlign: 'center', paddingTop: '4px' }}>
-                    本學期共 {new Set(timetable.map((c) => c.name)).size} 門課，{timetable.length} 節
+                    {t('totalCourses', { count: new Set(timetable.map((c) => c.name)).size, periods: timetable.length })}
                 </p>
             )}
 
-            {/* 課程詳細 Modal */}
             <CourseDetailModal course={selectedCourse} onClose={() => setSelectedCourse(null)} />
-
-            {/* 同步登入 Modal */}
             <SyncLoginModal show={showSyncModal} onClose={() => setShowSyncModal(false)} />
         </div>
     );

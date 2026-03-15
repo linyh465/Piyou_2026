@@ -4,12 +4,14 @@
  * 顯示倒數彈窗並自動執行重整更新。
  */
 import { useEffect, useState, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useRegisterSW } from 'virtual:pwa-register/react';
 
 const AUTO_UPDATE_SECONDS = 10;
 const CHECK_INTERVAL_MS = 5 * 60 * 1000; // 每 5 分鐘檢查一次
 
 export default function PWAReloadPrompt() {
+    const { t } = useTranslation('common');
     const [countdown, setCountdown] = useState(AUTO_UPDATE_SECONDS);
     const countdownRef = useRef(null);
 
@@ -114,7 +116,7 @@ export default function PWAReloadPrompt() {
 
                 {/* 標題 */}
                 <div style={{ fontSize: 17, fontWeight: 700, textAlign: 'center' }}>
-                    發現新版本！
+                    {t('pwaNewVersion')}
                 </div>
 
                 {/* 說明 */}
@@ -126,20 +128,7 @@ export default function PWAReloadPrompt() {
                         lineHeight: 1.6,
                     }}
                 >
-                    GitHub 已推送更新，Piyou 將在{' '}
-                    <span
-                        style={{
-                            color: '#6366f1',
-                            fontWeight: 700,
-                            fontSize: 15,
-                            display: 'inline-block',
-                            minWidth: '1.5ch',
-                            textAlign: 'center',
-                        }}
-                    >
-                        {countdown}
-                    </span>{' '}
-                    秒後自動重整。
+                    {t('pwaAutoRefresh', { countdown })}
                 </div>
 
                 {/* 倒數進度條 */}
@@ -180,7 +169,7 @@ export default function PWAReloadPrompt() {
                             cursor: 'pointer',
                         }}
                     >
-                        稍後再說
+                        {t('pwaLater')}
                     </button>
                     <button
                         onClick={handleUpdateNow}
@@ -197,7 +186,7 @@ export default function PWAReloadPrompt() {
                             boxShadow: '0 4px 14px rgba(99,102,241,0.35)',
                         }}
                     >
-                        立即更新
+                        {t('pwaUpdateNow')}
                     </button>
                 </div>
             </div>

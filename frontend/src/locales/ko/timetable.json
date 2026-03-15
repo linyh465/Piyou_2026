@@ -1,0 +1,26 @@
+{
+  "title": "시간표",
+  "weekView": "주간",
+  "todayView": "오늘 수업",
+  "timeHeader": "시간",
+  "days": ["월", "화", "수", "목", "금"],
+  "noClassesToday": "오늘은 수업이 없습니다 🎉",
+  "enjoyRest": "즐거운 휴식 되세요",
+  "totalCourses": "이번 학기 {{count}}개 과목, {{periods}}교시",
+  "requestTimeout": "요청 시간 초과",
+  "clearData": "데이터 삭제",
+  "clearConfirm": "시간표 데이터를 삭제하시겠습니까?",
+  "cooldownWarning": "⚠️ 쿨다운: 다음 동기화까지 {{mins}}분 남았습니다.",
+  "classInProgress": "수업 중",
+  "modal": {
+    "time": "⏰ 시간",
+    "classroom": "📍 강의실",
+    "teacher": "👤 담당 교수",
+    "email": "📧 이메일",
+    "type": "📋 구분",
+    "credits": "🎓 학점",
+    "creditsUnit": "{{n}}학점",
+    "close": "닫기",
+    "dayPeriod": "{{period}}교시 ・ {{timeRange}}"
+  }
+}

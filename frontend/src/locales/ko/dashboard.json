@@ -1,0 +1,18 @@
+{
+  "title": "오늘",
+  "classInProgress": "수업 중",
+  "remaining": "{{min}}분 남음",
+  "nextClass": "다음 수업",
+  "minutesUntil": "{{min}}분 후",
+  "noMoreClasses": "오늘 더 이상 수업이 없습니다",
+  "restWell": "푹 쉬세요",
+  "locationUnset": "장소 미정",
+  "todos": "할 일",
+  "allDone": "모든 할 일 완료",
+  "overdue": "기한 초과",
+  "libraryLoans": "도서관 대출",
+  "borrowingCount": "{{count}}권 대출 중",
+  "overdueCount": "{{count}}권 연체 중",
+  "dueSoonCount": "{{count}}권 반납 기한 임박",
+  "loanStatusNormal": "대출 상태 정상"
+}

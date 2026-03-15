@@ -1,0 +1,32 @@
+{
+  "title": "Bus Tracker",
+  "subtitle": "Real-time arrival info",
+  "updatedAt": "Updated {{time}}",
+  "swipeHint": "Swipe to switch direction",
+  "stopOverview": "All Stops",
+  "busesRunning": "🚌 {{count}} bus(es) running",
+  "stopsArriving": "{{count}} stop(s) arriving soon",
+  "totalStops": "{{count}} stops total",
+  "outbound": "Outbound",
+  "inbound": "Inbound",
+  "toDestination": "To {{dest}}",
+  "noStopData": "No stop data for this route",
+  "loadingOrNotOperating": "Loading or not in service today",
+  "autoUpdateBadge": "🕐 Auto-refresh every 2 min",
+  "tdxBadge": "📊 TDX Live Data",
+  "loadingBadge": "⏳ Loading...",
+  "refreshCooldown": "Wait {{s}}s",
+  "stopSequence": "Stop {{n}}",
+  "dataSource": "Data source: TDX Transport Data Exchange (ETA + RealTimeNearStop + StopOfRoute)",
+  "status": {
+    "notDeparted": "Not departed",
+    "noStop": "No service",
+    "lastPassed": "Last bus passed",
+    "notOperating": "Not operating today",
+    "arriving": "Arriving",
+    "departed": "Departed",
+    "approaching": "Approaching",
+    "minutesUnit": "{{min}} min",
+    "secondsUnit": "{{sec}} sec"
+  }
+}

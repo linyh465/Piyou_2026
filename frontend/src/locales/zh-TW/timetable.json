@@ -1,0 +1,26 @@
+{
+  "title": "課表",
+  "weekView": "週課表",
+  "todayView": "今日課程",
+  "timeHeader": "時間",
+  "days": ["一", "二", "三", "四", "五"],
+  "noClassesToday": "今天沒有課程 🎉",
+  "enjoyRest": "享受你的休息日吧",
+  "totalCourses": "本學期共 {{count}} 門課，{{periods}} 節",
+  "requestTimeout": "請求逾時",
+  "clearData": "清除資料",
+  "clearConfirm": "確定要清除課表資料嗎？",
+  "cooldownWarning": "⚠️ 冷卻時間: {{mins}}分，需待冷卻結束後才可再次同步校園資料。",
+  "classInProgress": "上課中",
+  "modal": {
+    "time": "⏰ 時間",
+    "classroom": "📍 教室",
+    "teacher": "👤 教師",
+    "email": "📧 Email",
+    "type": "📋 修別",
+    "credits": "🎓 學分",
+    "creditsUnit": "{{n}} 學分",
+    "close": "關閉",
+    "dayPeriod": "星期{{day}} 第 {{period}} 節 ・ {{timeRange}}"
+  }
+}

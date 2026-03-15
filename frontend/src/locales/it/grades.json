@@ -1,0 +1,15 @@
+{
+  "title": "Voti",
+  "overallGpa": "GPA complessivo",
+  "classRank": "Posizione in classe",
+  "deptRank": "Posizione nel dipartimento",
+  "gradeRankTitle": "Classifiche",
+  "courseGrades": "Voti per corso",
+  "average": "Media {{avg}}",
+  "credits": "{{n}} crediti",
+  "noGrades": "Nessun dato sui voti",
+  "noGradesHint": "Effettua il login per ottenere i voti",
+  "unnamed": "Senza nome",
+  "clearConfirm": "Cancellare i dati dei voti?",
+  "cooldownWarning": "⚠️ Cooldown: prossima sincronizzazione disponibile tra {{mins}} min."
+}

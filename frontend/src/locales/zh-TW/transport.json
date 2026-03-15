@@ -1,0 +1,32 @@
+{
+  "title": "公車動態",
+  "subtitle": "即時到站資訊",
+  "updatedAt": "更新 {{time}}",
+  "swipeHint": "左右滑動切換方向",
+  "stopOverview": "站牌一覽",
+  "busesRunning": "🚌 {{count}} 輛行駛中",
+  "stopsArriving": "{{count}} 站即將到站",
+  "totalStops": "共 {{count}} 站",
+  "outbound": "去程",
+  "inbound": "返程",
+  "toDestination": "往 {{dest}}",
+  "noStopData": "目前無此路線的站牌資訊",
+  "loadingOrNotOperating": "資料載入中或該路線今日未營運",
+  "autoUpdateBadge": "🕐 自動更新 2 分鐘",
+  "tdxBadge": "📊 TDX 即時資料",
+  "loadingBadge": "⏳ 載入中...",
+  "refreshCooldown": "請稍候 {{s}} 秒",
+  "stopSequence": "第 {{n}} 站",
+  "dataSource": "資料來源：TDX 運輸資料流通服務（ETA + RealTimeNearStop + StopOfRoute）",
+  "status": {
+    "notDeparted": "尚未發車",
+    "noStop": "交管不停靠",
+    "lastPassed": "末班已過",
+    "notOperating": "今日未營運",
+    "arriving": "進站中",
+    "departed": "已離站",
+    "approaching": "即將進站",
+    "minutesUnit": "{{min}} 分",
+    "secondsUnit": "{{sec}} 秒"
+  }
+}

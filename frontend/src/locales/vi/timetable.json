@@ -1,0 +1,26 @@
+{
+  "title": "Thời khóa biểu",
+  "weekView": "Tuần",
+  "todayView": "Hôm nay",
+  "timeHeader": "Giờ",
+  "days": ["T2", "T3", "T4", "T5", "T6"],
+  "noClassesToday": "Hôm nay không có tiết học 🎉",
+  "enjoyRest": "Hãy tận hưởng ngày nghỉ",
+  "totalCourses": "Học kỳ này {{count}} môn, {{periods}} tiết",
+  "requestTimeout": "Yêu cầu hết thời gian",
+  "clearData": "Xóa dữ liệu",
+  "clearConfirm": "Bạn có chắc muốn xóa dữ liệu thời khóa biểu?",
+  "cooldownWarning": "⚠️ Thời gian chờ: còn {{mins}} phút đến lần đồng bộ tiếp theo.",
+  "classInProgress": "Đang học",
+  "modal": {
+    "time": "⏰ Thời gian",
+    "classroom": "📍 Phòng học",
+    "teacher": "👤 Giảng viên",
+    "email": "📧 Email",
+    "type": "📋 Loại",
+    "credits": "🎓 Tín chỉ",
+    "creditsUnit": "{{n}} tín chỉ",
+    "close": "Đóng",
+    "dayPeriod": "Tiết {{period}} ・ {{timeRange}}"
+  }
+}
