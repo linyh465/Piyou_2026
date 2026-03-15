@@ -1,6 +1,7 @@
 # ══════════════════════════════════════════
 #  披呦 CI / Piyou Continuous Integration
-#  前後端測試自動化 / Automated frontend & backend tests
+#  前後端測試 + 分支自動同步
+#  Frontend & Backend tests + Branch auto-sync
 # ══════════════════════════════════════════
 name: CI
 
@@ -19,10 +20,10 @@ jobs:
         working-directory: backend
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v5
         with:
           python-version: "3.11"
           cache: pip
@@ -46,10 +47,10 @@ jobs:
         working-directory: frontend
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
 
       - name: Set up Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v4
         with:
           node-version: "20"
           cache: npm
@@ -63,3 +64,54 @@ jobs:
 
       - name: Run tests
         run: npx vitest run
+
+  # ── 分支同步 / Branch Sync (main ↔ dev) ──
+  sync:
+    name: Sync branches
+    needs: [backend, frontend]
+    # 只在直接 push 時執行（PR 不同步）
+    if: success() && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure git bot identity
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Sync source → target branch
+        run: |
+          SOURCE="${{ github.ref_name }}"
+          TARGET=$( [ "$SOURCE" = "main" ] && echo "dev" || echo "main" )
+          echo "🔄 Syncing  $SOURCE  →  $TARGET"
+
+          git fetch origin
+
+          # 切換至目標分支
+          git checkout -B "$TARGET" "origin/$TARGET"
+
+          # 1️⃣ 嘗試 fast-forward（無衝突時最乾淨）
+          if git merge "origin/$SOURCE" --ff-only 2>/dev/null; then
+            git push origin "$TARGET"
+            echo "✅ Fast-forward sync complete: $SOURCE → $TARGET"
+
+          # 2️⃣ 若 ff 不可能，改用 merge commit
+          elif git merge "origin/$SOURCE" --no-edit \
+               -m "ci: sync $SOURCE → $TARGET [skip ci]"; then
+            git push origin "$TARGET"
+            echo "✅ Merge sync complete: $SOURCE → $TARGET"
+
+          # 3️⃣ 衝突 → 放棄，通知開發者手動處理
+          else
+            echo "⚠️ Merge conflict detected — skipping auto-sync."
+            echo "    Please manually merge $SOURCE into $TARGET to resolve."
+            git merge --abort || true
+            exit 0
+          fi
