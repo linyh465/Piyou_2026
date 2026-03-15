@@ -11,6 +11,10 @@ on:
   pull_request:
     branches: [main, dev]
 
+# 強制 GitHub Actions 使用 Node.js 24 執行環境
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   # ── 後端測試 / Backend Tests ──
   backend:
@@ -69,7 +73,6 @@ jobs:
   sync:
     name: Sync branches
     needs: [backend, frontend]
-    # 只在直接 push 時執行（PR 不同步）
     if: success() && github.event_name == 'push'
     runs-on: ubuntu-latest
     permissions:
@@ -86,32 +89,23 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-      - name: Sync source → target branch
+      - name: Sync source to target branch
         run: |
           SOURCE="${{ github.ref_name }}"
           TARGET=$( [ "$SOURCE" = "main" ] && echo "dev" || echo "main" )
-          echo "🔄 Syncing  $SOURCE  →  $TARGET"
+          echo "Syncing $SOURCE to $TARGET"
 
           git fetch origin
-
-          # 切換至目標分支
           git checkout -B "$TARGET" "origin/$TARGET"
 
-          # 1️⃣ 嘗試 fast-forward（無衝突時最乾淨）
           if git merge "origin/$SOURCE" --ff-only 2>/dev/null; then
             git push origin "$TARGET"
-            echo "✅ Fast-forward sync complete: $SOURCE → $TARGET"
-
-          # 2️⃣ 若 ff 不可能，改用 merge commit
-          elif git merge "origin/$SOURCE" --no-edit \
-               -m "ci: sync $SOURCE → $TARGET [skip ci]"; then
+            echo "Fast-forward sync complete: $SOURCE to $TARGET"
+          elif git merge "origin/$SOURCE" --no-edit -m "ci: sync $SOURCE to $TARGET [skip ci]"; then
             git push origin "$TARGET"
-            echo "✅ Merge sync complete: $SOURCE → $TARGET"
-
-          # 3️⃣ 衝突 → 放棄，通知開發者手動處理
+            echo "Merge sync complete: $SOURCE to $TARGET"
           else
-            echo "⚠️ Merge conflict detected — skipping auto-sync."
-            echo "    Please manually merge $SOURCE into $TARGET to resolve."
+            echo "Merge conflict detected, skipping auto-sync."
             git merge --abort || true
             exit 0
           fi
