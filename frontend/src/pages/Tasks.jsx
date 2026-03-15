@@ -189,30 +189,30 @@ export default function Tasks() {
                     <h2 className="page-title">任務管理</h2>
                     <span className="page-subtitle">Tasks</span>
                 </div>
-                <div className="page-menu-wrapper" ref={menuRef}>
-                    {/* 桌面：直接顯示按鈕 */}
-                    <div className="page-header-actions">
-                        <button onClick={exportToMarkdown} className="btn btn-ghost" style={{ fontSize: '13px' }} aria-label="匯出為 Markdown">
-                            <IconDownload size={15} /> MD
-                        </button>
-                        <button onClick={() => { setEditTask(null); setShowForm(true); }} className="btn btn-primary" style={{ fontSize: '13px' }} aria-label="新增任務">
-                            <IconPlus size={15} /> 新增
-                        </button>
-                    </div>
-                    {/* 手機：收納按鈕 */}
-                    <button className="page-header-menu-btn" onClick={() => setShowMenu(v => !v)} aria-label="更多操作">
-                        <IconDotsVertical size={18} />
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    {/* 新增任務：獨立顯示，不收納 */}
+                    <button onClick={() => { setEditTask(null); setShowForm(true); }} className="btn btn-primary" style={{ fontSize: '13px' }} aria-label="新增任務">
+                        <IconPlus size={15} /> 新增任務
                     </button>
-                    {showMenu && (
-                        <div className="page-menu-dropdown">
-                            <button onClick={() => { exportToMarkdown(); setShowMenu(false); }} className="btn btn-ghost">
-                                <IconDownload size={14} /> 匯出 Markdown
-                            </button>
-                            <button onClick={() => { setEditTask(null); setShowForm(true); setShowMenu(false); }} className="btn btn-primary">
-                                <IconPlus size={14} /> 新增任務
+                    <div className="page-menu-wrapper" ref={menuRef}>
+                        {/* 桌面：直接顯示按鈕 */}
+                        <div className="page-header-actions">
+                            <button onClick={exportToMarkdown} className="btn btn-ghost" style={{ fontSize: '13px' }} aria-label="匯出為 Markdown">
+                                <IconDownload size={15} /> MD
                             </button>
                         </div>
-                    )}
+                        {/* 手機：收納按鈕 */}
+                        <button className="page-header-menu-btn" onClick={() => setShowMenu(v => !v)} aria-label="更多操作">
+                            <IconDotsVertical size={18} />
+                        </button>
+                        {showMenu && (
+                            <div className="page-menu-dropdown">
+                                <button onClick={() => { exportToMarkdown(); setShowMenu(false); }} className="btn btn-ghost">
+                                    <IconDownload size={14} /> 匯出 Markdown
+                                </button>
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
 
