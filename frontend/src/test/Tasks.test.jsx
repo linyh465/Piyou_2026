@@ -77,7 +77,7 @@ describe('Tasks Page', () => {
         <Tasks />
       </MemoryRouter>
     );
-    expect(screen.getByText('新增任務')).toBeInTheDocument();
-    expect(screen.getByText('MD')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '新增任務' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '匯出為 Markdown' })).toBeInTheDocument();
   });
 });
