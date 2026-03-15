@@ -2,9 +2,9 @@
  * 成績頁面 / Grades Page — iOS 風格
  * 圓形 GPA 儀錶、排名進度條、課程成績列表
  */
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import useTimetableStore from '../stores/timetableStore';
-import { IconChartBar, IconRefresh, IconBook, IconTrash, IconUser } from '../components/Icons';
+import { IconChartBar, IconRefresh, IconBook, IconTrash, IconUser, IconDotsVertical } from '../components/Icons';
 import SyncLoginModal from '../components/SyncLoginModal';
 import { scoreToGPA } from '../utils/scoreToGPA';
 
@@ -95,6 +95,17 @@ export default function Grades() {
     const { grades, isLoadingGrades, gradesError, fetchGrades, clearGradesData, canSync } = useTimetableStore();
     const [selectedSemester, setSelectedSemester] = useState(null);
     const [showSyncModal, setShowSyncModal] = useState(false);
+    const [showMenu, setShowMenu] = useState(false);
+    const menuRef = useRef(null);
+
+    useEffect(() => {
+        if (!showMenu) return;
+        const handler = (e) => {
+            if (menuRef.current && !menuRef.current.contains(e.target)) setShowMenu(false);
+        };
+        document.addEventListener('mousedown', handler);
+        return () => document.removeEventListener('mousedown', handler);
+    }, [showMenu]);
 
     // 預設選第一個學期
     const activeSemester = selectedSemester || (grades.length ? grades[0].name : null);
@@ -139,17 +150,39 @@ export default function Grades() {
             {/* 標題 */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <h1 className="dash-hero-title" style={{ paddingBottom: 0 }}>成績查詢</h1>
-                <div style={{ display: 'flex', gap: '8px', paddingTop: '6px' }}>
-                    <button onClick={() => setShowSyncModal(true)} className="btn btn-soft" style={{ fontSize: '13px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        <IconUser size={14} /> 一鍵登入
-                    </button>
-                    <button onClick={fetchGrades} disabled={isLoadingGrades} className="btn btn-ghost" style={{ fontSize: '13px' }}>
-                        <IconRefresh size={15} className={isLoadingGrades ? 'animate-spin' : ''} />
-                    </button>
-                    {grades.length > 0 && (
-                        <button onClick={handleClearGrades} className="btn btn-ghost" style={{ fontSize: '13px', color: 'var(--color-danger)' }}>
-                            <IconTrash size={15} />
+                <div className="page-menu-wrapper" style={{ paddingTop: '6px' }} ref={menuRef}>
+                    {/* 桌面：直接顯示按鈕 */}
+                    <div className="page-header-actions">
+                        <button onClick={() => setShowSyncModal(true)} className="btn btn-soft" style={{ fontSize: '13px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <IconUser size={14} /> 一鍵登入
                         </button>
+                        <button onClick={fetchGrades} disabled={isLoadingGrades} className="btn btn-ghost" style={{ fontSize: '13px' }}>
+                            <IconRefresh size={15} className={isLoadingGrades ? 'animate-spin' : ''} />
+                        </button>
+                        {grades.length > 0 && (
+                            <button onClick={handleClearGrades} className="btn btn-ghost" style={{ fontSize: '13px', color: 'var(--color-danger)' }}>
+                                <IconTrash size={15} />
+                            </button>
+                        )}
+                    </div>
+                    {/* 手機：收納按鈕 */}
+                    <button className="page-header-menu-btn" onClick={() => setShowMenu(v => !v)} aria-label="更多操作">
+                        <IconDotsVertical size={18} />
+                    </button>
+                    {showMenu && (
+                        <div className="page-menu-dropdown">
+                            <button onClick={() => { setShowSyncModal(true); setShowMenu(false); }} className="btn btn-soft">
+                                <IconUser size={14} /> 一鍵登入
+                            </button>
+                            <button onClick={() => { fetchGrades(); setShowMenu(false); }} disabled={isLoadingGrades} className="btn btn-ghost">
+                                <IconRefresh size={14} className={isLoadingGrades ? 'animate-spin' : ''} /> 重新整理
+                            </button>
+                            {grades.length > 0 && (
+                                <button onClick={() => { handleClearGrades(); setShowMenu(false); }} className="btn btn-ghost" style={{ color: 'var(--color-danger)' }}>
+                                    <IconTrash size={14} /> 清除資料
+                                </button>
+                            )}
+                        </div>
                     )}
                 </div>
             </div>

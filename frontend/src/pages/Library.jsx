@@ -8,7 +8,7 @@
  */
 import { useState, useEffect, useRef } from 'react';
 import useLibraryStore from '../stores/libraryStore';
-import { IconBook, IconRefresh, IconTrash, IconClock, IconCheckCircle, IconStar, IconUser } from '../components/Icons';
+import { IconBook, IconRefresh, IconTrash, IconClock, IconCheckCircle, IconStar, IconUser, IconDotsVertical } from '../components/Icons';
 import SyncLoginModal from '../components/SyncLoginModal';
 
 /** 到期日顏色 / Due date color */
@@ -159,7 +159,18 @@ export default function Library() {
 
     const [activeTab, setActiveTab] = useState('loans');
     const [showSyncModal, setShowSyncModal] = useState(false);
+    const [showMenu, setShowMenu] = useState(false);
     const hasFetched = useRef(false);
+    const menuRef = useRef(null);
+
+    useEffect(() => {
+        if (!showMenu) return;
+        const handler = (e) => {
+            if (menuRef.current && !menuRef.current.contains(e.target)) setShowMenu(false);
+        };
+        document.addEventListener('mousedown', handler);
+        return () => document.removeEventListener('mousedown', handler);
+    }, [showMenu]);
 
     useEffect(() => {
         if (!hasFetched.current && loans.length === 0 && reserves.length === 0) {
@@ -194,34 +205,56 @@ export default function Library() {
                     <h2 className="page-title">圖書館</h2>
                     <span className="page-subtitle">Library</span>
                 </div>
-                <div style={{ display: 'flex', gap: '8px' }}>
-                    <button
-                        onClick={() => setShowSyncModal(true)}
-                        className="btn btn-soft"
-                        style={{ fontSize: '13px', display: 'flex', alignItems: 'center', gap: '4px' }}
-                    >
-                        <IconUser size={14} /> 一鍵登入
-                    </button>
-                    <button
-                        onClick={fetchLibrary}
-                        disabled={isLoading}
-                        className="btn btn-ghost"
-                        style={{ fontSize: '13px' }}
-                        aria-label="重新整理圖書館資料"
-                    >
-                        <IconRefresh size={15} className={isLoading ? 'animate-spin' : ''} />
-                        {isLoading ? '載入中...' : '重新整理'}
-                    </button>
-                    {(loans.length > 0 || reserves.length > 0 || history.length > 0) && (
+                <div className="page-menu-wrapper" ref={menuRef}>
+                    {/* 桌面：直接顯示按鈕 */}
+                    <div className="page-header-actions">
                         <button
-                            onClick={() => { if (window.confirm('確定要清除圖書館資料嗎？')) clearLibraryData(); }}
-                            className="btn btn-ghost"
-                            style={{ fontSize: '13px', color: 'var(--color-danger)' }}
-                            aria-label="清除圖書館資料"
+                            onClick={() => setShowSyncModal(true)}
+                            className="btn btn-soft"
+                            style={{ fontSize: '13px', display: 'flex', alignItems: 'center', gap: '4px' }}
                         >
-                            <IconTrash size={15} />
-                            清除
+                            <IconUser size={14} /> 一鍵登入
                         </button>
+                        <button
+                            onClick={fetchLibrary}
+                            disabled={isLoading}
+                            className="btn btn-ghost"
+                            style={{ fontSize: '13px' }}
+                            aria-label="重新整理圖書館資料"
+                        >
+                            <IconRefresh size={15} className={isLoading ? 'animate-spin' : ''} />
+                            {isLoading ? '載入中...' : '重新整理'}
+                        </button>
+                        {(loans.length > 0 || reserves.length > 0 || history.length > 0) && (
+                            <button
+                                onClick={() => { if (window.confirm('確定要清除圖書館資料嗎？')) clearLibraryData(); }}
+                                className="btn btn-ghost"
+                                style={{ fontSize: '13px', color: 'var(--color-danger)' }}
+                                aria-label="清除圖書館資料"
+                            >
+                                <IconTrash size={15} />
+                                清除
+                            </button>
+                        )}
+                    </div>
+                    {/* 手機：收納按鈕 */}
+                    <button className="page-header-menu-btn" onClick={() => setShowMenu(v => !v)} aria-label="更多操作">
+                        <IconDotsVertical size={18} />
+                    </button>
+                    {showMenu && (
+                        <div className="page-menu-dropdown">
+                            <button onClick={() => { setShowSyncModal(true); setShowMenu(false); }} className="btn btn-soft">
+                                <IconUser size={14} /> 一鍵登入
+                            </button>
+                            <button onClick={() => { fetchLibrary(); setShowMenu(false); }} disabled={isLoading} className="btn btn-ghost">
+                                <IconRefresh size={14} className={isLoading ? 'animate-spin' : ''} /> 重新整理
+                            </button>
+                            {(loans.length > 0 || reserves.length > 0 || history.length > 0) && (
+                                <button onClick={() => { setShowMenu(false); if (window.confirm('確定要清除圖書館資料嗎？')) clearLibraryData(); }} className="btn btn-ghost" style={{ color: 'var(--color-danger)' }}>
+                                    <IconTrash size={14} /> 清除資料
+                                </button>
+                            )}
+                        </div>
                     )}
                 </div>
             </div>
