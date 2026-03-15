@@ -1,24 +1,26 @@
 /**
  * PWA 更新提示元件 / PWA Update Prompt Component
- * 當 Service Worker 偵測到新版本時顯示更新提示
- * Shows update prompt when Service Worker detects a new version.
+ * 當 Service Worker 偵測到新版本（GitHub 推送後部署）時，
+ * 顯示倒數彈窗並自動執行重整更新。
  */
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useRegisterSW } from 'virtual:pwa-register/react';
+
+const AUTO_UPDATE_SECONDS = 10;
+const CHECK_INTERVAL_MS = 5 * 60 * 1000; // 每 5 分鐘檢查一次
 
 export default function PWAReloadPrompt() {
     const [showPrompt, setShowPrompt] = useState(false);
+    const [countdown, setCountdown] = useState(AUTO_UPDATE_SECONDS);
+    const countdownRef = useRef(null);
 
     const {
         needRefresh: [needRefresh, setNeedRefresh],
         updateServiceWorker,
     } = useRegisterSW({
         onRegisteredSW(swUrl, r) {
-            // 每 30 分鐘檢查一次更新 / Check for updates every 30 min
             if (r) {
-                setInterval(() => {
-                    r.update();
-                }, 30 * 60 * 1000);
+                setInterval(() => r.update(), CHECK_INTERVAL_MS);
             }
         },
         onRegisterError(error) {
@@ -26,66 +28,200 @@ export default function PWAReloadPrompt() {
         },
     });
 
+    // 偵測到新版本時，顯示彈窗並開始倒數
     useEffect(() => {
-        setShowPrompt(needRefresh);
+        if (!needRefresh) return;
+        setShowPrompt(true);
+        setCountdown(AUTO_UPDATE_SECONDS);
     }, [needRefresh]);
+
+    // 倒數計時，歸零時自動更新
+    useEffect(() => {
+        if (!showPrompt) return;
+
+        countdownRef.current = setInterval(() => {
+            setCountdown(prev => {
+                if (prev <= 1) {
+                    clearInterval(countdownRef.current);
+                    updateServiceWorker(true);
+                    return 0;
+                }
+                return prev - 1;
+            });
+        }, 1000);
+
+        return () => clearInterval(countdownRef.current);
+    }, [showPrompt]);
+
+    const handleUpdateNow = () => {
+        clearInterval(countdownRef.current);
+        updateServiceWorker(true);
+    };
+
+    const handleDismiss = () => {
+        clearInterval(countdownRef.current);
+        setNeedRefresh(false);
+        setShowPrompt(false);
+    };
 
     if (!showPrompt) return null;
 
     return (
-        <div
-            style={{
-                position: 'fixed',
-                bottom: 'calc(env(safe-area-inset-bottom, 0px) + 80px)',
-                left: '50%',
-                transform: 'translateX(-50%)',
-                zIndex: 9999,
-                background: 'var(--bg-card, #1a1a2e)',
-                border: '1px solid var(--border, #333)',
-                borderRadius: '16px',
-                padding: '14px 20px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '12px',
-                boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
-                fontSize: '13px',
-                color: 'var(--text, #eee)',
-                maxWidth: 'calc(100vw - 32px)',
-                animation: 'slideUp 0.3s ease-out',
-            }}
-        >
-            <span>🔄 有新版本可用</span>
-            <button
-                onClick={() => updateServiceWorker(true)}
+        <>
+            {/* 背景遮罩 */}
+            <div
                 style={{
-                    background: 'var(--color-brand, #6366f1)',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '10px',
-                    padding: '6px 14px',
-                    fontSize: '12px',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    whiteSpace: 'nowrap',
+                    position: 'fixed',
+                    inset: 0,
+                    background: 'rgba(0, 0, 0, 0.55)',
+                    zIndex: 9998,
+                    backdropFilter: 'blur(4px)',
+                    WebkitBackdropFilter: 'blur(4px)',
+                    animation: 'pwaFadeIn 0.25s ease-out',
+                }}
+            />
+
+            {/* 彈窗主體 */}
+            <div
+                style={{
+                    position: 'fixed',
+                    top: '50%',
+                    left: '50%',
+                    transform: 'translate(-50%, -50%)',
+                    zIndex: 9999,
+                    width: 'min(360px, calc(100vw - 40px))',
+                    background: 'var(--bg-card, #1a1a2e)',
+                    border: '1px solid var(--border, #333)',
+                    borderRadius: '20px',
+                    padding: '28px 24px 24px',
+                    boxShadow: '0 20px 60px rgba(0, 0, 0, 0.5)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: '12px',
+                    color: 'var(--text, #eee)',
+                    animation: 'pwaSlideUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
                 }}
             >
-                立即更新
-            </button>
-            <button
-                onClick={() => { setNeedRefresh(false); setShowPrompt(false); }}
-                style={{
-                    background: 'none',
-                    border: 'none',
-                    color: 'var(--text-muted, #888)',
-                    cursor: 'pointer',
-                    fontSize: '16px',
-                    padding: '0 4px',
-                    lineHeight: 1,
-                }}
-                aria-label="關閉"
-            >
-                ✕
-            </button>
-        </div>
+                {/* 圖示 */}
+                <div
+                    style={{
+                        width: 56,
+                        height: 56,
+                        borderRadius: '50%',
+                        background: 'linear-gradient(135deg, #6366f1, #0ea5e9)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: 26,
+                        marginBottom: 4,
+                        boxShadow: '0 0 24px rgba(99,102,241,0.4)',
+                    }}
+                >
+                    🚀
+                </div>
+
+                {/* 標題 */}
+                <div style={{ fontSize: 17, fontWeight: 700, textAlign: 'center' }}>
+                    發現新版本！
+                </div>
+
+                {/* 說明 */}
+                <div
+                    style={{
+                        fontSize: 13,
+                        color: 'var(--text-muted, #aaa)',
+                        textAlign: 'center',
+                        lineHeight: 1.6,
+                    }}
+                >
+                    GitHub 已推送更新，Piyou 將在{' '}
+                    <span
+                        style={{
+                            color: '#6366f1',
+                            fontWeight: 700,
+                            fontSize: 15,
+                            display: 'inline-block',
+                            minWidth: '1.5ch',
+                            textAlign: 'center',
+                        }}
+                    >
+                        {countdown}
+                    </span>{' '}
+                    秒後自動重整。
+                </div>
+
+                {/* 倒數進度條 */}
+                <div
+                    style={{
+                        width: '100%',
+                        height: 4,
+                        background: 'var(--border, #333)',
+                        borderRadius: 4,
+                        overflow: 'hidden',
+                        margin: '4px 0',
+                    }}
+                >
+                    <div
+                        style={{
+                            height: '100%',
+                            width: `${(countdown / AUTO_UPDATE_SECONDS) * 100}%`,
+                            background: 'linear-gradient(90deg, #6366f1, #0ea5e9)',
+                            borderRadius: 4,
+                            transition: 'width 1s linear',
+                        }}
+                    />
+                </div>
+
+                {/* 按鈕群 */}
+                <div style={{ display: 'flex', gap: 10, width: '100%', marginTop: 4 }}>
+                    <button
+                        onClick={handleDismiss}
+                        style={{
+                            flex: 1,
+                            padding: '9px 0',
+                            background: 'var(--bg, #12121f)',
+                            border: '1px solid var(--border, #444)',
+                            borderRadius: 12,
+                            color: 'var(--text-muted, #aaa)',
+                            fontSize: 13,
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                        }}
+                    >
+                        稍後再說
+                    </button>
+                    <button
+                        onClick={handleUpdateNow}
+                        style={{
+                            flex: 2,
+                            padding: '9px 0',
+                            background: 'linear-gradient(135deg, #6366f1, #0ea5e9)',
+                            border: 'none',
+                            borderRadius: 12,
+                            color: 'white',
+                            fontSize: 13,
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                            boxShadow: '0 4px 14px rgba(99,102,241,0.35)',
+                        }}
+                    >
+                        立即更新
+                    </button>
+                </div>
+            </div>
+
+            {/* 動畫樣式 */}
+            <style>{`
+                @keyframes pwaFadeIn {
+                    from { opacity: 0; }
+                    to   { opacity: 1; }
+                }
+                @keyframes pwaSlideUp {
+                    from { opacity: 0; transform: translate(-50%, calc(-50% + 20px)); }
+                    to   { opacity: 1; transform: translate(-50%, -50%); }
+                }
+            `}</style>
+        </>
     );
 }
