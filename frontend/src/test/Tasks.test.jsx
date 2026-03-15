@@ -77,7 +77,7 @@ describe('Tasks Page', () => {
         <Tasks />
       </MemoryRouter>
     );
-    expect(screen.getByText('新增')).toBeInTheDocument();
+    expect(screen.getByText('新增任務')).toBeInTheDocument();
     expect(screen.getByText('MD')).toBeInTheDocument();
   });
 });
