@@ -117,9 +117,11 @@ describe('Settings Page', () => {
         <Settings />
       </MemoryRouter>
     );
-    expect(screen.getByText('淺色')).toBeInTheDocument();
-    expect(screen.getByText('深色')).toBeInTheDocument();
-    expect(screen.getByText('系統')).toBeInTheDocument();
+    // 主題選項現為 <select><option> 結構，文字含 emoji 前綴（如 ☀️ 淺色）
+    // Theme options are now <select><option>, text includes emoji prefix
+    expect(screen.getByRole('option', { name: /淺色/ })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: /深色/ })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: /系統/ })).toBeInTheDocument();
   });
 
   it('renders notification toggles', () => {
