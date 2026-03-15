@@ -8,12 +8,10 @@ import useTimetableStore from '../stores/timetableStore';
 import useTaskStore from '../stores/taskStore';
 import useLibraryStore from '../stores/libraryStore';
 import useLangStore from '../stores/langStore';
-import useTronclassStore from '../stores/tronclassStore';
-import useAuthStore from '../stores/authStore';
 import {
     IconBook, IconMapPin, IconClock,
     IconCheckSquare, IconCalendar, IconStar, IconPlus, IconLibrary, IconUser,
-    IconChevronRight, IconWowClass, IconEyeOff,
+    IconChevronRight,
 } from '../components/Icons';
 
 const PERIOD_TIMES = {
@@ -274,114 +272,6 @@ function TaskSection() {
     );
 }
 
-// ── 玩課雲作業預覽 / WoW Class Assignments Preview ──
-function WowClassSection() {
-    const { t } = useTranslation('dashboard');
-    const { t: tCommon } = useTranslation('common');
-    const fetchAssignments = useTronclassStore((s) => s.fetchAssignments);
-    const assignments = useTronclassStore((s) => s.assignments);
-    const ignoredIds = useTronclassStore((s) => s.ignoredIds);
-    const ignoreAssignment = useTronclassStore((s) => s.ignoreAssignment);
-    const isLoading = useTronclassStore((s) => s.isLoading);
-    const isLoggedIn = useAuthStore((s) => s.isLoggedIn);
-    const hasFetched = useRef(false);
-
-    useEffect(() => {
-        if (!hasFetched.current && isLoggedIn) {
-            hasFetched.current = true;
-            fetchAssignments();
-        }
-    }, [fetchAssignments, isLoggedIn]);
-
-    if (!isLoggedIn) return null;
-    if (isLoading && !assignments.length) return null;
-
-    const visible = assignments
-        .filter((a) => !ignoredIds.has(a.id) && !a.is_submitted)
-        .slice(0, 3);
-
-    if (!visible.length && !assignments.length) return null;
-
-    return (
-        <div className="dash-section">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <h3 className="dash-section-title">{t('wowClassAssignments')}</h3>
-                <a href="#/wow-class" style={{
-                    fontSize: '13px', color: 'var(--color-brand)', textDecoration: 'none',
-                    fontWeight: 500, display: 'flex', alignItems: 'center', gap: '2px',
-                }}>
-                    {tCommon('viewAll')} <IconChevronRight size={14} />
-                </a>
-            </div>
-
-            {visible.length === 0 ? (
-                <div className="card" style={{ padding: '24px', textAlign: 'center' }}>
-                    <p style={{ fontSize: '1.25rem', marginBottom: '4px' }}>🎉</p>
-                    <p style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text-secondary)' }}>
-                        {t('wowClassAllDone')}
-                    </p>
-                </div>
-            ) : (
-                <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-                    {visible.map((a, i) => {
-                        const isOverdue = a.is_overdue;
-                        return (
-                            <div
-                                key={a.id}
-                                className="dash-task-row"
-                                style={{
-                                    borderBottom: i < visible.length - 1 ? '1px solid var(--border-light)' : 'none',
-                                    padding: '14px 18px',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '12px',
-                                }}
-                            >
-                                <span style={{
-                                    width: '8px', height: '8px', borderRadius: '50%',
-                                    background: isOverdue ? 'var(--color-danger)' : 'var(--color-brand)',
-                                    flexShrink: 0,
-                                }} />
-                                <div style={{ flex: 1, minWidth: 0 }}>
-                                    <p style={{
-                                        fontSize: '15px', fontWeight: 500, color: 'var(--text)',
-                                        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                                    }}>
-                                        {a.title}
-                                    </p>
-                                    <p style={{
-                                        fontSize: '12px',
-                                        color: isOverdue ? 'var(--color-danger)' : 'var(--text-muted)',
-                                        marginTop: '2px', fontWeight: isOverdue ? 500 : 400,
-                                    }}>
-                                        {a.course_name}{a.due_date ? ` · ${isOverdue ? t('overdue') + ' · ' : ''}${a.due_date.slice(0, 10)}` : ''}
-                                    </p>
-                                </div>
-                                <button
-                                    type="button"
-                                    onClick={(e) => { e.preventDefault(); ignoreAssignment(a.id); }}
-                                    title={t('wowClassIgnore')}
-                                    style={{
-                                        background: 'none', border: 'none', cursor: 'pointer',
-                                        padding: '4px', color: 'var(--text-muted)',
-                                        display: 'flex', alignItems: 'center', borderRadius: '6px',
-                                        flexShrink: 0,
-                                    }}
-                                >
-                                    <IconEyeOff size={14} />
-                                </button>
-                                <a href="#/wow-class" style={{ color: 'var(--text-muted)', flexShrink: 0, display: 'flex' }}>
-                                    <IconChevronRight size={14} />
-                                </a>
-                            </div>
-                        );
-                    })}
-                </div>
-            )}
-        </div>
-    );
-}
-
 // ── 圖書館借閱預覽 / Library Preview ──
 function LibrarySection() {
     const { t } = useTranslation('dashboard');
@@ -457,7 +347,6 @@ export default function Dashboard() {
             </div>
             <CurrentClassCard />
             <TaskSection />
-            <WowClassSection />
             <LibrarySection />
         </div>
     );

@@ -8,14 +8,6 @@ import i18n from '../i18n/index';
 export const LANGUAGES = [
     { code: 'zh-TW', label: '繁體中文', flag: '🇹🇼' },
     { code: 'en',    label: 'English',   flag: '🇺🇸' },
-    { code: 'ja',    label: '日本語',    flag: '🇯🇵' },
-    { code: 'ko',    label: '한국어',    flag: '🇰🇷' },
-    { code: 'vi',    label: 'Tiếng Việt', flag: '🇻🇳' },
-    { code: 'de',    label: 'Deutsch',   flag: '🇩🇪' },
-    { code: 'it',    label: 'Italiano',  flag: '🇮🇹' },
-    { code: 'fil',   label: 'Filipino',  flag: '🇵🇭' },
-    { code: 'id',    label: 'Indonesia', flag: '🇮🇩' },
-    { code: 'hi',    label: 'हिन्दी',    flag: '🇮🇳' },
 ];
 
 const useLangStore = create((set) => ({

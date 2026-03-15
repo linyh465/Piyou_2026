@@ -9,11 +9,11 @@ import useTimetableStore from '../stores/timetableStore';
 import {
     IconHome, IconCalendar, IconCheckSquare,
     IconSettings, IconChartBar, IconCloudLightning, IconCloudOff, IconBus,
-    IconLibrary, IconArrowLeft, IconSchool, IconWowClass,
+    IconLibrary, IconArrowLeft, IconSchool,
 } from './Icons';
 
 // ── 學校相關路徑 / School-related paths ──
-const schoolPaths = ['/timetable', '/grades', '/library', '/wow-class'];
+const schoolPaths = ['/timetable', '/grades', '/library'];
 
 let _lastSchoolPath = '/timetable';
 let _touchStartX = 0;
@@ -27,7 +27,6 @@ const ROUTE_TITLE_KEYS = {
     '/transport': 'transport',
     '/library': 'library',
     '/settings': 'settings',
-    '/wow-class': 'wowClass',
 };
 
 export default function Layout() {
@@ -67,7 +66,6 @@ export default function Layout() {
             items: [
                 { to: '/timetable', icon: IconCalendar, label: t('timetable') },
                 { to: '/grades', icon: IconChartBar, label: t('grades') },
-                { to: '/wow-class', icon: IconWowClass, label: t('wowClass') },
             ],
         },
         {
@@ -93,7 +91,6 @@ export default function Layout() {
         { to: '/grades', icon: IconChartBar, label: t('grades') },
         { to: '/timetable', icon: IconCalendar, label: t('timetable') },
         { to: '/library', icon: IconLibrary, label: t('library') },
-        { to: '/wow-class', icon: IconWowClass, label: t('wowClass') },
         { key: 'back', icon: IconArrowLeft, label: t('back'), isBack: true },
     ];
 

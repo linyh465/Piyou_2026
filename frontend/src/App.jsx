@@ -19,7 +19,6 @@ const Tasks = lazy(() => import('./pages/Tasks'));
 const Transport = lazy(() => import('./pages/Transport'));
 const Library = lazy(() => import('./pages/Library'));
 const Settings = lazy(() => import('./pages/Settings'));
-const WowClass = lazy(() => import('./pages/WowClass'));
 
 // ── 載入中佔位 / Loading fallback ──
 function PageLoader() {
@@ -53,7 +52,6 @@ export default function App() {
               <Route path="transport" element={<Transport />} />
               <Route path="library" element={<Library />} />
               <Route path="settings" element={<Settings />} />
-              <Route path="wow-class" element={<WowClass />} />
             </Route>
 
             {/* 未知路由導回首頁 / Unknown routes redirect to home */}
