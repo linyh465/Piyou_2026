@@ -16,6 +16,8 @@ from datetime import datetime, timezone, timedelta
 from typing import Optional
 
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 logger = logging.getLogger(__name__)
 
@@ -68,6 +70,8 @@ class TronClassScraper:
 
     def __init__(self):
         self.session = requests.Session()
+        _retry = Retry(total=2, connect=2, read=2, backoff_factor=0.3)
+        self.session.mount("https://", HTTPAdapter(max_retries=_retry))
         self.session.headers.update({
             "User-Agent": random.choice(USER_AGENTS),
             "Accept": "application/json, text/plain, */*",
