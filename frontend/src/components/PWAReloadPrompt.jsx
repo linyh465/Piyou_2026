@@ -10,7 +10,6 @@ const AUTO_UPDATE_SECONDS = 10;
 const CHECK_INTERVAL_MS = 5 * 60 * 1000; // 每 5 分鐘檢查一次
 
 export default function PWAReloadPrompt() {
-    const [showPrompt, setShowPrompt] = useState(false);
     const [countdown, setCountdown] = useState(AUTO_UPDATE_SECONDS);
     const countdownRef = useRef(null);
 
@@ -28,16 +27,11 @@ export default function PWAReloadPrompt() {
         },
     });
 
-    // 偵測到新版本時，顯示彈窗並開始倒數
+    // 偵測到新版本時開始倒數，歸零自動更新
     useEffect(() => {
         if (!needRefresh) return;
-        setShowPrompt(true);
-        setCountdown(AUTO_UPDATE_SECONDS);
-    }, [needRefresh]);
 
-    // 倒數計時，歸零時自動更新
-    useEffect(() => {
-        if (!showPrompt) return;
+        setCountdown(AUTO_UPDATE_SECONDS);
 
         countdownRef.current = setInterval(() => {
             setCountdown(prev => {
@@ -51,7 +45,7 @@ export default function PWAReloadPrompt() {
         }, 1000);
 
         return () => clearInterval(countdownRef.current);
-    }, [showPrompt, updateServiceWorker]);
+    }, [needRefresh, updateServiceWorker]);
 
     const handleUpdateNow = () => {
         clearInterval(countdownRef.current);
@@ -61,10 +55,9 @@ export default function PWAReloadPrompt() {
     const handleDismiss = () => {
         clearInterval(countdownRef.current);
         setNeedRefresh(false);
-        setShowPrompt(false);
     };
 
-    if (!showPrompt) return null;
+    if (!needRefresh) return null;
 
     return (
         <>
