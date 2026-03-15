@@ -267,7 +267,7 @@ export default function Settings() {
             {/* ── Sync Data Modal ── */}
             {showSyncModal && (
                 <div style={{
-                    position: 'fixed', inset: 0, zIndex: 50,
+                    position: 'fixed', inset: 0, zIndex: 200,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     padding: '16px', background: 'rgba(0,0,0,0.5)',
                 }} className="animate-fade-in">
@@ -364,7 +364,7 @@ export default function Settings() {
             {/* ── Logout Confirmation Modal ── */}
             {showLogoutConfirm && (
                 <div style={{
-                    position: 'fixed', inset: 0, zIndex: 50,
+                    position: 'fixed', inset: 0, zIndex: 200,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     padding: '16px', background: 'rgba(0,0,0,0.5)',
                 }} className="animate-fade-in">
