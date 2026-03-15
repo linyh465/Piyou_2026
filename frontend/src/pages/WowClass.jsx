@@ -1,5 +1,5 @@
 /**
- * 玩課雲頁面 / WoW Class Page
+ * 玩課雲頁面 / WOW Class Page
  * 顯示 TronClass 待辦作業，支援忽略功能
  * Shows TronClass pending assignments with ignore support.
  */
