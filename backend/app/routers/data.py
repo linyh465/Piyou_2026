@@ -672,8 +672,11 @@ async def get_tronclass(user: dict = Depends(get_current_user)):
                 assignments=assignments,
                 fetched_at=datetime.now(timezone(timedelta(hours=8))).isoformat(),
             )
-    except HTTPException:
-        raise
+    except HTTPException as e:
+        if e.status_code == 401:
+            raise
+        # 502 = TronClass 登入失敗或無法連線，fallback 到 mock
+        logger.warning(f"TronClass unreachable (HTTP {e.status_code}), using mock data")
     except Exception as e:
         logger.warning(f"TronClass scraper failed, using mock: {type(e).__name__}: {e}")
 
