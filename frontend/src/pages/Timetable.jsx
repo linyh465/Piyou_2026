@@ -46,7 +46,6 @@ function getColorForCourse(name) {
 // ── 課程詳細 Modal ──
 function CourseDetailModal({ course, onClose }) {
     const { t } = useTranslation('timetable');
-    const { t: tCommon } = useTranslation('common');
 
     useEffect(() => {
         if (!course) return;

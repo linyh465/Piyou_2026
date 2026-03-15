@@ -38,7 +38,6 @@ function formatDate(date, lang) {
 // ── 當前課堂卡片 / Current & Next Class Card ──
 function CurrentClassCard() {
     const { t } = useTranslation('dashboard');
-    const { t: tCommon } = useTranslation('common');
     const getNextClass = useDashboardStore((s) => s.getNextClass);
     const fetchTimetable = useTimetableStore((s) => s.fetchTimetable);
     const timetable = useTimetableStore((s) => s.timetable);
