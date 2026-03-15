@@ -13,7 +13,7 @@ import useTaskStore from '../stores/taskStore';
 import useLibraryStore from '../stores/libraryStore';
 import useLangStore, { LANGUAGES } from '../stores/langStore';
 import {
-    IconUser, IconSun, IconMoon, IconBell, IconSettings,
+    IconUser, IconSun, IconBell, IconSettings,
     IconLogOut, IconChevronRight, IconBook, IconCheckCircle, IconXCircle
 } from '../components/Icons';
 
@@ -74,6 +74,32 @@ function Toggle({ checked, onChange, 'aria-label': ariaLabel }) {
                 transform: checked ? 'translateX(20px)' : 'translateX(0)',
             }} />
         </button>
+    );
+}
+
+// ── 行內下拉選單 / Inline Select ──
+function InlineSelect({ value, onChange, options }) {
+    return (
+        <select
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            onClick={(e) => e.stopPropagation()}
+            style={{
+                background: 'var(--bg-input)',
+                color: 'var(--text)',
+                border: '1.5px solid var(--border)',
+                borderRadius: '8px',
+                padding: '6px 10px',
+                fontSize: '14px',
+                cursor: 'pointer',
+                outline: 'none',
+                minWidth: '140px',
+            }}
+        >
+            {options.map((opt) => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
+        </select>
     );
 }
 
@@ -171,10 +197,20 @@ export default function Settings() {
     };
 
     const themeOptions = [
-        { value: 'light', label: t('theme.light'), icon: IconSun },
-        { value: 'dark', label: t('theme.dark'), icon: IconMoon },
-        { value: 'system', label: t('theme.system'), icon: IconSettings },
+        { value: 'light',  label: `☀️ ${t('theme.light')}` },
+        { value: 'dark',   label: `🌙 ${t('theme.dark')}` },
+        { value: 'system', label: `⚙️ ${t('theme.system')}` },
     ];
+
+    const colorOptions = COLOR_THEMES.map((ct) => ({
+        value: ct.id,
+        label: `${ct.label} · ${ct.labelEn}`,
+    }));
+
+    const langOptions = LANGUAGES.map((l) => ({
+        value: l.code,
+        label: `${l.flag} ${l.label}`,
+    }));
 
     return (
         <div className="section-stack animate-fade-in">
@@ -384,89 +420,15 @@ export default function Settings() {
             <div className="card-stack">
                 <SectionHeader title={t('appearance')} />
                 <div className="card">
-                    <p style={{ color: 'var(--text)', fontSize: '15px', fontWeight: 500, paddingBottom: '14px', padding: '4px 8px 14px' }}>
-                        {t('themeMode')}
-                    </p>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                        {themeOptions.map((opt) => {
-                            const isActive = theme === opt.value;
-                            return (
-                                <button
-                                    key={opt.value}
-                                    onClick={() => setTheme(opt.value)}
-                                    style={{
-                                        width: '100%', display: 'flex', alignItems: 'center', gap: '14px',
-                                        padding: '14px 16px', borderRadius: '12px', fontSize: '15px', fontWeight: 500,
-                                        cursor: 'pointer', transition: 'all 0.2s',
-                                        background: isActive ? 'var(--color-brand-subtle)' : 'var(--bg-input)',
-                                        color: isActive ? 'var(--color-brand)' : 'var(--text-secondary)',
-                                        border: isActive ? '2px solid var(--color-brand)' : '2px solid transparent',
-                                    }}
-                                >
-                                    <opt.icon size={22} />
-                                    <span>{opt.label}</span>
-                                </button>
-                            );
-                        })}
-                    </div>
-                </div>
-
-                {/* ── 色彩主題 / Color Theme ── */}
-                <div className="card">
-                    <p style={{ color: 'var(--text)', fontSize: '15px', fontWeight: 500, padding: '4px 8px 14px' }}>
-                        {t('colorTheme')}
-                    </p>
-                    <div className="theme-picker">
-                        {COLOR_THEMES.map((ct) => (
-                            <button
-                                key={ct.id}
-                                className={`theme-swatch ${colorTheme === ct.id ? 'active' : ''}`}
-                                onClick={() => setColorTheme(ct.id)}
-                                aria-label={`${ct.label} ${ct.labelEn}`}
-                            >
-                                <div
-                                    className="theme-swatch-dot"
-                                    style={{ background: `linear-gradient(135deg, ${ct.color}, ${ct.color}cc)` }}
-                                />
-                                <div>
-                                    <div className="theme-swatch-label">{ct.label}</div>
-                                    <div className="theme-swatch-sublabel">{ct.description}</div>
-                                </div>
-                            </button>
-                        ))}
-                    </div>
-                </div>
-            </div>
-
-            {/* ═══ 語言 / Language ═══ */}
-            <div className="card-stack">
-                <SectionHeader title={t('language')} />
-                <div className="card">
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', padding: '4px 0' }}>
-                        {LANGUAGES.map((l) => {
-                            const isActive = lang === l.code;
-                            return (
-                                <button
-                                    key={l.code}
-                                    onClick={() => setLang(l.code)}
-                                    style={{
-                                        width: '100%', display: 'flex', alignItems: 'center', gap: '12px',
-                                        padding: '12px 16px', borderRadius: '12px', fontSize: '15px', fontWeight: 500,
-                                        cursor: 'pointer', transition: 'all 0.2s',
-                                        background: isActive ? 'var(--color-brand-subtle)' : 'transparent',
-                                        color: isActive ? 'var(--color-brand)' : 'var(--text)',
-                                        border: isActive ? '2px solid var(--color-brand)' : '2px solid transparent',
-                                    }}
-                                >
-                                    <span style={{ fontSize: '20px' }}>{l.flag}</span>
-                                    <span>{l.label}</span>
-                                    {isActive && (
-                                        <IconCheckCircle size={16} style={{ marginLeft: 'auto', color: 'var(--color-brand)' }} />
-                                    )}
-                                </button>
-                            );
-                        })}
-                    </div>
+                    <SettingItem icon={IconSun} label={t('themeMode')}>
+                        <InlineSelect value={theme} onChange={setTheme} options={themeOptions} />
+                    </SettingItem>
+                    <SettingItem icon={IconSettings} label={t('colorTheme')}>
+                        <InlineSelect value={colorTheme} onChange={setColorTheme} options={colorOptions} />
+                    </SettingItem>
+                    <SettingItem icon={IconBook} label={t('language')}>
+                        <InlineSelect value={lang} onChange={setLang} options={langOptions} />
+                    </SettingItem>
                 </div>
             </div>
 
