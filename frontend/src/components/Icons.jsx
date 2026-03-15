@@ -256,6 +256,14 @@ export const IconSchool = icon(
     </>
 );
 
+export const IconDotsVertical = icon(
+    <>
+        <circle cx="12" cy="5" r="1" fill="currentColor" />
+        <circle cx="12" cy="12" r="1" fill="currentColor" />
+        <circle cx="12" cy="19" r="1" fill="currentColor" />
+    </>
+);
+
 export const IconLibrary = icon(
     <>
         <path d="M3 21h18M3 10h18M5 6l7-3 7 3" />

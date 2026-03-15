@@ -374,6 +374,63 @@ body {
   gap: 0.625rem;
 }
 
+/* ── 頁面右上角收納選單 / Mobile Page Actions Menu ── */
+.page-menu-wrapper {
+  position: relative;
+}
+
+.page-header-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.page-header-menu-btn {
+  display: none;
+  width: 36px;
+  height: 36px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.page-menu-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 200;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 155px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.12), 0 1px 4px rgba(0, 0, 0, 0.06);
+  animation: fadeIn 0.12s ease;
+}
+
+.page-menu-dropdown .btn {
+  justify-content: flex-start;
+  width: 100%;
+  font-size: 13px !important;
+  gap: 8px;
+}
+
+@media (max-width: 767px) {
+  .page-header-actions {
+    display: none;
+  }
+  .page-header-menu-btn {
+    display: flex;
+  }
+}
+
 .page-title {
   font-size: 1.75rem;
   font-weight: 800;

@@ -2,9 +2,9 @@
  * 課表頁面 / Timetable Page — iOS 風格
  * 週課表＋今日課程雙視圖 + 課程詳細 Modal
  */
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import useTimetableStore from '../stores/timetableStore';
-import { IconCalendar, IconRefresh, IconTrash, IconMapPin, IconClock, IconUser } from '../components/Icons';
+import { IconCalendar, IconRefresh, IconTrash, IconMapPin, IconClock, IconUser, IconDotsVertical } from '../components/Icons';
 import SyncLoginModal from '../components/SyncLoginModal';
 
 const DAYS = ['一', '二', '三', '四', '五'];
@@ -292,6 +292,17 @@ export default function Timetable() {
     const [view, setView] = useState('week');
     const [selectedCourse, setSelectedCourse] = useState(null);
     const [showSyncModal, setShowSyncModal] = useState(false);
+    const [showMenu, setShowMenu] = useState(false);
+    const menuRef = useRef(null);
+
+    useEffect(() => {
+        if (!showMenu) return;
+        const handler = (e) => {
+            if (menuRef.current && !menuRef.current.contains(e.target)) setShowMenu(false);
+        };
+        document.addEventListener('mousedown', handler);
+        return () => document.removeEventListener('mousedown', handler);
+    }, [showMenu]);
 
     const handleClearTimetable = async () => {
         const syncCheck = await canSync();
@@ -308,17 +319,39 @@ export default function Timetable() {
             {/* 標題 */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <h1 className="dash-hero-title" style={{ paddingBottom: 0 }}>課表</h1>
-                <div style={{ display: 'flex', gap: '8px', paddingTop: '6px' }}>
-                    <button onClick={() => setShowSyncModal(true)} className="btn btn-soft" style={{ fontSize: '13px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        <IconUser size={14} /> 一鍵登入
-                    </button>
-                    <button onClick={fetchTimetable} disabled={isLoadingTimetable} className="btn btn-ghost" style={{ fontSize: '13px' }}>
-                        <IconRefresh size={15} className={isLoadingTimetable ? 'animate-spin' : ''} />
-                    </button>
-                    {timetable.length > 0 && (
-                        <button onClick={handleClearTimetable} className="btn btn-ghost" style={{ fontSize: '13px', color: 'var(--color-danger)' }}>
-                            <IconTrash size={15} />
+                <div className="page-menu-wrapper" style={{ paddingTop: '6px' }} ref={menuRef}>
+                    {/* 桌面：直接顯示按鈕 */}
+                    <div className="page-header-actions">
+                        <button onClick={() => setShowSyncModal(true)} className="btn btn-soft" style={{ fontSize: '13px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <IconUser size={14} /> 一鍵登入
                         </button>
+                        <button onClick={fetchTimetable} disabled={isLoadingTimetable} className="btn btn-ghost" style={{ fontSize: '13px' }}>
+                            <IconRefresh size={15} className={isLoadingTimetable ? 'animate-spin' : ''} />
+                        </button>
+                        {timetable.length > 0 && (
+                            <button onClick={handleClearTimetable} className="btn btn-ghost" style={{ fontSize: '13px', color: 'var(--color-danger)' }}>
+                                <IconTrash size={15} />
+                            </button>
+                        )}
+                    </div>
+                    {/* 手機：收納按鈕 */}
+                    <button className="page-header-menu-btn" onClick={() => setShowMenu(v => !v)} aria-label="更多操作">
+                        <IconDotsVertical size={18} />
+                    </button>
+                    {showMenu && (
+                        <div className="page-menu-dropdown">
+                            <button onClick={() => { setShowSyncModal(true); setShowMenu(false); }} className="btn btn-soft">
+                                <IconUser size={14} /> 一鍵登入
+                            </button>
+                            <button onClick={() => { fetchTimetable(); setShowMenu(false); }} disabled={isLoadingTimetable} className="btn btn-ghost">
+                                <IconRefresh size={14} className={isLoadingTimetable ? 'animate-spin' : ''} /> 重新整理
+                            </button>
+                            {timetable.length > 0 && (
+                                <button onClick={() => { handleClearTimetable(); setShowMenu(false); }} className="btn btn-ghost" style={{ color: 'var(--color-danger)' }}>
+                                    <IconTrash size={14} /> 清除資料
+                                </button>
+                            )}
+                        </div>
                     )}
                 </div>
             </div>
