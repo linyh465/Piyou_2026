@@ -51,7 +51,7 @@ export default function PWAReloadPrompt() {
         }, 1000);
 
         return () => clearInterval(countdownRef.current);
-    }, [showPrompt]);
+    }, [showPrompt, updateServiceWorker]);
 
     const handleUpdateNow = () => {
         clearInterval(countdownRef.current);
