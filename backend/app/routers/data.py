@@ -32,6 +32,7 @@ from app.services.scraper import SchoolScraper
 from app.services.tdx import TDXService
 from app.services.library_scraper import LibraryScraper
 from app.services.scraper_cache import get_cached_scraper, cache_scraper_session
+from app.services.storage import get_storage
 from app.routers.auth import get_current_user, get_cached_credentials
 
 router = APIRouter(prefix="/data", tags=["資料 / Data"])
@@ -542,15 +543,7 @@ async def get_library(user: dict = Depends(get_current_user)):
 #  任務同步 / Task Sync
 # ══════════════════════════════════════════
 
-TASKS_DIR = CACHE_DIR / "tasks"
-TASKS_DIR.mkdir(exist_ok=True)
 MAX_TASKS = 500  # 每位學生最多 500 筆任務 / Max 500 tasks per student
-
-
-def _get_tasks_path(student_id: str) -> Path:
-    """取得任務儲存路徑 / Get task storage path"""
-    safe_id = "".join(c for c in student_id if c.isalnum())
-    return TASKS_DIR / f"{safe_id}.json"
 
 
 @router.get("/tasks")
@@ -561,15 +554,15 @@ async def get_tasks(user: dict = Depends(get_current_user)):
     Returns server-stored tasks JSON; 404 if no data exists.
     """
     student_id = user.get("sub", "")
-    path = _get_tasks_path(student_id)
-    if not path.exists():
-        raise HTTPException(status_code=404, detail="尚無任務資料 / No task data found")
     try:
-        data = json.loads(path.read_text(encoding="utf-8"))
-        return data
+        data = await get_storage().get_tasks(student_id)
     except Exception as e:
         logger.warning(f"Task read error: {e}")
         raise HTTPException(status_code=500, detail="讀取任務失敗 / Failed to read tasks")
+
+    if data is None:
+        raise HTTPException(status_code=404, detail="尚無任務資料 / No task data found")
+    return data
 
 
 @router.put("/tasks")
@@ -591,10 +584,8 @@ async def put_tasks(request: Request, user: dict = Depends(get_current_user)):
     if len(tasks) > MAX_TASKS:
         raise HTTPException(status_code=400, detail=f"任務數量超過上限 {MAX_TASKS} / Too many tasks (max {MAX_TASKS})")
 
-    path = _get_tasks_path(student_id)
     try:
-        data = {"tasks": tasks, "updated_at": datetime.now(timezone.utc).isoformat()}
-        path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+        await get_storage().set_tasks(student_id, tasks)
         logger.info(f"Saved {len(tasks)} tasks for student")
         return {"status": "ok", "count": len(tasks)}
     except Exception as e:

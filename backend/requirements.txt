@@ -7,6 +7,13 @@ pyjwt>=2.10.0
 python-dotenv>=1.0.0
 pydantic>=2.10.0
 
+# 任務儲存後端（選裝）/ Task Storage Backends (optional)
+# STORAGE_BACKEND=sheets  → 安裝這兩個 / install these two:
+google-api-python-client>=2.100.0
+google-auth>=2.23.0
+# STORAGE_BACKEND=supabase → 安裝這個 / install this:
+supabase>=2.0.0
+
 # 測試依賴 / Test Dependencies
 pytest>=8.0.0
 httpx>=0.27.0
