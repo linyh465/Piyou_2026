@@ -12,5 +12,6 @@
   "schoolCategory": "विद्यालय",
   "back": "वापस",
   "syncedStatus": "पोर्टल डेटा सिंक हो गया",
-  "notSyncedStatus": "पोर्टल डेटा सिंक नहीं हुआ"
+  "notSyncedStatus": "पोर्टल डेटा सिंक नहीं हुआ",
+  "wowClass": "WoW Class"
 }

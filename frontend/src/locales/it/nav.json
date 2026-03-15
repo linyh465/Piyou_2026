@@ -12,5 +12,6 @@
   "schoolCategory": "Università",
   "back": "Indietro",
   "syncedStatus": "Dati universitari sincronizzati",
-  "notSyncedStatus": "Dati universitari non sincronizzati"
+  "notSyncedStatus": "Dati universitari non sincronizzati",
+  "wowClass": "WoW Class"
 }

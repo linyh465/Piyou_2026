@@ -12,5 +12,6 @@
   "schoolCategory": "Schule",
   "back": "Zurück",
   "syncedStatus": "Campus-Daten synchronisiert",
-  "notSyncedStatus": "Campus-Daten nicht synchronisiert"
+  "notSyncedStatus": "Campus-Daten nicht synchronisiert",
+  "wowClass": "WoW Class"
 }

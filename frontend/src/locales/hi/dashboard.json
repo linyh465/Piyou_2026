@@ -14,5 +14,8 @@
   "borrowingCount": "{{count}} पुस्तक उधार ली गई",
   "overdueCount": "{{count}} पुस्तक की समय सीमा बीत गई",
   "dueSoonCount": "{{count}} पुस्तक जल्द वापस करनी है",
-  "loanStatusNormal": "सभी ऋण सामान्य स्थिति में हैं"
+  "loanStatusNormal": "सभी ऋण सामान्य स्थिति में हैं",
+  "wowClassAssignments": "लंबित असाइनमेंट (WoW Class)",
+  "wowClassAllDone": "कोई लंबित असाइनमेंट नहीं!",
+  "wowClassIgnore": "छिपाएं"
 }

@@ -14,5 +14,8 @@
   "borrowingCount": "{{count}}冊貸出中",
   "overdueCount": "{{count}}冊延滞中",
   "dueSoonCount": "{{count}}冊もうすぐ返却期限",
-  "loanStatusNormal": "貸出状況は正常です"
+  "loanStatusNormal": "貸出状況は正常です",
+  "wowClassAssignments": "未提出課題（WoW Class）",
+  "wowClassAllDone": "未提出の課題はありません！",
+  "wowClassIgnore": "非表示"
 }

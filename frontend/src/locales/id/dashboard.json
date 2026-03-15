@@ -14,5 +14,8 @@
   "borrowingCount": "{{count}} buku dipinjam",
   "overdueCount": "{{count}} buku terlambat",
   "dueSoonCount": "{{count}} buku akan jatuh tempo",
-  "loanStatusNormal": "Semua pinjaman dalam kondisi baik"
+  "loanStatusNormal": "Semua pinjaman dalam kondisi baik",
+  "wowClassAssignments": "Tugas Belum Dikumpulkan (WoW Class)",
+  "wowClassAllDone": "Tidak ada tugas yang belum dikumpulkan!",
+  "wowClassIgnore": "Sembunyikan"
 }

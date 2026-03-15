@@ -165,8 +165,8 @@ export default function Settings() {
             if (success) {
                 await fetchTimetable();
                 await fetchGrades();
-                await syncTasksFromServer();
                 await syncTasksToServer();
+                await syncTasksFromServer();
                 recordSyncSuccess();
                 setSyncSuccess(true);
                 setTimeout(() => {

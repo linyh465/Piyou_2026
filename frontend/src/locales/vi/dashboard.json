@@ -14,5 +14,8 @@
   "borrowingCount": "Đang mượn {{count}} cuốn",
   "overdueCount": "{{count}} cuốn quá hạn",
   "dueSoonCount": "{{count}} cuốn sắp đến hạn",
-  "loanStatusNormal": "Tình trạng mượn sách bình thường"
+  "loanStatusNormal": "Tình trạng mượn sách bình thường",
+  "wowClassAssignments": "Bài tập chưa nộp (WoW Class)",
+  "wowClassAllDone": "Không có bài tập chưa nộp!",
+  "wowClassIgnore": "Ẩn"
 }

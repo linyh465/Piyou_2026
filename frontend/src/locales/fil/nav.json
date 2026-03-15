@@ -12,5 +12,6 @@
   "schoolCategory": "Paaralan",
   "back": "Bumalik",
   "syncedStatus": "Na-sync na ang portal data",
-  "notSyncedStatus": "Hindi pa na-sync ang portal data"
+  "notSyncedStatus": "Hindi pa na-sync ang portal data",
+  "wowClass": "WoW Class"
 }

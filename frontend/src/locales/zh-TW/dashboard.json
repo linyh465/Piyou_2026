@@ -14,5 +14,8 @@
   "borrowingCount": "{{count}} 本借閱中",
   "overdueCount": "{{count}} 本已逾期",
   "dueSoonCount": "{{count}} 本即將到期",
-  "loanStatusNormal": "借閱狀態正常"
+  "loanStatusNormal": "借閱狀態正常",
+  "wowClassAssignments": "待辦作業（玩課雲）",
+  "wowClassAllDone": "目前沒有待提交的作業！",
+  "wowClassIgnore": "忽略"
 }

@@ -14,5 +14,8 @@
   "borrowingCount": "{{count}}권 대출 중",
   "overdueCount": "{{count}}권 연체 중",
   "dueSoonCount": "{{count}}권 반납 기한 임박",
-  "loanStatusNormal": "대출 상태 정상"
+  "loanStatusNormal": "대출 상태 정상",
+  "wowClassAssignments": "미제출 과제 (WoW Class)",
+  "wowClassAllDone": "미제출 과제가 없습니다!",
+  "wowClassIgnore": "숨기기"
 }

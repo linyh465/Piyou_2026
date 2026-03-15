@@ -6,16 +6,17 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import useTronclassStore from '../stores/tronclassStore';
+import useLangStore from '../stores/langStore';
 import useAuthStore from '../stores/authStore';
 import {
     IconRefresh, IconChevronRight, IconClock, IconBook,
     IconEyeOff, IconEye, IconCheckCircle,
 } from '../components/Icons';
 
-function formatDueDate(dateStr) {
+function formatDueDate(dateStr, lang = 'zh-TW') {
     if (!dateStr) return null;
     try {
-        return new Date(dateStr).toLocaleDateString('zh-TW', {
+        return new Date(dateStr).toLocaleDateString(lang, {
             month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
         });
     } catch {
@@ -24,7 +25,7 @@ function formatDueDate(dateStr) {
 }
 
 // ── 單筆作業列 / Single Assignment Row ──
-function AssignmentRow({ assignment, onIgnore, onUnignore, isIgnored }) {
+function AssignmentRow({ assignment, onIgnore, onUnignore, isIgnored, lang }) {
     const { t } = useTranslation('wowClass');
     const isOverdue = assignment.is_overdue;
     const dotColor = isOverdue
@@ -75,7 +76,7 @@ function AssignmentRow({ assignment, onIgnore, onUnignore, isIgnored }) {
                             display: 'flex', alignItems: 'center', gap: '3px',
                         }}>
                             <IconClock size={11} />
-                            {isOverdue ? `${t('overdue')} · ` : ''}{formatDueDate(assignment.due_date)}
+                            {isOverdue ? `${t('overdue')} · ` : ''}{formatDueDate(assignment.due_date, lang)}
                         </span>
                     )}
                 </div>
@@ -104,6 +105,7 @@ function AssignmentRow({ assignment, onIgnore, onUnignore, isIgnored }) {
 // ── 主頁面 / Main Page ──
 export default function WowClass() {
     const { t } = useTranslation('wowClass');
+    const { lang } = useLangStore();
     const fetchAssignments = useTronclassStore((s) => s.fetchAssignments);
     const refresh = useTronclassStore((s) => s.refresh);
     const assignments = useTronclassStore((s) => s.assignments);
@@ -145,7 +147,7 @@ export default function WowClass() {
                     <h1 className="dash-hero-title">{t('title')}</h1>
                     {fetchedAt && (
                         <p className="dash-hero-date" style={{ fontSize: '12px' }}>
-                            {t('syncedAt')} {new Date(fetchedAt).toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' })}
+                            {t('syncedAt')} {new Date(fetchedAt).toLocaleTimeString(lang, { hour: '2-digit', minute: '2-digit' })}
                         </p>
                     )}
                 </div>
@@ -237,6 +239,7 @@ export default function WowClass() {
                                         isIgnored={false}
                                         onIgnore={ignoreAssignment}
                                         onUnignore={unignoreAssignment}
+                                        lang={lang}
                                     />
                                 </div>
                             ))}
@@ -275,6 +278,7 @@ export default function WowClass() {
                                         isIgnored={true}
                                         onIgnore={ignoreAssignment}
                                         onUnignore={unignoreAssignment}
+                                        lang={lang}
                                     />
                                 </div>
                             ))}

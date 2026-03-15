@@ -14,5 +14,8 @@
   "borrowingCount": "{{count}} librong hiniram",
   "overdueCount": "{{count}} librong nalampasan na",
   "dueSoonCount": "{{count}} librong malapit na ibalik",
-  "loanStatusNormal": "Lahat ng hiniram ay nasa maayos na kalagayan"
+  "loanStatusNormal": "Lahat ng hiniram ay nasa maayos na kalagayan",
+  "wowClassAssignments": "Mga Pending na Assignment (WoW Class)",
+  "wowClassAllDone": "Walang pending na assignment!",
+  "wowClassIgnore": "Itago"
 }

@@ -15,6 +15,7 @@ import zhTWGrades from '../locales/zh-TW/grades.json';
 import zhTWTransport from '../locales/zh-TW/transport.json';
 import zhTWLibrary from '../locales/zh-TW/library.json';
 import zhTWSettings from '../locales/zh-TW/settings.json';
+import zhTWWowClass from '../locales/zh-TW/wowClass.json';
 
 // ── en ──
 import enCommon from '../locales/en/common.json';
@@ -26,6 +27,7 @@ import enGrades from '../locales/en/grades.json';
 import enTransport from '../locales/en/transport.json';
 import enLibrary from '../locales/en/library.json';
 import enSettings from '../locales/en/settings.json';
+import enWowClass from '../locales/en/wowClass.json';
 
 // ── ja ──
 import jaCommon from '../locales/ja/common.json';
@@ -37,6 +39,7 @@ import jaGrades from '../locales/ja/grades.json';
 import jaTransport from '../locales/ja/transport.json';
 import jaLibrary from '../locales/ja/library.json';
 import jaSettings from '../locales/ja/settings.json';
+import jaWowClass from '../locales/ja/wowClass.json';
 
 // ── ko ──
 import koCommon from '../locales/ko/common.json';
@@ -48,6 +51,7 @@ import koGrades from '../locales/ko/grades.json';
 import koTransport from '../locales/ko/transport.json';
 import koLibrary from '../locales/ko/library.json';
 import koSettings from '../locales/ko/settings.json';
+import koWowClass from '../locales/ko/wowClass.json';
 
 // ── vi ──
 import viCommon from '../locales/vi/common.json';
@@ -59,6 +63,7 @@ import viGrades from '../locales/vi/grades.json';
 import viTransport from '../locales/vi/transport.json';
 import viLibrary from '../locales/vi/library.json';
 import viSettings from '../locales/vi/settings.json';
+import viWowClass from '../locales/vi/wowClass.json';
 
 // ── de ──
 import deCommon from '../locales/de/common.json';
@@ -70,6 +75,7 @@ import deGrades from '../locales/de/grades.json';
 import deTransport from '../locales/de/transport.json';
 import deLibrary from '../locales/de/library.json';
 import deSettings from '../locales/de/settings.json';
+import deWowClass from '../locales/de/wowClass.json';
 
 // ── it ──
 import itCommon from '../locales/it/common.json';
@@ -81,6 +87,7 @@ import itGrades from '../locales/it/grades.json';
 import itTransport from '../locales/it/transport.json';
 import itLibrary from '../locales/it/library.json';
 import itSettings from '../locales/it/settings.json';
+import itWowClass from '../locales/it/wowClass.json';
 
 // ── fil ──
 import filCommon from '../locales/fil/common.json';
@@ -92,6 +99,7 @@ import filGrades from '../locales/fil/grades.json';
 import filTransport from '../locales/fil/transport.json';
 import filLibrary from '../locales/fil/library.json';
 import filSettings from '../locales/fil/settings.json';
+import filWowClass from '../locales/fil/wowClass.json';
 
 // ── id ──
 import idCommon from '../locales/id/common.json';
@@ -103,6 +111,7 @@ import idGrades from '../locales/id/grades.json';
 import idTransport from '../locales/id/transport.json';
 import idLibrary from '../locales/id/library.json';
 import idSettings from '../locales/id/settings.json';
+import idWowClass from '../locales/id/wowClass.json';
 
 // ── hi ──
 import hiCommon from '../locales/hi/common.json';
@@ -114,23 +123,24 @@ import hiGrades from '../locales/hi/grades.json';
 import hiTransport from '../locales/hi/transport.json';
 import hiLibrary from '../locales/hi/library.json';
 import hiSettings from '../locales/hi/settings.json';
+import hiWowClass from '../locales/hi/wowClass.json';
 
-const NAMESPACES = ['common', 'nav', 'dashboard', 'tasks', 'timetable', 'grades', 'transport', 'library', 'settings'];
+const NAMESPACES = ['common', 'nav', 'dashboard', 'tasks', 'timetable', 'grades', 'transport', 'library', 'settings', 'wowClass'];
 
 i18n
     .use(initReactI18next)
     .init({
         resources: {
-            'zh-TW': { common: zhTWCommon, nav: zhTWNav, dashboard: zhTWDashboard, tasks: zhTWTasks, timetable: zhTWTimetable, grades: zhTWGrades, transport: zhTWTransport, library: zhTWLibrary, settings: zhTWSettings },
-            'en':    { common: enCommon,   nav: enNav,   dashboard: enDashboard,   tasks: enTasks,   timetable: enTimetable,   grades: enGrades,   transport: enTransport,   library: enLibrary,   settings: enSettings   },
-            'ja':    { common: jaCommon,   nav: jaNav,   dashboard: jaDashboard,   tasks: jaTasks,   timetable: jaTimetable,   grades: jaGrades,   transport: jaTransport,   library: jaLibrary,   settings: jaSettings   },
-            'ko':    { common: koCommon,   nav: koNav,   dashboard: koDashboard,   tasks: koTasks,   timetable: koTimetable,   grades: koGrades,   transport: koTransport,   library: koLibrary,   settings: koSettings   },
-            'vi':    { common: viCommon,   nav: viNav,   dashboard: viDashboard,   tasks: viTasks,   timetable: viTimetable,   grades: viGrades,   transport: viTransport,   library: viLibrary,   settings: viSettings   },
-            'de':    { common: deCommon,   nav: deNav,   dashboard: deDashboard,   tasks: deTasks,   timetable: deTimetable,   grades: deGrades,   transport: deTransport,   library: deLibrary,   settings: deSettings   },
-            'it':    { common: itCommon,   nav: itNav,   dashboard: itDashboard,   tasks: itTasks,   timetable: itTimetable,   grades: itGrades,   transport: itTransport,   library: itLibrary,   settings: itSettings   },
-            'fil':   { common: filCommon,  nav: filNav,  dashboard: filDashboard,  tasks: filTasks,  timetable: filTimetable,  grades: filGrades,  transport: filTransport,  library: filLibrary,  settings: filSettings  },
-            'id':    { common: idCommon,   nav: idNav,   dashboard: idDashboard,   tasks: idTasks,   timetable: idTimetable,   grades: idGrades,   transport: idTransport,   library: idLibrary,   settings: idSettings   },
-            'hi':    { common: hiCommon,   nav: hiNav,   dashboard: hiDashboard,   tasks: hiTasks,   timetable: hiTimetable,   grades: hiGrades,   transport: hiTransport,   library: hiLibrary,   settings: hiSettings   },
+            'zh-TW': { common: zhTWCommon, nav: zhTWNav, dashboard: zhTWDashboard, tasks: zhTWTasks, timetable: zhTWTimetable, grades: zhTWGrades, transport: zhTWTransport, library: zhTWLibrary, settings: zhTWSettings, wowClass: zhTWWowClass },
+            'en':    { common: enCommon,   nav: enNav,   dashboard: enDashboard,   tasks: enTasks,   timetable: enTimetable,   grades: enGrades,   transport: enTransport,   library: enLibrary,   settings: enSettings,   wowClass: enWowClass   },
+            'ja':    { common: jaCommon,   nav: jaNav,   dashboard: jaDashboard,   tasks: jaTasks,   timetable: jaTimetable,   grades: jaGrades,   transport: jaTransport,   library: jaLibrary,   settings: jaSettings,   wowClass: jaWowClass   },
+            'ko':    { common: koCommon,   nav: koNav,   dashboard: koDashboard,   tasks: koTasks,   timetable: koTimetable,   grades: koGrades,   transport: koTransport,   library: koLibrary,   settings: koSettings,   wowClass: koWowClass   },
+            'vi':    { common: viCommon,   nav: viNav,   dashboard: viDashboard,   tasks: viTasks,   timetable: viTimetable,   grades: viGrades,   transport: viTransport,   library: viLibrary,   settings: viSettings,   wowClass: viWowClass   },
+            'de':    { common: deCommon,   nav: deNav,   dashboard: deDashboard,   tasks: deTasks,   timetable: deTimetable,   grades: deGrades,   transport: deTransport,   library: deLibrary,   settings: deSettings,   wowClass: deWowClass   },
+            'it':    { common: itCommon,   nav: itNav,   dashboard: itDashboard,   tasks: itTasks,   timetable: itTimetable,   grades: itGrades,   transport: itTransport,   library: itLibrary,   settings: itSettings,   wowClass: itWowClass   },
+            'fil':   { common: filCommon,  nav: filNav,  dashboard: filDashboard,  tasks: filTasks,  timetable: filTimetable,  grades: filGrades,  transport: filTransport,  library: filLibrary,  settings: filSettings,  wowClass: filWowClass  },
+            'id':    { common: idCommon,   nav: idNav,   dashboard: idDashboard,   tasks: idTasks,   timetable: idTimetable,   grades: idGrades,   transport: idTransport,   library: idLibrary,   settings: idSettings,   wowClass: idWowClass   },
+            'hi':    { common: hiCommon,   nav: hiNav,   dashboard: hiDashboard,   tasks: hiTasks,   timetable: hiTimetable,   grades: hiGrades,   transport: hiTransport,   library: hiLibrary,   settings: hiSettings,   wowClass: hiWowClass   },
         },
         lng: localStorage.getItem('piyou_lang') || 'zh-TW',
         fallbackLng: 'zh-TW',

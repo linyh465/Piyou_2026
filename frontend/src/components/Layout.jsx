@@ -2,7 +2,7 @@
  * 應用佈局外殼 / App Layout Shell — iOS 風格
  * 桌面版 (md+)：群組化側邊欄；行動版：底部兩層導航 + 滑動動畫
  */
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import useTimetableStore from '../stores/timetableStore';
@@ -17,6 +17,18 @@ const schoolPaths = ['/timetable', '/grades', '/library', '/wow-class'];
 
 let _lastSchoolPath = '/timetable';
 let _touchStartX = 0;
+
+// ── 路由 → 翻譯 key 對應 / Route to nav translation key mapping ──
+const ROUTE_TITLE_KEYS = {
+    '/': 'home',
+    '/tasks': 'tasks',
+    '/timetable': 'timetable',
+    '/grades': 'grades',
+    '/transport': 'transport',
+    '/library': 'library',
+    '/settings': 'settings',
+    '/wow-class': 'wowClass',
+};
 
 export default function Layout() {
     const { t } = useTranslation('nav');
@@ -33,6 +45,13 @@ export default function Layout() {
     );
 
     const [prevPath, setPrevPath] = useState('/');
+
+    // ── 動態 document.title / Dynamic document.title ──
+    useEffect(() => {
+        const key = ROUTE_TITLE_KEYS[location.pathname];
+        const pageName = key ? t(key) : '';
+        document.title = pageName ? `${pageName} · Piyou` : 'Piyou';
+    }, [location.pathname, t]);
 
     // ── 側邊欄群組 / Sidebar Menu Groups ──
     const menuGroups = [

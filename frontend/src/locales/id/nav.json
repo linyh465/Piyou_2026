@@ -12,5 +12,6 @@
   "schoolCategory": "Sekolah",
   "back": "Kembali",
   "syncedStatus": "Data portal tersinkronisasi",
-  "notSyncedStatus": "Data portal belum tersinkronisasi"
+  "notSyncedStatus": "Data portal belum tersinkronisasi",
+  "wowClass": "WoW Class"
 }

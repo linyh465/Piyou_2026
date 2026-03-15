@@ -14,5 +14,8 @@
   "borrowingCount": "{{count}} book(s) borrowed",
   "overdueCount": "{{count}} book(s) overdue",
   "dueSoonCount": "{{count}} book(s) due soon",
-  "loanStatusNormal": "All loans in good standing"
+  "loanStatusNormal": "All loans in good standing",
+  "wowClassAssignments": "Pending Assignments (WoW Class)",
+  "wowClassAllDone": "No pending assignments!",
+  "wowClassIgnore": "Ignore"
 }

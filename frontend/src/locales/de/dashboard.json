@@ -14,5 +14,8 @@
   "borrowingCount": "{{count}} Buch/Bücher ausgeliehen",
   "overdueCount": "{{count}} Buch/Bücher überfällig",
   "dueSoonCount": "{{count}} Buch/Bücher bald fällig",
-  "loanStatusNormal": "Alle Ausleihen in Ordnung"
+  "loanStatusNormal": "Alle Ausleihen in Ordnung",
+  "wowClassAssignments": "Ausstehende Aufgaben (WoW Class)",
+  "wowClassAllDone": "Keine ausstehenden Aufgaben!",
+  "wowClassIgnore": "Ausblenden"
 }

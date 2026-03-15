@@ -14,5 +14,8 @@
   "borrowingCount": "{{count}} libro/i in prestito",
   "overdueCount": "{{count}} libro/i scaduto/i",
   "dueSoonCount": "{{count}} libro/i in scadenza",
-  "loanStatusNormal": "Tutti i prestiti in regola"
+  "loanStatusNormal": "Tutti i prestiti in regola",
+  "wowClassAssignments": "Compiti in sospeso (WoW Class)",
+  "wowClassAllDone": "Nessun compito in sospeso!",
+  "wowClassIgnore": "Nascondi"
 }
