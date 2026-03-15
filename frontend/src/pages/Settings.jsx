@@ -7,6 +7,7 @@
  * Layout spacing and font sizes unified with Dashboard.
  */
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import useThemeStore from '../stores/themeStore';
 import { COLOR_THEMES } from '../stores/themeStore';
 import useAuthStore from '../stores/authStore';
@@ -265,9 +266,9 @@ export default function Settings() {
             </div>
 
             {/* ── Sync Data Modal ── */}
-            {showSyncModal && (
+            {showSyncModal && createPortal(
                 <div style={{
-                    position: 'fixed', inset: 0, zIndex: 200,
+                    position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', zIndex: 200,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     padding: '16px', background: 'rgba(0,0,0,0.5)',
                 }} className="animate-fade-in">
@@ -358,13 +359,14 @@ export default function Settings() {
                             </div>
                         </form>
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
 
             {/* ── Logout Confirmation Modal ── */}
-            {showLogoutConfirm && (
+            {showLogoutConfirm && createPortal(
                 <div style={{
-                    position: 'fixed', inset: 0, zIndex: 200,
+                    position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', zIndex: 200,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     padding: '16px', background: 'rgba(0,0,0,0.5)',
                 }} className="animate-fade-in">
@@ -398,7 +400,8 @@ export default function Settings() {
                             </button>
                         </div>
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
 
             {/* ═══ 外觀 / Appearance ═══ */}
