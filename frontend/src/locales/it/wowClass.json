@@ -1,0 +1,18 @@
+{
+  "title": "WoW Class",
+  "syncedAt": "Sincronizzato alle",
+  "refresh": "Aggiorna",
+  "notLoggedIn": "Non connesso",
+  "notLoggedInHint": "Vai nelle Impostazioni e accedi con il tuo account scolastico per sincronizzare i compiti di WoW Class.",
+  "goToSettings": "Vai alle Impostazioni",
+  "pendingAssignments": "Compiti in sospeso",
+  "pendingCount": "in sospeso",
+  "overdueCount": "scaduti",
+  "allDone": "Nessun compito in sospeso!",
+  "noAssignments": "Nessun dato sui compiti",
+  "noAssignmentsHint": "Tocca aggiorna in alto a destra o controlla il tuo account WoW Class.",
+  "ignoredAssignments": "Compiti nascosti",
+  "ignore": "Nascondi",
+  "unignore": "Mostra di nuovo",
+  "overdue": "Scaduto"
+}

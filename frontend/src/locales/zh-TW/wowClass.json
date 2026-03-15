@@ -1,0 +1,18 @@
+{
+  "title": "玩課雲",
+  "syncedAt": "同步於",
+  "refresh": "重新同步",
+  "notLoggedIn": "尚未登入",
+  "notLoggedInHint": "請前往系統設定登入校務帳號，即可同步玩課雲作業",
+  "goToSettings": "前往設定",
+  "pendingAssignments": "待提交作業",
+  "pendingCount": "件待提交",
+  "overdueCount": "件已逾期",
+  "allDone": "目前沒有待提交的作業！",
+  "noAssignments": "沒有作業資料",
+  "noAssignmentsHint": "點擊右上角重新同步，或確認玩課雲帳號狀態",
+  "ignoredAssignments": "已忽略作業",
+  "ignore": "忽略（首頁隱藏）",
+  "unignore": "恢復顯示",
+  "overdue": "已逾期"
+}

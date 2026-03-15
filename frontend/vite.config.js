@@ -3,7 +3,14 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
 
+// GitHub Pages base path 設定 / GitHub Pages base path config
+// 部署到子目錄時設定 VITE_BASE_PATH（如 /Piyou_2026/）
+// Set VITE_BASE_PATH when deploying to a subdirectory (e.g. /Piyou_2026/)
+// 有自訂網域時保持預設 '/' / Keep default '/' when using custom domain
+const basePath = process.env.VITE_BASE_PATH || '/'
+
 export default defineConfig({
+  base: basePath,
   plugins: [
     react(),
     tailwindcss(),
@@ -22,8 +29,8 @@ export default defineConfig({
         theme_color: '#0072ff',
         background_color: '#0f0f14',
         display: 'standalone',
-        scope: '/',
-        start_url: '/',
+        scope: basePath,
+        start_url: basePath,
         icons: [
           {
             src: 'pwa-192x192.svg',

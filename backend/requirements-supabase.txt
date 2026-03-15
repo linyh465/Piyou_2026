@@ -1,0 +1,5 @@
+# Supabase 額外依賴 / Supabase extra dependencies
+# 切換至 STORAGE_BACKEND=supabase 時，將此檔案內容加入 requirements.txt
+# When switching to STORAGE_BACKEND=supabase, add this to requirements.txt
+-r requirements.txt
+supabase>=2.0.0

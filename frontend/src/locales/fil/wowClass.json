@@ -1,0 +1,18 @@
+{
+  "title": "WoW Class",
+  "syncedAt": "Na-sync noong",
+  "refresh": "I-refresh",
+  "notLoggedIn": "Hindi naka-login",
+  "notLoggedInHint": "Pumunta sa Mga Setting at mag-login gamit ang iyong school account para i-sync ang mga assignment sa WoW Class.",
+  "goToSettings": "Pumunta sa Mga Setting",
+  "pendingAssignments": "Mga Pending na Assignment",
+  "pendingCount": "pending",
+  "overdueCount": "nalagpasan na",
+  "allDone": "Walang pending na assignment!",
+  "noAssignments": "Walang datos ng assignment",
+  "noAssignmentsHint": "I-tap ang refresh sa kanang itaas o suriin ang iyong WoW Class account.",
+  "ignoredAssignments": "Mga Nakatago na Assignment",
+  "ignore": "Itago",
+  "unignore": "Ipakita Muli",
+  "overdue": "Nalagpasan na"
+}

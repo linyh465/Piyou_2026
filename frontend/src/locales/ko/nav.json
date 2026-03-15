@@ -12,5 +12,6 @@
   "schoolCategory": "학교",
   "back": "뒤로",
   "syncedStatus": "캠퍼스 데이터 동기화됨",
-  "notSyncedStatus": "캠퍼스 데이터 미동기화"
+  "notSyncedStatus": "캠퍼스 데이터 미동기화",
+  "wowClass": "WoW Class"
 }

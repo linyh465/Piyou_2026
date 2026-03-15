@@ -12,5 +12,6 @@
   "schoolCategory": "学校",
   "back": "戻る",
   "syncedStatus": "キャンパスデータ同期済み",
-  "notSyncedStatus": "キャンパスデータ未同期"
+  "notSyncedStatus": "キャンパスデータ未同期",
+  "wowClass": "WoW Class"
 }

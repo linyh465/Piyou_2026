@@ -1,0 +1,64 @@
+# ══════════════════════════════════════════
+#  Koyeb 部署參考設定 / Koyeb Deployment Reference
+#  此檔案為 Koyeb CLI 格式，供參考用
+#  This file is for reference / Koyeb CLI format
+#
+#  部署步驟 / Deployment steps:
+#  1. 安裝 Koyeb CLI: npm install -g @koyeb/koyeb-cli
+#  2. 登入: koyeb login
+#  3. 部署: koyeb app create --name piyou-backend (或透過 Dashboard)
+#
+#  建議使用 Koyeb Dashboard 連接 GitHub repo 自動部署
+#  Recommended: Use Koyeb Dashboard to connect GitHub repo for auto-deploy
+# ══════════════════════════════════════════
+
+name: piyou-backend
+
+services:
+  - name: api
+    type: web
+
+    # GitHub 來源 / GitHub source
+    git:
+      repository: github.com/<YOUR_GITHUB_USERNAME>/Piyou_2026
+      branch: main
+      dockerfile: backend/Dockerfile
+      build_command: ""
+
+    # 端口 / Port
+    ports:
+      - port: 8000
+        protocol: http
+
+    # 健康檢查 / Health check
+    checks:
+      - type: http
+        port: 8000
+        path: /health
+        interval: 30
+        timeout: 5
+
+    # 區域 / Region (選最近的 / pick nearest)
+    # options: was (US East), par (EU), sin (Singapore), syd (Australia)
+    regions:
+      - sin
+
+    # 環境變數 / Environment variables
+    # 在 Koyeb Dashboard 設定，不要寫在這裡
+    # Set in Koyeb Dashboard, NOT here (security)
+    env:
+      - key: PORT
+        value: "8000"
+      - key: STORAGE_BACKEND
+        value: "sheets"          # 前期用 sheets，正式改為 supabase
+      # 以下在 Dashboard 設為 Secret:
+      # JWT_SECRET
+      # SCHOOL_PORTAL_URL
+      # TDX_CLIENT_ID
+      # TDX_CLIENT_SECRET
+      # CORS_ORIGINS          → https://<username>.github.io
+      # GOOGLE_SERVICE_ACCOUNT_JSON
+      # GOOGLE_SHEETS_ID
+      # （正式上線後改為）
+      # SUPABASE_URL
+      # SUPABASE_SERVICE_KEY

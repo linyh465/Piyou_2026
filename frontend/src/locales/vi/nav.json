@@ -12,5 +12,6 @@
   "schoolCategory": "Trường",
   "back": "Quay lại",
   "syncedStatus": "Đã đồng bộ dữ liệu trường",
-  "notSyncedStatus": "Chưa đồng bộ dữ liệu trường"
+  "notSyncedStatus": "Chưa đồng bộ dữ liệu trường",
+  "wowClass": "WoW Class"
 }

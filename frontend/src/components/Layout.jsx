@@ -9,11 +9,11 @@ import useTimetableStore from '../stores/timetableStore';
 import {
     IconHome, IconCalendar, IconCheckSquare,
     IconSettings, IconChartBar, IconCloudLightning, IconCloudOff, IconBus,
-    IconLibrary, IconArrowLeft, IconSchool
+    IconLibrary, IconArrowLeft, IconSchool, IconWowClass,
 } from './Icons';
 
 // ── 學校相關路徑 / School-related paths ──
-const schoolPaths = ['/timetable', '/grades', '/library'];
+const schoolPaths = ['/timetable', '/grades', '/library', '/wow-class'];
 
 let _lastSchoolPath = '/timetable';
 let _touchStartX = 0;
@@ -48,6 +48,7 @@ export default function Layout() {
             items: [
                 { to: '/timetable', icon: IconCalendar, label: t('timetable') },
                 { to: '/grades', icon: IconChartBar, label: t('grades') },
+                { to: '/wow-class', icon: IconWowClass, label: t('wowClass') },
             ],
         },
         {
@@ -73,6 +74,7 @@ export default function Layout() {
         { to: '/grades', icon: IconChartBar, label: t('grades') },
         { to: '/timetable', icon: IconCalendar, label: t('timetable') },
         { to: '/library', icon: IconLibrary, label: t('library') },
+        { to: '/wow-class', icon: IconWowClass, label: t('wowClass') },
         { key: 'back', icon: IconArrowLeft, label: t('back'), isBack: true },
     ];
 

@@ -12,5 +12,6 @@
   "schoolCategory": "School",
   "back": "Back",
   "syncedStatus": "Portal data synced",
-  "notSyncedStatus": "Portal data not synced"
+  "notSyncedStatus": "Portal data not synced",
+  "wowClass": "WoW Class"
 }

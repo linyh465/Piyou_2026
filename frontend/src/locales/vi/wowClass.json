@@ -1,0 +1,18 @@
+{
+  "title": "WoW Class",
+  "syncedAt": "Đồng bộ lúc",
+  "refresh": "Làm mới",
+  "notLoggedIn": "Chưa đăng nhập",
+  "notLoggedInHint": "Vào Cài đặt và đăng nhập bằng tài khoản trường để đồng bộ bài tập WoW Class.",
+  "goToSettings": "Đến Cài đặt",
+  "pendingAssignments": "Bài tập chưa nộp",
+  "pendingCount": "bài chưa nộp",
+  "overdueCount": "bài quá hạn",
+  "allDone": "Không có bài tập chưa nộp!",
+  "noAssignments": "Không có dữ liệu bài tập",
+  "noAssignmentsHint": "Nhấn làm mới góc trên cùng bên phải hoặc kiểm tra tài khoản WoW Class.",
+  "ignoredAssignments": "Bài tập đã ẩn",
+  "ignore": "Ẩn (khỏi trang chủ)",
+  "unignore": "Hiện lại",
+  "overdue": "Quá hạn"
+}

@@ -167,3 +167,23 @@ class BusPositionsResponse(BaseModel):
     """即時公車位置回應 / Bus Positions Response"""
     positions: list[BusPosition] = Field(default_factory=list)
     updatedAt: Optional[str] = Field(None, description="最後更新時間 / Last updated time")
+
+
+# ── 玩課雲模型 / WoW Class (TronClass) Models ──
+
+class TronClassAssignment(BaseModel):
+    """玩課雲待辦作業 / TronClass Assignment"""
+    id: str = Field(..., description="作業 ID / Assignment ID")
+    title: str = Field(..., description="作業標題 / Assignment title")
+    course_name: str = Field("", description="課程名稱 / Course name")
+    course_id: Optional[str] = Field(None, description="課程 ID / Course ID")
+    due_date: Optional[str] = Field(None, description="截止日期 (ISO8601) / Due date")
+    is_submitted: bool = Field(False, description="是否已提交 / Submission status")
+    is_overdue: bool = Field(False, description="是否逾期 / Is overdue")
+    assignment_type: Optional[str] = Field(None, description="作業類型 / Assignment type")
+
+
+class TronClassResponse(BaseModel):
+    """玩課雲回應 / TronClass Response"""
+    assignments: list[TronClassAssignment] = Field(default_factory=list)
+    fetched_at: Optional[str] = Field(None, description="擷取時間 / Fetch timestamp")
