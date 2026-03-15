@@ -25,6 +25,7 @@ const menuGroups = [
         label: '總覽',
         items: [
             { to: '/', icon: IconHome, label: '首頁', end: true },
+            { to: '/tasks', icon: IconCheckSquare, label: '任務' },
         ],
     },
     {
