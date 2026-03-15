@@ -31,8 +31,6 @@ export default function PWAReloadPrompt() {
     useEffect(() => {
         if (!needRefresh) return;
 
-        setCountdown(AUTO_UPDATE_SECONDS);
-
         countdownRef.current = setInterval(() => {
             setCountdown(prev => {
                 if (prev <= 1) {
