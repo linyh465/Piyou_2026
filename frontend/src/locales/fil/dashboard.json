@@ -1,0 +1,18 @@
+{
+  "title": "Ngayon",
+  "classInProgress": "Sa Klase",
+  "remaining": "{{min}} min natitira",
+  "nextClass": "Susunod",
+  "minutesUntil": "sa {{min}} min",
+  "noMoreClasses": "Wala nang klase ngayon",
+  "restWell": "I-enjoy ang iyong libreng oras",
+  "locationUnset": "Walang lokasyon",
+  "todos": "Mga Gagawin",
+  "allDone": "Lahat ng gawain ay tapos na",
+  "overdue": "Nalampasan na",
+  "libraryLoans": "Mga Hiniram sa Aklatan",
+  "borrowingCount": "{{count}} librong hiniram",
+  "overdueCount": "{{count}} librong nalampasan na",
+  "dueSoonCount": "{{count}} librong malapit na ibalik",
+  "loanStatusNormal": "Lahat ng hiniram ay nasa maayos na kalagayan"
+}

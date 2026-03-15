@@ -1,0 +1,15 @@
+{
+  "title": "Mga Marka",
+  "overallGpa": "Kabuuang GPA",
+  "classRank": "Ranggo sa Klase",
+  "deptRank": "Ranggo sa Departamento",
+  "gradeRankTitle": "Mga Ranggo",
+  "courseGrades": "Mga Marka sa Kurso",
+  "average": "Avg {{avg}}",
+  "credits": "{{n}} kredito",
+  "noGrades": "Walang datos ng marka",
+  "noGradesHint": "Mangyaring mag-login para i-fetch ang mga marka",
+  "unnamed": "Walang pangalan",
+  "clearConfirm": "Sigurado ka bang gusto mong i-clear ang datos ng marka?",
+  "cooldownWarning": "⚠️ Cooldown: {{mins}} min bago maaaring mag-sync ulit."
+}

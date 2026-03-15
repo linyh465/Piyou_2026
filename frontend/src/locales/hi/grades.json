@@ -1,0 +1,15 @@
+{
+  "title": "ग्रेड",
+  "overallGpa": "संचयी GPA",
+  "classRank": "कक्षा रैंक",
+  "deptRank": "विभाग रैंक",
+  "gradeRankTitle": "रैंकिंग",
+  "courseGrades": "पाठ्यक्रम ग्रेड",
+  "average": "औसत {{avg}}",
+  "credits": "{{n}} क्रेडिट",
+  "noGrades": "कोई ग्रेड डेटा नहीं",
+  "noGradesHint": "ग्रेड लाने के लिए कृपया लॉगिन करें",
+  "unnamed": "अनाम",
+  "clearConfirm": "क्या आप वाकई ग्रेड डेटा साफ़ करना चाहते हैं?",
+  "cooldownWarning": "⚠️ कूलडाउन: अगली सिंक {{mins}} मिनट में उपलब्ध।"
+}

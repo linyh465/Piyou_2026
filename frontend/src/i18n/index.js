@@ -1,6 +1,6 @@
 /**
  * i18next 初始化設定 / i18next Initialization
- * 支援 7 種語言：zh-TW, en, ja, ko, vi, de, it
+ * 支援 10 種語言：zh-TW, en, ja, ko, vi, de, it, fil, id, hi
  */
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
@@ -82,6 +82,39 @@ import itTransport from '../locales/it/transport.json';
 import itLibrary from '../locales/it/library.json';
 import itSettings from '../locales/it/settings.json';
 
+// ── fil ──
+import filCommon from '../locales/fil/common.json';
+import filNav from '../locales/fil/nav.json';
+import filDashboard from '../locales/fil/dashboard.json';
+import filTasks from '../locales/fil/tasks.json';
+import filTimetable from '../locales/fil/timetable.json';
+import filGrades from '../locales/fil/grades.json';
+import filTransport from '../locales/fil/transport.json';
+import filLibrary from '../locales/fil/library.json';
+import filSettings from '../locales/fil/settings.json';
+
+// ── id ──
+import idCommon from '../locales/id/common.json';
+import idNav from '../locales/id/nav.json';
+import idDashboard from '../locales/id/dashboard.json';
+import idTasks from '../locales/id/tasks.json';
+import idTimetable from '../locales/id/timetable.json';
+import idGrades from '../locales/id/grades.json';
+import idTransport from '../locales/id/transport.json';
+import idLibrary from '../locales/id/library.json';
+import idSettings from '../locales/id/settings.json';
+
+// ── hi ──
+import hiCommon from '../locales/hi/common.json';
+import hiNav from '../locales/hi/nav.json';
+import hiDashboard from '../locales/hi/dashboard.json';
+import hiTasks from '../locales/hi/tasks.json';
+import hiTimetable from '../locales/hi/timetable.json';
+import hiGrades from '../locales/hi/grades.json';
+import hiTransport from '../locales/hi/transport.json';
+import hiLibrary from '../locales/hi/library.json';
+import hiSettings from '../locales/hi/settings.json';
+
 const NAMESPACES = ['common', 'nav', 'dashboard', 'tasks', 'timetable', 'grades', 'transport', 'library', 'settings'];
 
 i18n
@@ -95,6 +128,9 @@ i18n
             'vi':    { common: viCommon,   nav: viNav,   dashboard: viDashboard,   tasks: viTasks,   timetable: viTimetable,   grades: viGrades,   transport: viTransport,   library: viLibrary,   settings: viSettings   },
             'de':    { common: deCommon,   nav: deNav,   dashboard: deDashboard,   tasks: deTasks,   timetable: deTimetable,   grades: deGrades,   transport: deTransport,   library: deLibrary,   settings: deSettings   },
             'it':    { common: itCommon,   nav: itNav,   dashboard: itDashboard,   tasks: itTasks,   timetable: itTimetable,   grades: itGrades,   transport: itTransport,   library: itLibrary,   settings: itSettings   },
+            'fil':   { common: filCommon,  nav: filNav,  dashboard: filDashboard,  tasks: filTasks,  timetable: filTimetable,  grades: filGrades,  transport: filTransport,  library: filLibrary,  settings: filSettings  },
+            'id':    { common: idCommon,   nav: idNav,   dashboard: idDashboard,   tasks: idTasks,   timetable: idTimetable,   grades: idGrades,   transport: idTransport,   library: idLibrary,   settings: idSettings   },
+            'hi':    { common: hiCommon,   nav: hiNav,   dashboard: hiDashboard,   tasks: hiTasks,   timetable: hiTimetable,   grades: hiGrades,   transport: hiTransport,   library: hiLibrary,   settings: hiSettings   },
         },
         lng: localStorage.getItem('piyou_lang') || 'zh-TW',
         fallbackLng: 'zh-TW',

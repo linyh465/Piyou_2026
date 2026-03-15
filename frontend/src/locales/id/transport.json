@@ -1,0 +1,32 @@
+{
+  "title": "Pelacak Bus",
+  "subtitle": "Info kedatangan real-time",
+  "updatedAt": "Diperbarui {{time}}",
+  "swipeHint": "Geser untuk ganti arah",
+  "stopOverview": "Semua Halte",
+  "busesRunning": "🚌 {{count}} bus beroperasi",
+  "stopsArriving": "{{count}} halte akan tiba",
+  "totalStops": "{{count}} halte total",
+  "outbound": "Keluar",
+  "inbound": "Masuk",
+  "toDestination": "Menuju {{dest}}",
+  "noStopData": "Tidak ada data halte untuk rute ini",
+  "loadingOrNotOperating": "Memuat atau tidak beroperasi hari ini",
+  "autoUpdateBadge": "🕐 Auto-refresh setiap 2 menit",
+  "tdxBadge": "📊 Data Langsung TDX",
+  "loadingBadge": "⏳ Memuat...",
+  "refreshCooldown": "Tunggu {{s}}d",
+  "stopSequence": "Halte {{n}}",
+  "dataSource": "Sumber data: TDX Transport Data Exchange (ETA + RealTimeNearStop + StopOfRoute)",
+  "status": {
+    "notDeparted": "Belum berangkat",
+    "noStop": "Tidak ada layanan",
+    "lastPassed": "Bus terakhir telah lewat",
+    "notOperating": "Tidak beroperasi hari ini",
+    "arriving": "Tiba",
+    "departed": "Berangkat",
+    "approaching": "Mendekat",
+    "minutesUnit": "{{min}} menit",
+    "secondsUnit": "{{sec}} detik"
+  }
+}

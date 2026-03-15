@@ -1,0 +1,16 @@
+{
+  "home": "Beranda",
+  "tasks": "Tugas",
+  "timetable": "Jadwal",
+  "grades": "Nilai",
+  "transport": "Transportasi",
+  "library": "Perpustakaan",
+  "settings": "Pengaturan",
+  "overview": "Ikhtisar",
+  "school": "Sekolah",
+  "life": "Kehidupan",
+  "schoolCategory": "Sekolah",
+  "back": "Kembali",
+  "syncedStatus": "Data portal tersinkronisasi",
+  "notSyncedStatus": "Data portal belum tersinkronisasi"
+}

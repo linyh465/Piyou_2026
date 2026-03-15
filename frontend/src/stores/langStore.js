@@ -13,6 +13,9 @@ export const LANGUAGES = [
     { code: 'vi',    label: 'Tiếng Việt', flag: '🇻🇳' },
     { code: 'de',    label: 'Deutsch',   flag: '🇩🇪' },
     { code: 'it',    label: 'Italiano',  flag: '🇮🇹' },
+    { code: 'fil',   label: 'Filipino',  flag: '🇵🇭' },
+    { code: 'id',    label: 'Indonesia', flag: '🇮🇩' },
+    { code: 'hi',    label: 'हिन्दी',    flag: '🇮🇳' },
 ];
 
 const useLangStore = create((set) => ({

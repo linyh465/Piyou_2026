@@ -1,0 +1,18 @@
+{
+  "title": "आज",
+  "classInProgress": "कक्षा में",
+  "remaining": "{{min}} मिनट शेष",
+  "nextClass": "अगला",
+  "minutesUntil": "{{min}} मिनट में",
+  "noMoreClasses": "आज कोई और कक्षा नहीं",
+  "restWell": "अपना खाली समय आनंद से बिताएं",
+  "locationUnset": "कोई स्थान नहीं",
+  "todos": "करने योग्य कार्य",
+  "allDone": "सभी कार्य पूर्ण",
+  "overdue": "समय बीत गया",
+  "libraryLoans": "पुस्तकालय ऋण",
+  "borrowingCount": "{{count}} पुस्तक उधार ली गई",
+  "overdueCount": "{{count}} पुस्तक की समय सीमा बीत गई",
+  "dueSoonCount": "{{count}} पुस्तक जल्द वापस करनी है",
+  "loanStatusNormal": "सभी ऋण सामान्य स्थिति में हैं"
+}

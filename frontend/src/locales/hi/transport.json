@@ -1,0 +1,32 @@
+{
+  "title": "बस ट्रैकर",
+  "subtitle": "रियल-टाइम आगमन जानकारी",
+  "updatedAt": "अपडेट किया {{time}}",
+  "swipeHint": "दिशा बदलने के लिए स्वाइप करें",
+  "stopOverview": "सभी स्टॉप",
+  "busesRunning": "🚌 {{count}} बस चल रही है",
+  "stopsArriving": "{{count}} स्टॉप जल्द आने वाले हैं",
+  "totalStops": "कुल {{count}} स्टॉप",
+  "outbound": "बाहर जाने वाली",
+  "inbound": "अंदर आने वाली",
+  "toDestination": "{{dest}} की ओर",
+  "noStopData": "इस रूट के लिए कोई स्टॉप डेटा नहीं",
+  "loadingOrNotOperating": "लोड हो रहा है या आज सेवा नहीं",
+  "autoUpdateBadge": "🕐 हर 2 मिनट में ऑटो-रिफ्रेश",
+  "tdxBadge": "📊 TDX लाइव डेटा",
+  "loadingBadge": "⏳ लोड हो रहा है...",
+  "refreshCooldown": "{{s}}s प्रतीक्षा करें",
+  "stopSequence": "स्टॉप {{n}}",
+  "dataSource": "डेटा स्रोत: TDX Transport Data Exchange (ETA + RealTimeNearStop + StopOfRoute)",
+  "status": {
+    "notDeparted": "रवाना नहीं हुई",
+    "noStop": "कोई सेवा नहीं",
+    "lastPassed": "अंतिम बस निकल गई",
+    "notOperating": "आज सेवा नहीं",
+    "arriving": "आ रही है",
+    "departed": "रवाना हो गई",
+    "approaching": "नजदीक आ रही है",
+    "minutesUnit": "{{min}} मिनट",
+    "secondsUnit": "{{sec}} सेकंड"
+  }
+}

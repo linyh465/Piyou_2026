@@ -1,0 +1,32 @@
+{
+  "title": "कार्य",
+  "addTask": "नया कार्य",
+  "editTask": "कार्य संपादित करें",
+  "taskTitlePlaceholder": "कार्य का शीर्षक",
+  "taskDescPlaceholder": "विवरण (वैकल्पिक)",
+  "update": "अपडेट करें",
+  "add": "जोड़ें",
+  "noTasks": "कोई कार्य नहीं",
+  "noTasksHint": "पहला कार्य बनाने के लिए \"नया कार्य\" पर टैप करें",
+  "completedCount": "{{done}}/{{total}} पूर्ण",
+  "markDone": "पूर्ण के रूप में चिह्नित करें",
+  "cancelDone": "अपूर्ण के रूप में चिह्नित करें",
+  "filter": {
+    "all": "सभी",
+    "active": "सक्रिय",
+    "done": "पूर्ण"
+  },
+  "category": {
+    "general": "सामान्य",
+    "homework": "गृहकार्य",
+    "exam": "परीक्षा",
+    "project": "परियोजना",
+    "personal": "व्यक्तिगत"
+  },
+  "priority": {
+    "normal": "सामान्य",
+    "high": "उच्च",
+    "urgent": "अत्यावश्यक",
+    "critical": "गंभीर"
+  }
+}

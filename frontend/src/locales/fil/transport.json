@@ -1,0 +1,32 @@
+{
+  "title": "Bus Tracker",
+  "subtitle": "Real-time na impormasyon ng pagdating",
+  "updatedAt": "Na-update {{time}}",
+  "swipeHint": "Mag-swipe para baguhin ang direksyon",
+  "stopOverview": "Lahat ng Hinto",
+  "busesRunning": "🚌 {{count}} bus na tumatakbo",
+  "stopsArriving": "{{count}} hintong malapit nang dumating",
+  "totalStops": "{{count}} hinto sa kabuuan",
+  "outbound": "Palabas",
+  "inbound": "Papasok",
+  "toDestination": "Patungo sa {{dest}}",
+  "noStopData": "Walang datos ng hinto para sa ruta na ito",
+  "loadingOrNotOperating": "Naglo-load o hindi nag-ooperate ngayon",
+  "autoUpdateBadge": "🕐 Auto-refresh bawat 2 min",
+  "tdxBadge": "📊 TDX Live Data",
+  "loadingBadge": "⏳ Naglo-load...",
+  "refreshCooldown": "Maghintay ng {{s}}s",
+  "stopSequence": "Hinto {{n}}",
+  "dataSource": "Pinagkukunan ng datos: TDX Transport Data Exchange (ETA + RealTimeNearStop + StopOfRoute)",
+  "status": {
+    "notDeparted": "Hindi pa umalis",
+    "noStop": "Walang serbisyo",
+    "lastPassed": "Nakaraang bus ay lumipas na",
+    "notOperating": "Hindi nag-ooperate ngayon",
+    "arriving": "Paparating",
+    "departed": "Umalis na",
+    "approaching": "Papalapit",
+    "minutesUnit": "{{min}} min",
+    "secondsUnit": "{{sec}} seg"
+  }
+}

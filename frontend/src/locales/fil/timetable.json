@@ -1,0 +1,26 @@
+{
+  "title": "Iskedyul",
+  "weekView": "Lingguhang",
+  "todayView": "Ngayon",
+  "timeHeader": "Oras",
+  "days": ["Lun", "Mar", "Miy", "Huw", "Biy"],
+  "noClassesToday": "Walang klase ngayon 🎉",
+  "enjoyRest": "I-enjoy ang iyong araw na walang pasok",
+  "totalCourses": "{{count}} kurso, {{periods}} panahon ngayong semestre",
+  "requestTimeout": "Nag-timeout ang kahilingan",
+  "clearData": "I-clear ang Data",
+  "clearConfirm": "Sigurado ka bang gusto mong i-clear ang data ng iskedyul?",
+  "cooldownWarning": "⚠️ Cooldown: {{mins}} min bago maaaring mag-sync ulit.",
+  "classInProgress": "Sa Klase",
+  "modal": {
+    "time": "⏰ Oras",
+    "classroom": "📍 Silid-aralan",
+    "teacher": "👤 Guro",
+    "email": "📧 Email",
+    "type": "📋 Uri",
+    "credits": "🎓 Kredito",
+    "creditsUnit": "{{n}} kredito",
+    "close": "Isara",
+    "dayPeriod": "Panahon {{period}} ・ {{timeRange}}"
+  }
+}

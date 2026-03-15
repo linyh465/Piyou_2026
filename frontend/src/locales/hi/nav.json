@@ -1,0 +1,16 @@
+{
+  "home": "होम",
+  "tasks": "कार्य",
+  "timetable": "टाइमटेबल",
+  "grades": "ग्रेड",
+  "transport": "परिवहन",
+  "library": "पुस्तकालय",
+  "settings": "सेटिंग्स",
+  "overview": "अवलोकन",
+  "school": "विद्यालय",
+  "life": "जीवन",
+  "schoolCategory": "विद्यालय",
+  "back": "वापस",
+  "syncedStatus": "पोर्टल डेटा सिंक हो गया",
+  "notSyncedStatus": "पोर्टल डेटा सिंक नहीं हुआ"
+}

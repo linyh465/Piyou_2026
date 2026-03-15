@@ -1,0 +1,38 @@
+{
+  "title": "पुस्तकालय",
+  "tabs": {
+    "loans": "वर्तमान ऋण",
+    "reserves": "आरक्षण",
+    "history": "इतिहास"
+  },
+  "currentLoans": "वर्तमान ऋण",
+  "reservations": "आरक्षण",
+  "borrowHistory": "उधार इतिहास",
+  "loansOverview": "📚 ऋण अवलोकन",
+  "borrowing": "उधार ली गई",
+  "overdue": "समय सीमा बीत गई",
+  "dueSoon": "जल्द वापस करनी है",
+  "reserving": "आरक्षित",
+  "queuePosition": "कतार #{{n}}",
+  "renewCount": "{{n}} बार नवीनीकृत किया",
+  "overdueBooksAlert": "⚠️ {{count}} पुस्तक की समय सीमा बीत गई",
+  "dueDate": "{{date}} को वापस करें",
+  "dueSoonAlert": "📅 {{count}} पुस्तक 7 दिनों में वापस करनी है",
+  "countBooks": "{{n}} पुस्तक",
+  "countRecords": "{{n}} रिकॉर्ड",
+  "noBooksLoaned": "वर्तमान में कोई पुस्तक उधार नहीं ली गई",
+  "goToBorrow": "पुस्तक उधार लेने के लिए पुस्तकालय जाएं",
+  "noReservations": "कोई आरक्षण नहीं",
+  "reservationsHint": "आपके आरक्षण यहाँ दिखेंगे",
+  "noHistory": "कोई उधार इतिहास नहीं",
+  "historyHint": "पहले उधार ली गई पुस्तकें यहाँ दिखेंगी",
+  "noData": "कोई पुस्तकालय डेटा नहीं",
+  "loginHint": "पुस्तकालय डेटा सिंक करने के लिए कृपया लॉगिन करें",
+  "clearConfirm": "क्या आप वाकई पुस्तकालय डेटा साफ़ करना चाहते हैं?",
+  "dueDateStatus": {
+    "overdue": "समय सीमा बीत गई ({{date}})",
+    "today": "आज वापस करनी है",
+    "tomorrow": "कल वापस करनी है",
+    "daysLater": "{{n}} दिनों में वापस करनी है"
+  }
+}
