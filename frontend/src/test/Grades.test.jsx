@@ -11,10 +11,8 @@ vi.mock('../stores/timetableStore', () => {
     grades: [
       {
         name: '113-1 上學期',
-        class_rank: 5,
-        class_total: 60,
-        dept_rank: 12,
-        dept_total: 120,
+        class_rank: '5/60',
+        dept_rank: '12/120',
         courses: [
           { name: '微積分', score: 92, credits: 3 },
           { name: '國文', score: 78, credits: 2 },

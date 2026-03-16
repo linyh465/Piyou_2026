@@ -1391,6 +1391,14 @@ body {
   margin-top: 4px;
 }
 
+/* ── 圓餅圖並列 / Gauges Row ── */
+.grade-gauges-row {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
 /* ── 成績總覽 / Grade Overview ── */
 .grade-overview {
   display: flex;

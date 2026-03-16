@@ -6,6 +6,7 @@
   "gradeRankTitle": "成績排名",
   "courseGrades": "修課成績",
   "average": "平均 {{avg}}",
+  "weightedAvg": "加權平均",
   "credits": "{{n}} 學分",
   "noGrades": "尚無成績資料",
   "noGradesHint": "請先登入以取得成績",

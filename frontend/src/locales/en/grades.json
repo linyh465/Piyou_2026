@@ -6,6 +6,7 @@
   "gradeRankTitle": "Rankings",
   "courseGrades": "Course Grades",
   "average": "Avg {{avg}}",
+  "weightedAvg": "Weighted Avg",
   "credits": "{{n}} credits",
   "noGrades": "No grade data",
   "noGradesHint": "Please log in to fetch grades",

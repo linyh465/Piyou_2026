@@ -30,16 +30,23 @@ function calculateStats(courses) {
 
 function scoreColor(course) {
     if (!isNumericCourse(course)) return 'var(--text-muted)';
-    const s = course.score;
-    if (s >= 80) return 'var(--color-success)';
-    if (s >= 60) return 'var(--color-warning)';
-    return 'var(--color-danger)';
+    return course.score >= 60 ? 'var(--color-success)' : 'var(--color-danger)';
 }
 
 function displayScore(course) {
     if (course.score_text) return course.score_text;
     if (course.score != null) return course.score;
     return '--';
+}
+
+function parseRank(rankStr) {
+    if (!rankStr || typeof rankStr !== 'string') return null;
+    const parts = rankStr.split('/');
+    if (parts.length !== 2) return null;
+    const rank = parseInt(parts[0], 10);
+    const total = parseInt(parts[1], 10);
+    if (isNaN(rank) || isNaN(total) || total === 0) return null;
+    return { rank, total };
 }
 
 function GpaGauge({ gpa, label }) {
@@ -62,6 +69,32 @@ function GpaGauge({ gpa, label }) {
             </svg>
             <div className="gpa-gauge-text">
                 <span className="gpa-gauge-value">{gpa ?? '--'}</span>
+                <span className="gpa-gauge-label">{label}</span>
+            </div>
+        </div>
+    );
+}
+
+function AvgGauge({ avg, label }) {
+    const numAvg = parseFloat(avg) || 0;
+    const ratio = Math.min(numAvg / 100, 1);
+    const circumference = 2 * Math.PI * 52;
+    const offset = circumference - ratio * circumference;
+    const color = numAvg >= 80 ? 'var(--color-success)' : numAvg >= 60 ? 'var(--color-brand)' : 'var(--color-warning)';
+
+    return (
+        <div className="gpa-gauge">
+            <svg viewBox="0 0 120 120" className="gpa-gauge-svg">
+                <circle cx="60" cy="60" r="52" fill="none" stroke="var(--border)" strokeWidth="8" />
+                <circle
+                    cx="60" cy="60" r="52" fill="none"
+                    stroke={color} strokeWidth="8" strokeLinecap="round"
+                    strokeDasharray={circumference} strokeDashoffset={offset}
+                    style={{ transform: 'rotate(-90deg)', transformOrigin: '50% 50%', transition: 'stroke-dashoffset 0.8s ease' }}
+                />
+            </svg>
+            <div className="gpa-gauge-text">
+                <span className="gpa-gauge-value">{avg ?? '--'}</span>
                 <span className="gpa-gauge-label">{label}</span>
             </div>
         </div>
@@ -136,10 +169,8 @@ export default function Grades() {
     const semGpa = currentSem?.gpa ?? semStats.gpa;
     const semAvg = currentSem?.weighted_average ?? semStats.weightedAvg;
 
-    const classRank = currentSem?.class_rank ?? currentSem?.rank;
-    const classTotal = currentSem?.class_total ?? 45;
-    const deptRank = currentSem?.dept_rank;
-    const deptTotal = currentSem?.dept_total ?? 180;
+    const classRankParsed = parseRank(currentSem?.class_rank) ?? parseRank(currentSem?.rank);
+    const deptRankParsed = parseRank(currentSem?.dept_rank);
 
     return (
         <div className="section-stack animate-fade-in">
@@ -209,18 +240,21 @@ export default function Grades() {
                 <>
                     <div className="card">
                         <div className="grade-overview">
-                            <GpaGauge gpa={overallStats?.gpa ?? semGpa} label={t('overallGpa')} />
+                            <div className="grade-gauges-row">
+                                <GpaGauge gpa={overallStats?.gpa ?? semGpa} label={t('overallGpa')} />
+                                {semAvg && <AvgGauge avg={semAvg} label={t('weightedAvg')} />}
+                            </div>
                             <div className="grade-rank-section">
                                 <div className="grade-rank-item">
                                     <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{t('classRank')}</span>
                                     <p style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text)' }}>
-                                        {classRank ?? '--'}<span style={{ fontSize: '14px', color: 'var(--text-muted)', fontWeight: 400 }}>/ {classTotal}</span>
+                                        {classRankParsed?.rank ?? '--'}<span style={{ fontSize: '14px', color: 'var(--text-muted)', fontWeight: 400 }}>/ {classRankParsed?.total ?? '--'}</span>
                                     </p>
                                 </div>
                                 <div className="grade-rank-item">
                                     <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{t('deptRank')}</span>
                                     <p style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text)' }}>
-                                        {deptRank ?? '--'}<span style={{ fontSize: '14px', color: 'var(--text-muted)', fontWeight: 400 }}>/ {deptTotal}</span>
+                                        {deptRankParsed?.rank ?? '--'}<span style={{ fontSize: '14px', color: 'var(--text-muted)', fontWeight: 400 }}>/ {deptRankParsed?.total ?? '--'}</span>
                                     </p>
                                 </div>
                             </div>
@@ -229,16 +263,13 @@ export default function Grades() {
 
                     <div className="card">
                         <h3 style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '16px', color: 'var(--text)' }}>{t('gradeRankTitle')}</h3>
-                        <RankBar label={t('classRank')} rank={classRank} total={classTotal} />
-                        <RankBar label={t('deptRank')} rank={deptRank} total={deptTotal} />
+                        <RankBar label={t('classRank')} rank={classRankParsed?.rank} total={classRankParsed?.total} />
+                        <RankBar label={t('deptRank')} rank={deptRankParsed?.rank} total={deptRankParsed?.total} />
                     </div>
 
                     <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px 8px' }}>
                             <h3 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text)' }}>{t('courseGrades')}</h3>
-                            {semAvg && (
-                                <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-success)' }}>{t('average', { avg: semAvg })}</span>
-                            )}
                         </div>
                         {(currentSem.courses || []).map((course, ci) => (
                             <div
@@ -269,9 +300,6 @@ export default function Grades() {
                                     }}>
                                         {displayScore(course)}
                                     </span>
-                                    {isNumericCourse(course) && course.score >= 60 && (
-                                        <span style={{ fontSize: '12px', color: 'var(--color-success)', marginLeft: '4px' }}>✓</span>
-                                    )}
                                 </div>
                             </div>
                         ))}
