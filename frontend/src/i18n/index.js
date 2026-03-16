@@ -15,7 +15,6 @@ import zhTWGrades from '../locales/zh-TW/grades.json';
 import zhTWTransport from '../locales/zh-TW/transport.json';
 import zhTWLibrary from '../locales/zh-TW/library.json';
 import zhTWSettings from '../locales/zh-TW/settings.json';
-import zhTWWowClass from '../locales/zh-TW/wowClass.json';
 
 // ── en ──
 import enCommon from '../locales/en/common.json';
@@ -27,16 +26,15 @@ import enGrades from '../locales/en/grades.json';
 import enTransport from '../locales/en/transport.json';
 import enLibrary from '../locales/en/library.json';
 import enSettings from '../locales/en/settings.json';
-import enWowClass from '../locales/en/wowClass.json';
 
-const NAMESPACES = ['common', 'nav', 'dashboard', 'tasks', 'timetable', 'grades', 'transport', 'library', 'settings', 'wowClass'];
+const NAMESPACES = ['common', 'nav', 'dashboard', 'tasks', 'timetable', 'grades', 'transport', 'library', 'settings'];
 
 i18n
     .use(initReactI18next)
     .init({
         resources: {
-            'zh-TW': { common: zhTWCommon, nav: zhTWNav, dashboard: zhTWDashboard, tasks: zhTWTasks, timetable: zhTWTimetable, grades: zhTWGrades, transport: zhTWTransport, library: zhTWLibrary, settings: zhTWSettings, wowClass: zhTWWowClass },
-            'en':    { common: enCommon,   nav: enNav,   dashboard: enDashboard,   tasks: enTasks,   timetable: enTimetable,   grades: enGrades,   transport: enTransport,   library: enLibrary,   settings: enSettings,   wowClass: enWowClass   },
+            'zh-TW': { common: zhTWCommon, nav: zhTWNav, dashboard: zhTWDashboard, tasks: zhTWTasks, timetable: zhTWTimetable, grades: zhTWGrades, transport: zhTWTransport, library: zhTWLibrary, settings: zhTWSettings },
+            'en':    { common: enCommon,   nav: enNav,   dashboard: enDashboard,   tasks: enTasks,   timetable: enTimetable,   grades: enGrades,   transport: enTransport,   library: enLibrary,   settings: enSettings   },
         },
         lng: localStorage.getItem('piyou_lang') || 'zh-TW',
         fallbackLng: 'zh-TW',
