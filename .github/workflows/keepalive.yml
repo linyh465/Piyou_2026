@@ -58,3 +58,6 @@ jobs:
           else
             echo "OK: Supabase is alive"
           fi
+
+      - name: Done
+        run: echo "Keepalive complete."
