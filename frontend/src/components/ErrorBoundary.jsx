@@ -1,8 +1,28 @@
 /**
  * React Error Boundary — 攔截子元件的渲染異常，避免整頁白屏。
  * Catches render errors in child components to prevent blank screens.
+ * 自動將錯誤回報至後端並寄送 Email 給開發者。
+ * Automatically reports errors to the backend which emails the developer.
  */
 import { Component } from 'react';
+
+const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api/v1';
+
+function sendErrorReport(error, componentStack) {
+    try {
+        fetch(`${API_BASE}/report-error`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                message: error?.message || String(error),
+                stack: error?.stack || null,
+                component_stack: componentStack || null,
+                url: window.location.href,
+                user_agent: navigator.userAgent,
+            }),
+        }).catch(() => { /* 靜默失敗 / silent fail */ });
+    } catch (_) { /* 靜默失敗 / silent fail */ }
+}
 
 export default class ErrorBoundary extends Component {
     constructor(props) {
@@ -16,6 +36,7 @@ export default class ErrorBoundary extends Component {
 
     componentDidCatch(error, info) {
         console.error('[ErrorBoundary]', error, info.componentStack);
+        sendErrorReport(error, info.componentStack);
     }
 
     handleReset = () => {
