@@ -239,36 +239,34 @@ export default function Grades() {
             ) : currentSem ? (
                 <>
                     <div className="card">
-                        <div className="grade-overview">
+                        <div className="grade-overview" style={{ flexDirection: 'column', alignItems: 'center' }}>
                             <div className="grade-gauges-row">
                                 <GpaGauge gpa={overallStats?.gpa ?? semGpa} label={t('overallGpa')} />
                                 {semAvg && <AvgGauge avg={semAvg} label={t('weightedAvg')} />}
                             </div>
-                            <div className="grade-rank-section">
-                                <div className="grade-rank-item">
+                            <div style={{ display: 'flex', gap: '24px', width: '100%', justifyContent: 'center', marginTop: '8px' }}>
+                                <div style={{ textAlign: 'center' }}>
                                     <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{t('classRank')}</span>
                                     <p style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text)' }}>
-                                        {classRankParsed?.rank ?? '--'}<span style={{ fontSize: '14px', color: 'var(--text-muted)', fontWeight: 400 }}>/ {classRankParsed?.total ?? '--'}</span>
+                                        {classRankParsed?.rank ?? '--'}<span style={{ fontSize: '14px', color: 'var(--text-muted)', fontWeight: 400 }}> / {classRankParsed?.total ?? '--'}</span>
                                     </p>
+                                    {classRankParsed && (
+                                        <p style={{ fontSize: '12px', color: 'var(--color-success)', fontWeight: 600 }}>
+                                            {((classRankParsed.rank / classRankParsed.total) * 100).toFixed(2)}%
+                                        </p>
+                                    )}
                                 </div>
-                                <div className="grade-rank-item">
+                                <div style={{ textAlign: 'center' }}>
                                     <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{t('deptRank')}</span>
                                     <p style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text)' }}>
-                                        {deptRankParsed?.rank ?? '--'}<span style={{ fontSize: '14px', color: 'var(--text-muted)', fontWeight: 400 }}>/ {deptRankParsed?.total ?? '--'}</span>
+                                        {deptRankParsed?.rank ?? '--'}<span style={{ fontSize: '14px', color: 'var(--text-muted)', fontWeight: 400 }}> / {deptRankParsed?.total ?? '--'}</span>
                                     </p>
+                                    {deptRankParsed && (
+                                        <p style={{ fontSize: '12px', color: 'var(--color-success)', fontWeight: 600 }}>
+                                            {((deptRankParsed.rank / deptRankParsed.total) * 100).toFixed(2)}%
+                                        </p>
+                                    )}
                                 </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="card">
-                        <h3 style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '16px', color: 'var(--text)' }}>{t('gradeRankTitle')}</h3>
-                        <div style={{ display: 'flex', gap: '16px' }}>
-                            <div style={{ flex: 1 }}>
-                                <RankBar label={t('classRank')} rank={classRankParsed?.rank} total={classRankParsed?.total} />
-                            </div>
-                            <div style={{ flex: 1 }}>
-                                <RankBar label={t('deptRank')} rank={deptRankParsed?.rank} total={deptRankParsed?.total} />
                             </div>
                         </div>
                     </div>
