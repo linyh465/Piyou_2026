@@ -103,13 +103,13 @@ function AvgGauge({ avg, label }) {
 
 function RankBar({ label, rank, total }) {
     if (!rank || !total) return null;
-    const pct = ((rank / total) * 100).toFixed(1);
+    const pct = ((rank / total) * 100).toFixed(2);
     const fillPct = Math.min((1 - rank / total) * 100 + 5, 100);
     return (
         <div style={{ marginBottom: '12px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
                 <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>{label}</span>
-                <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-success)' }}>Top {pct}%</span>
+                <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-success)' }}>{pct}%</span>
             </div>
             <div className="rank-bar-track">
                 <div className="rank-bar-fill" style={{ width: `${fillPct}%` }} />
@@ -263,8 +263,14 @@ export default function Grades() {
 
                     <div className="card">
                         <h3 style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '16px', color: 'var(--text)' }}>{t('gradeRankTitle')}</h3>
-                        <RankBar label={t('classRank')} rank={classRankParsed?.rank} total={classRankParsed?.total} />
-                        <RankBar label={t('deptRank')} rank={deptRankParsed?.rank} total={deptRankParsed?.total} />
+                        <div style={{ display: 'flex', gap: '16px' }}>
+                            <div style={{ flex: 1 }}>
+                                <RankBar label={t('classRank')} rank={classRankParsed?.rank} total={classRankParsed?.total} />
+                            </div>
+                            <div style={{ flex: 1 }}>
+                                <RankBar label={t('deptRank')} rank={deptRankParsed?.rank} total={deptRankParsed?.total} />
+                            </div>
+                        </div>
                     </div>
 
                     <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
