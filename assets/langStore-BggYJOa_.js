@@ -1,1 +1,0 @@
-import{c as g,J as l}from"./index-BKDojVrH.js";const t=[{code:"zh-TW",label:"繁體中文",flag:"🇹🇼"},{code:"en",label:"English",flag:"🇺🇸"}],o=g(e=>({lang:localStorage.getItem("piyou_lang")||"zh-TW",setLang:a=>{localStorage.setItem("piyou_lang",a),l.changeLanguage(a),e({lang:a})}}));export{t as L,o as u};
