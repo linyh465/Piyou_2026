@@ -27,12 +27,10 @@ from app.models.schemas import (
     BusRouteStopsResponse, BusRouteStops, BusStopInfo,
     BusPositionsResponse, BusPosition,
     LibraryResponse, LibraryBook, LibraryReservation,
-    TronClassAssignment, TronClassResponse,
 )
 from app.services.scraper import SchoolScraper
 from app.services.tdx import TDXService
 from app.services.library_scraper import LibraryScraper
-from app.services.tronclass_scraper import TronClassScraper
 from app.services.scraper_cache import get_cached_scraper, cache_scraper_session
 from app.services.storage import get_storage
 from app.routers.auth import get_current_user, get_cached_credentials
@@ -593,95 +591,6 @@ async def put_tasks(request: Request, user: dict = Depends(get_current_user)):
     except Exception as e:
         logger.warning(f"Task write error: {e}")
         raise HTTPException(status_code=500, detail="儲存任務失敗 / Failed to save tasks")
-
-# ══════════════════════════════════════════
-#  玩課雲 / WoW Class (TronClass)
-# ══════════════════════════════════════════
-
-MOCK_TRONCLASS = TronClassResponse(
-    assignments=[
-        TronClassAssignment(
-            id="mock-1",
-            title="第三章習題",
-            course_name="程式設計",
-            due_date="2026-03-22T23:59:59",
-            is_submitted=False,
-            is_overdue=False,
-            assignment_type="assignment",
-        ),
-        TronClassAssignment(
-            id="mock-2",
-            title="期中報告草稿",
-            course_name="資料結構",
-            due_date="2026-03-25T23:59:59",
-            is_submitted=False,
-            is_overdue=False,
-            assignment_type="assignment",
-        ),
-        TronClassAssignment(
-            id="mock-3",
-            title="週記 #8",
-            course_name="英文",
-            due_date="2026-03-18T23:59:59",
-            is_submitted=False,
-            is_overdue=True,
-            assignment_type="assignment",
-        ),
-    ],
-    fetched_at=datetime.now(timezone(timedelta(hours=8))).isoformat(),
-)
-
-
-def _get_tronclass_scraper(user: dict) -> TronClassScraper:
-    """
-    取得已登入的玩課雲爬蟲 / Get authenticated TronClass scraper.
-    使用與校務系統相同的帳密 / Uses same credentials as school portal.
-    """
-    student_id = user.get("sub", "")
-    creds = get_cached_credentials(student_id)
-    if not creds:
-        raise HTTPException(
-            status_code=401,
-            detail="請重新登入以取得玩課雲資料 / Please re-login to fetch TronClass data",
-        )
-    tc = TronClassScraper()
-    success = tc.login(creds[0], creds[1])
-    if not success:
-        raise HTTPException(
-            status_code=502,
-            detail="玩課雲登入失敗 / TronClass login failed",
-        )
-    return tc
-
-
-@router.get("/tronclass", response_model=TronClassResponse)
-async def get_tronclass(user: dict = Depends(get_current_user)):
-    """
-    取得玩課雲待辦作業 / Get TronClass pending assignments.
-    爬蟲抓取後直接回傳，不在伺服器端儲存快取（隱私保護）。
-    前端會自行快取至 localStorage。
-    Scraper fetch → return directly. No server-side cache (privacy).
-    Frontend caches in localStorage on its own.
-    """
-    try:
-        tc = await asyncio.to_thread(_get_tronclass_scraper, user)
-        raw = await asyncio.to_thread(tc.fetch_assignments)
-        if raw is not None:
-            assignments = [TronClassAssignment(**a) for a in raw]
-            return TronClassResponse(
-                assignments=assignments,
-                fetched_at=datetime.now(timezone(timedelta(hours=8))).isoformat(),
-            )
-    except HTTPException as e:
-        if e.status_code == 401:
-            raise
-        # 502 = TronClass 登入失敗或無法連線，fallback 到 mock
-        logger.warning(f"TronClass unreachable (HTTP {e.status_code}), using mock data")
-    except Exception as e:
-        logger.warning(f"TronClass scraper failed, using mock: {type(e).__name__}: {e}")
-
-    return MOCK_TRONCLASS
-
 
 # ── 記憶體內 TDX 節流 / In-memory TDX throttle ──
 _bus_mem_cache: dict | None = None
