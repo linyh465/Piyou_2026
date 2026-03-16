@@ -59,9 +59,8 @@ export default function SyncLoginModal({ show, onClose }) {
 
             const success = await login(studentId.trim(), password);
             if (success) {
-                await fetchTimetable();
-                await fetchGrades();
-                await fetchLibrary();
+                // 並行抓取課表、成績、圖書館，不需序列等待
+                await Promise.all([fetchTimetable(), fetchGrades(), fetchLibrary()]);
                 await syncTasksFromServer();
                 await syncTasksToServer();
                 recordSyncSuccess();

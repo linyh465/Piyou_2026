@@ -14,6 +14,16 @@ export default function PWAReloadPrompt() {
     const { t } = useTranslation('common');
     const [countdown, setCountdown] = useState(AUTO_UPDATE_SECONDS);
     const countdownRef = useRef(null);
+    const swCheckIntervalRef = useRef(null);
+
+    // 元件卸載時清除 SW 檢查 interval / Clear SW check interval on unmount
+    useEffect(() => {
+        return () => {
+            if (swCheckIntervalRef.current) {
+                clearInterval(swCheckIntervalRef.current);
+            }
+        };
+    }, []);
 
     const {
         needRefresh: [needRefresh, setNeedRefresh],
@@ -21,7 +31,7 @@ export default function PWAReloadPrompt() {
     } = useRegisterSW({
         onRegisteredSW(swUrl, r) {
             if (r) {
-                setInterval(() => r.update(), CHECK_INTERVAL_MS);
+                swCheckIntervalRef.current = setInterval(() => r.update(), CHECK_INTERVAL_MS);
             }
         },
         onRegisterError(error) {

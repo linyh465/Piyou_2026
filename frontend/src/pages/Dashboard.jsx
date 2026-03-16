@@ -222,7 +222,8 @@ function TaskSection() {
             ) : (
                 <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
                     {pendingTasks.map((task, i) => {
-                        const isOverdue = task.due_date && new Date(task.due_date) < new Date();
+                        const today = new Date(); today.setHours(0, 0, 0, 0);
+                        const isOverdue = task.due_date && new Date(task.due_date) < today;
                         return (
                             <a
                                 key={task.id}

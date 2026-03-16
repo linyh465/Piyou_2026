@@ -47,7 +47,7 @@ const useTimetableStore = create((set, get) => ({
             const result = {
                 allowed: data.allowed,
                 reason: data.reason || null,
-                remainingMs: data.remaining_seconds ? data.remaining_seconds * 1000 : 0,
+                remainingMs: data.remaining_seconds != null ? data.remaining_seconds * 1000 : 0,
             };
             set({ serverCooldown: result });
             return result;

@@ -119,7 +119,12 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         self._last_gc = now
 
     async def dispatch(self, request, call_next):
-        client_ip = request.client.host if request.client else "unknown"
+        # 優先使用 X-Forwarded-For（反向代理環境如 Railway）/ Prefer X-Forwarded-For for reverse proxy envs
+        forwarded = request.headers.get("X-Forwarded-For")
+        if forwarded:
+            client_ip = forwarded.split(",")[0].strip()
+        else:
+            client_ip = request.client.host if request.client else "unknown"
         now = time.time()
 
         # 定期全面清理 / Periodic full GC

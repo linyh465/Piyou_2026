@@ -223,7 +223,7 @@ export default function Transport() {
             .filter(a => a.routeName === selectedRoute && a.direction === direction)
             .forEach(a => {
                 if (indicators[a.stopName]) return;
-                if (a.estimatedSeconds !== null && a.estimatedSeconds !== undefined && a.estimatedSeconds <= 60 &&
+                if (a.estimatedSeconds != null && a.estimatedSeconds <= 60 &&
                     (a.stopStatusCode === 0 || a.stopStatusCode === undefined || a.stopStatusCode === null)) {
                     indicators[a.stopName] = {
                         labelKey: 'arriving',

@@ -16,6 +16,7 @@ import os
 import json
 import time
 import asyncio
+import hashlib
 import logging
 from pathlib import Path
 from datetime import datetime, timezone, timedelta
@@ -52,9 +53,9 @@ DATA_CACHE_TTL = 30 * 60  # 30 分鐘 / 30 minutes
 
 
 def _get_cache_path(student_id: str, data_type: str) -> Path:
-    """取得快取檔案路徑 / Get cache file path"""
-    safe_id = "".join(c for c in student_id if c.isalnum())
-    return CACHE_DIR / f"{safe_id}_{data_type}.json"
+    """取得快取檔案路徑（用 SHA-256 hash 學號，避免 PII 洩漏）/ Get cache file path (SHA-256 hash of student ID to avoid PII leak)"""
+    id_hash = hashlib.sha256(student_id.encode()).hexdigest()[:16]
+    return CACHE_DIR / f"{id_hash}_{data_type}.json"
 
 
 def _read_data_cache(student_id: str, data_type: str) -> dict | None:
@@ -90,34 +91,59 @@ def _write_data_cache(student_id: str, data_type: str, data: dict):
         logger.warning(f"Cache write error: {e}")
 
 
-def _get_authenticated_scraper(user: dict) -> SchoolScraper:
+# 每位學生一把鎖，防止並發登入競爭 / Per-student lock to prevent concurrent login race
+_scraper_login_locks: dict[str, asyncio.Lock] = {}
+
+
+def _get_or_create_login_lock(student_id: str) -> asyncio.Lock:
+    """取得或建立指定學生的登入鎖 / Get or create login lock for a student"""
+    if student_id not in _scraper_login_locks:
+        _scraper_login_locks[student_id] = asyncio.Lock()
+    return _scraper_login_locks[student_id]
+
+
+async def _get_authenticated_scraper(user: dict) -> SchoolScraper:
     """
     取得已登入的爬蟲 / Get an authenticated scraper instance.
     優先重用 auth login 端點快取的 session，避免重複登入校網
     Prioritizes reuse of session cached by auth login endpoint to avoid double-login.
+    使用 asyncio.Lock 防止並發登入競爭；scraper.login() 跑在 thread 中避免阻塞 event loop。
+    Uses asyncio.Lock to prevent concurrent login races; scraper.login() runs in thread to avoid blocking event loop.
     """
     student_id = user.get("sub", "")
 
-    # 檢查共用快取（含 auth login 快取的 session）/ Check shared cache
+    # 快速路徑：快取命中不需加鎖 / Fast path: cache hit, no lock needed
     cached_scraper = get_cached_scraper(student_id)
     if cached_scraper:
         return cached_scraper
 
-    # 需要新登入 / Need fresh login
-    creds = get_cached_credentials(student_id)
-    if not creds:
-        raise HTTPException(
-            status_code=401,
-            detail="請重新登入以取得資料 / Please re-login to fetch data",
-        )
+    # 需要新登入，加鎖避免競爭 / Need fresh login, lock to prevent races
+    lock = _get_or_create_login_lock(student_id)
+    async with lock:
+        # 重新確認快取（可能在等鎖時被其他請求填入）/ Double-check after acquiring lock
+        cached_scraper = get_cached_scraper(student_id)
+        if cached_scraper:
+            return cached_scraper
 
-    scraper = SchoolScraper()
-    scraper.login(creds[0], creds[1])
+        creds = get_cached_credentials(student_id)
+        if not creds:
+            raise HTTPException(
+                status_code=401,
+                detail="請重新登入以取得資料 / Please re-login to fetch data",
+            )
 
-    # 存入共用快取 / Store in shared cache
-    cache_scraper_session(student_id, scraper)
-    logger.info("Created new scraper session and cached it (30min TTL)")
-    return scraper
+        # 在 thread 中執行登入，避免阻塞 async event loop / Run login in thread to avoid blocking
+        def _do_login():
+            s = SchoolScraper()
+            s.login(creds[0], creds[1])
+            return s
+
+        scraper = await asyncio.to_thread(_do_login)
+
+        # 存入共用快取 / Store in shared cache
+        cache_scraper_session(student_id, scraper)
+        logger.info("Created new scraper session and cached it (30min TTL)")
+        return scraper
 
 
 # ══════════════════════════════════════════
@@ -364,7 +390,7 @@ async def get_timetable(user: dict = Depends(get_current_user)):
     # 爬蟲抓取（在執行緒池中執行，避免阻塞事件迴圈）
     # Scraper fetch (run in thread pool to avoid blocking event loop)
     try:
-        scraper = _get_authenticated_scraper(user)
+        scraper = await _get_authenticated_scraper(user)
         raw_data = await asyncio.to_thread(scraper.fetch_timetable)
         if raw_data and raw_data.get("courses"):
             result = transform_timetable(raw_data)
@@ -390,7 +416,7 @@ async def get_grades(user: dict = Depends(get_current_user)):
     # 爬蟲抓取（在執行緒池中執行，避免阻塞事件迴圈）
     # Scraper fetch (run in thread pool to avoid blocking event loop)
     try:
-        scraper = _get_authenticated_scraper(user)
+        scraper = await _get_authenticated_scraper(user)
         raw_data = await asyncio.to_thread(scraper.fetch_grades)
         if raw_data and (raw_data.get("semesters") or raw_data.get("rows")):
             result = transform_grades(raw_data)
