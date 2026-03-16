@@ -26,15 +26,18 @@ env:
 jobs:
   ping:
     runs-on: ubuntu-latest
+    env:
+      KOYEB_API_URL: ${{ secrets.KOYEB_API_URL }}
+      SUPABASE_PING_URL: ${{ secrets.SUPABASE_PING_URL }}
     steps:
       - name: Ping Koyeb backend
         # secrets.KOYEB_API_URL 格式：https://<app>-<hash>.koyeb.app
         # 若尚未設定則跳過 / Skip if not set yet
-        if: ${{ secrets.KOYEB_API_URL != '' }}
+        if: ${{ env.KOYEB_API_URL != '' }}
         run: |
           echo "Pinging Koyeb backend..."
           STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
-            "${{ secrets.KOYEB_API_URL }}/health" \
+            "$KOYEB_API_URL/health" \
             --max-time 15 || echo "000")
           echo "Koyeb response: $STATUS"
           if [ "$STATUS" = "000" ]; then
@@ -46,11 +49,11 @@ jobs:
       - name: Ping Supabase (keep database active)
         # secrets.SUPABASE_URL 格式：https://xxxx.supabase.co
         # 使用 REST API health endpoint / Uses REST API health endpoint
-        if: ${{ secrets.SUPABASE_PING_URL != '' }}
+        if: ${{ env.SUPABASE_PING_URL != '' }}
         run: |
           echo "Pinging Supabase..."
           STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
-            "${{ secrets.SUPABASE_PING_URL }}" \
+            "$SUPABASE_PING_URL" \
             --max-time 15 || echo "000")
           echo "Supabase response: $STATUS"
           if [ "$STATUS" = "000" ]; then
