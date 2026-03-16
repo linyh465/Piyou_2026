@@ -21,7 +21,7 @@ function sendErrorReport(error, componentStack) {
                 user_agent: navigator.userAgent,
             }),
         }).catch(() => { /* 靜默失敗 / silent fail */ });
-    } catch (_) { /* 靜默失敗 / silent fail */ }
+    } catch { /* 靜默失敗 / silent fail */ }
 }
 
 export default class ErrorBoundary extends Component {
