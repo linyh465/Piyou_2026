@@ -354,17 +354,25 @@ MOCK_LIBRARY = LibraryResponse(
 async def get_timetable(user: dict = Depends(get_current_user)):
     """
     取得課表 / Get Timetable
-    爬蟲抓取後直接回傳，不在伺服器端儲存快取（隱私保護）。
-    前端會自行快取至 localStorage。
-    Scraper fetch → return directly. No server-side cache (privacy).
-    Frontend caches in localStorage on its own.
+    伺服器端快取 30 分鐘，減少重複爬蟲登入。
+    Server-side cache for 30 min to avoid redundant scraper logins.
     """
+    student_id = user.get("sub", "")
+
+    # 先檢查伺服器端快取 / Check server-side cache first
+    cached = _read_data_cache(student_id, "timetable")
+    if cached and cached.get("courses"):
+        result = transform_timetable(cached)
+        logger.info(f"Serving timetable from cache ({len(result.courses)} periods)")
+        return result
+
     # 爬蟲抓取（在執行緒池中執行，避免阻塞事件迴圈）
     # Scraper fetch (run in thread pool to avoid blocking event loop)
     try:
         scraper = _get_authenticated_scraper(user)
         raw_data = await asyncio.to_thread(scraper.fetch_timetable)
         if raw_data and raw_data.get("courses"):
+            _write_data_cache(student_id, "timetable", raw_data)
             result = transform_timetable(raw_data)
             logger.info(f"Fetched {len(result.courses)} real course periods")
             return result
@@ -380,17 +388,25 @@ async def get_timetable(user: dict = Depends(get_current_user)):
 async def get_grades(user: dict = Depends(get_current_user)):
     """
     取得成績 / Get Grades
-    爬蟲抓取後直接回傳，不在伺服器端儲存快取（隱私保護）。
-    前端會自行快取至 localStorage。
-    Scraper fetch → return directly. No server-side cache (privacy).
-    Frontend caches in localStorage on its own.
+    伺服器端快取 30 分鐘，減少重複爬蟲登入。
+    Server-side cache for 30 min to avoid redundant scraper logins.
     """
+    student_id = user.get("sub", "")
+
+    # 先檢查伺服器端快取 / Check server-side cache first
+    cached = _read_data_cache(student_id, "grades")
+    if cached and (cached.get("semesters") or cached.get("rows")):
+        result = transform_grades(cached)
+        logger.info(f"Serving grades from cache ({len(result.semesters)} semesters)")
+        return result
+
     # 爬蟲抓取（在執行緒池中執行，避免阻塞事件迴圈）
     # Scraper fetch (run in thread pool to avoid blocking event loop)
     try:
         scraper = _get_authenticated_scraper(user)
         raw_data = await asyncio.to_thread(scraper.fetch_grades)
         if raw_data and (raw_data.get("semesters") or raw_data.get("rows")):
+            _write_data_cache(student_id, "grades", raw_data)
             result = transform_grades(raw_data)
             logger.info(f"Fetched {sum(len(s.courses) for s in result.semesters)} grade rows across {len(result.semesters)} semesters")
             return result
@@ -514,9 +530,13 @@ async def get_library(user: dict = Depends(get_current_user)):
     try:
         lib = await asyncio.to_thread(_get_library_scraper, user)
 
-        loans_raw = await asyncio.to_thread(lib.fetch_loans)
-        reserves_raw = await asyncio.to_thread(lib.fetch_reserves)
-        history_raw = await asyncio.to_thread(lib.fetch_history)
+        # 並行抓取借閱、預約、歷史資料以加速
+        # Fetch loans, reserves, history concurrently for speed
+        loans_raw, reserves_raw, history_raw = await asyncio.gather(
+            asyncio.to_thread(lib.fetch_loans),
+            asyncio.to_thread(lib.fetch_reserves),
+            asyncio.to_thread(lib.fetch_history),
+        )
 
         # 標記逾期 / Mark overdue
         if loans_raw:

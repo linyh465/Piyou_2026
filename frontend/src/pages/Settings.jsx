@@ -163,8 +163,14 @@ export default function Settings() {
 
             const success = await login(studentId.trim(), password);
             if (success) {
-                await fetchTimetable();
-                await fetchGrades();
+                // 課表與成績互不相依，並行抓取以加速同步
+                // Timetable and grades are independent — fetch in parallel
+                await Promise.all([
+                    fetchTimetable(),
+                    fetchGrades(),
+                ]);
+                // 任務：先上傳再下載（有順序相依）
+                // Tasks: upload then download (order matters)
                 await syncTasksToServer();
                 await syncTasksFromServer();
                 recordSyncSuccess();
