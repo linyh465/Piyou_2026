@@ -30,16 +30,23 @@ function calculateStats(courses) {
 
 function scoreColor(course) {
     if (!isNumericCourse(course)) return 'var(--text-muted)';
-    const s = course.score;
-    if (s >= 80) return 'var(--color-success)';
-    if (s >= 60) return 'var(--color-warning)';
-    return 'var(--color-danger)';
+    return course.score >= 60 ? 'var(--color-success)' : 'var(--color-danger)';
 }
 
 function displayScore(course) {
     if (course.score_text) return course.score_text;
     if (course.score != null) return course.score;
     return '--';
+}
+
+function parseRank(rankStr) {
+    if (!rankStr || typeof rankStr !== 'string') return null;
+    const parts = rankStr.split('/');
+    if (parts.length !== 2) return null;
+    const rank = parseInt(parts[0], 10);
+    const total = parseInt(parts[1], 10);
+    if (isNaN(rank) || isNaN(total) || total === 0) return null;
+    return { rank, total };
 }
 
 // ── 圓形 GPA 儀錶 / Circular GPA Gauge ──
@@ -70,16 +77,43 @@ function GpaGauge({ gpa, label }) {
     );
 }
 
+// ── 加權平均圓形儀錶 / Weighted Average Gauge ──
+function AvgGauge({ avg, label }) {
+    const numAvg = parseFloat(avg) || 0;
+    const ratio = Math.min(numAvg / 100, 1);
+    const circumference = 2 * Math.PI * 52;
+    const offset = circumference - ratio * circumference;
+    const color = numAvg >= 80 ? 'var(--color-success)' : numAvg >= 60 ? 'var(--color-brand)' : 'var(--color-warning)';
+
+    return (
+        <div className="gpa-gauge">
+            <svg viewBox="0 0 120 120" className="gpa-gauge-svg">
+                <circle cx="60" cy="60" r="52" fill="none" stroke="var(--border)" strokeWidth="8" />
+                <circle
+                    cx="60" cy="60" r="52" fill="none"
+                    stroke={color} strokeWidth="8" strokeLinecap="round"
+                    strokeDasharray={circumference} strokeDashoffset={offset}
+                    style={{ transform: 'rotate(-90deg)', transformOrigin: '50% 50%', transition: 'stroke-dashoffset 0.8s ease' }}
+                />
+            </svg>
+            <div className="gpa-gauge-text">
+                <span className="gpa-gauge-value">{avg ?? '--'}</span>
+                <span className="gpa-gauge-label">{label}</span>
+            </div>
+        </div>
+    );
+}
+
 // ── 排名進度條 / Rank Progress Bar ──
 function RankBar({ label, rank, total }) {
     if (!rank || !total) return null;
-    const pct = ((rank / total) * 100).toFixed(1);
+    const pct = ((rank / total) * 100).toFixed(2);
     const fillPct = Math.min((1 - rank / total) * 100 + 5, 100); // 越前面越多
     return (
         <div style={{ marginBottom: '12px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
                 <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>{label}</span>
-                <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-success)' }}>Top {pct}%</span>
+                <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-success)' }}>{pct}%</span>
             </div>
             <div className="rank-bar-track">
                 <div className="rank-bar-fill" style={{ width: `${fillPct}%` }} />
@@ -139,11 +173,9 @@ export default function Grades() {
     const semGpa = currentSem?.gpa ?? semStats.gpa;
     const semAvg = currentSem?.weighted_average ?? semStats.weightedAvg;
 
-    // 排名
-    const classRank = currentSem?.class_rank ?? currentSem?.rank;
-    const classTotal = currentSem?.class_total ?? 45;
-    const deptRank = currentSem?.dept_rank;
-    const deptTotal = currentSem?.dept_total ?? 180;
+    // 排名（從 "5/60" 格式解析）
+    const classRankParsed = parseRank(currentSem?.class_rank) ?? parseRank(currentSem?.rank);
+    const deptRankParsed = parseRank(currentSem?.dept_rank);
 
     return (
         <div className="section-stack animate-fade-in">
@@ -215,41 +247,44 @@ export default function Grades() {
                 </div>
             ) : currentSem ? (
                 <>
-                    {/* GPA 與排名卡片 */}
+                    {/* GPA + 加權平均 + 排名卡片 */}
                     <div className="card">
-                        <div className="grade-overview">
-                            <GpaGauge gpa={overallStats?.gpa ?? semGpa} label="歷年 GPA" />
-                            <div className="grade-rank-section">
-                                <div className="grade-rank-item">
+                        <div className="grade-overview" style={{ flexDirection: 'column', alignItems: 'center' }}>
+                            <div className="grade-gauges-row">
+                                <GpaGauge gpa={overallStats?.gpa ?? semGpa} label="歷年 GPA" />
+                                {semAvg && <AvgGauge avg={semAvg} label="加權平均" />}
+                            </div>
+                            <div style={{ display: 'flex', gap: '24px', width: '100%', justifyContent: 'center', marginTop: '8px' }}>
+                                <div style={{ textAlign: 'center' }}>
                                     <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>班級排名</span>
                                     <p style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text)' }}>
-                                        {classRank ?? '--'}<span style={{ fontSize: '14px', color: 'var(--text-muted)', fontWeight: 400 }}>/ {classTotal}</span>
+                                        {classRankParsed?.rank ?? '--'}<span style={{ fontSize: '14px', color: 'var(--text-muted)', fontWeight: 400 }}> / {classRankParsed?.total ?? '--'}</span>
                                     </p>
+                                    {classRankParsed && (
+                                        <p style={{ fontSize: '12px', color: 'var(--color-success)', fontWeight: 600 }}>
+                                            {((classRankParsed.rank / classRankParsed.total) * 100).toFixed(2)}%
+                                        </p>
+                                    )}
                                 </div>
-                                <div className="grade-rank-item">
+                                <div style={{ textAlign: 'center' }}>
                                     <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>系所排名</span>
                                     <p style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text)' }}>
-                                        {deptRank ?? '--'}<span style={{ fontSize: '14px', color: 'var(--text-muted)', fontWeight: 400 }}>/ {deptTotal}</span>
+                                        {deptRankParsed?.rank ?? '--'}<span style={{ fontSize: '14px', color: 'var(--text-muted)', fontWeight: 400 }}> / {deptRankParsed?.total ?? '--'}</span>
                                     </p>
+                                    {deptRankParsed && (
+                                        <p style={{ fontSize: '12px', color: 'var(--color-success)', fontWeight: 600 }}>
+                                            {((deptRankParsed.rank / deptRankParsed.total) * 100).toFixed(2)}%
+                                        </p>
+                                    )}
                                 </div>
                             </div>
                         </div>
-                    </div>
-
-                    {/* 成績排名進度條 */}
-                    <div className="card">
-                        <h3 style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '16px', color: 'var(--text)' }}>成績排名</h3>
-                        <RankBar label="班級排名" rank={classRank} total={classTotal} />
-                        <RankBar label="系所排名" rank={deptRank} total={deptTotal} />
                     </div>
 
                     {/* 修課成績列表 */}
                     <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px 8px' }}>
                             <h3 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text)' }}>修課成績</h3>
-                            {semAvg && (
-                                <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-success)' }}>平均 {semAvg}</span>
-                            )}
                         </div>
                         {(currentSem.courses || []).map((course, ci) => (
                             <div
@@ -282,9 +317,7 @@ export default function Grades() {
                                     }}>
                                         {displayScore(course)}
                                     </span>
-                                    {isNumericCourse(course) && course.score >= 60 && (
-                                        <span style={{ fontSize: '12px', color: 'var(--color-success)', marginLeft: '4px' }}>✓</span>
-                                    )}
+
                                 </div>
                             </div>
                         ))}
