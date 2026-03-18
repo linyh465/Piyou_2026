@@ -268,7 +268,7 @@ export default function Grades() {
                                             {classRankParsed.rank}<span> / {classRankParsed.total}</span>
                                         </span>
                                         <span className="grade-rank-pill-pct">
-                                            前 {((classRankParsed.rank / classRankParsed.total) * 100).toFixed(1)}%
+                                            {((classRankParsed.rank / classRankParsed.total) * 100).toFixed(2)}%
                                         </span>
                                     </div>
                                 )}
@@ -279,7 +279,7 @@ export default function Grades() {
                                             {deptRankParsed.rank}<span> / {deptRankParsed.total}</span>
                                         </span>
                                         <span className="grade-rank-pill-pct">
-                                            前 {((deptRankParsed.rank / deptRankParsed.total) * 100).toFixed(1)}%
+                                            {((deptRankParsed.rank / deptRankParsed.total) * 100).toFixed(2)}%
                                         </span>
                                     </div>
                                 )}
