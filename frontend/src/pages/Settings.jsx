@@ -14,10 +14,12 @@ import useAuthStore from '../stores/authStore';
 import useTimetableStore from '../stores/timetableStore';
 import useTaskStore from '../stores/taskStore';
 import useLibraryStore from '../stores/libraryStore';
+import useNotifyStore from '../stores/notifyStore';
 import {
     IconUser, IconSun, IconMoon, IconBell, IconSettings,
     IconLogOut, IconChevronRight, IconBook, IconCheckCircle, IconXCircle
 } from '../components/Icons';
+import FeedbackModal from '../components/FeedbackModal';
 
 // ── 設定項目元件 / Setting Item Component ──
 function SettingItem({ icon: Icon, label, labelEn, children, onClick }) {
@@ -97,16 +99,30 @@ export default function Settings() {
     const { syncTasksFromServer, syncTasksToServer } = useTaskStore();
     const { clearLibraryData } = useLibraryStore();
 
+    const { requestNotificationPermission } = useNotifyStore();
+
     const [busNotify, setBusNotify] = useState(() => {
         try { return JSON.parse(localStorage.getItem('piyou_busNotify') ?? 'true'); } catch { return true; }
     });
     const [taskNotify, setTaskNotify] = useState(() => {
         try { return JSON.parse(localStorage.getItem('piyou_taskNotify') ?? 'true'); } catch { return true; }
     });
+    const [announceNotify, setAnnounceNotify] = useState(() => {
+        try { return JSON.parse(localStorage.getItem('piyou_announceNotify') ?? 'true'); } catch { return true; }
+    });
+    const [showFeedback, setShowFeedback] = useState(false);
 
     // 持久化通知偏好至 localStorage / Persist notification prefs
     useEffect(() => { localStorage.setItem('piyou_busNotify', JSON.stringify(busNotify)); }, [busNotify]);
     useEffect(() => { localStorage.setItem('piyou_taskNotify', JSON.stringify(taskNotify)); }, [taskNotify]);
+    useEffect(() => { localStorage.setItem('piyou_announceNotify', JSON.stringify(announceNotify)); }, [announceNotify]);
+
+    const handleAnnounceNotifyToggle = async (val) => {
+        if (val && typeof Notification !== 'undefined' && Notification.permission !== 'granted') {
+            await requestNotificationPermission();
+        }
+        setAnnounceNotify(val);
+    };
 
     const [showSyncModal, setShowSyncModal] = useState(false);
     const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
@@ -466,6 +482,9 @@ export default function Settings() {
             <div className="card-stack">
                 <SectionHeader title="通知" titleEn="Notifications" />
                 <div className="card">
+                    <SettingItem icon={IconBell} label="校園公告通知" labelEn="Campus announcement alerts">
+                        <Toggle checked={announceNotify} onChange={handleAnnounceNotifyToggle} aria-label="校園公告通知" />
+                    </SettingItem>
                     <SettingItem icon={IconBell} label="公車到站提醒" labelEn="Bus arrival alerts">
                         <Toggle checked={busNotify} onChange={setBusNotify} aria-label="公車到站提醒" />
                     </SettingItem>
@@ -489,8 +508,11 @@ export default function Settings() {
                             background: 'var(--bg-secondary)', color: 'var(--text-muted)', fontSize: '14px',
                         }}>1.0.0-beta</span>
                     </div>
+                    <SettingItem icon={IconBell} label="意見回饋" labelEn="Feedback" onClick={() => setShowFeedback(true)} />
                 </div>
             </div>
+
+            <FeedbackModal show={showFeedback} onClose={() => setShowFeedback(false)} />
         </div>
     );
 }

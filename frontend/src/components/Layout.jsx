@@ -10,6 +10,8 @@ import {
     IconSettings, IconChartBar, IconCloudLightning, IconCloudOff, IconBus,
     IconLibrary, IconArrowLeft, IconSchool
 } from './Icons';
+import NotificationPanel from './NotificationPanel';
+import FeedbackModal from './FeedbackModal';
 
 // ── 學校相關路徑 / School-related paths ──
 const schoolPaths = ['/timetable', '/grades', '/library'];
@@ -65,6 +67,8 @@ export default function Layout() {
     const timetable = useTimetableStore((s) => s.timetable);
     const grades = useTimetableStore((s) => s.grades);
     const syncStatus = (timetable.length > 0 || grades.length > 0) ? 'synced' : 'error';
+
+    const [showFeedback, setShowFeedback] = useState(false);
 
     const location = useLocation();
     const navigate = useNavigate();
@@ -231,6 +235,12 @@ export default function Layout() {
             <main className="sidebar-main">
                 <Outlet />
             </main>
+
+            {/* 通知鈴鐺（全頁固定）/ Notification bell (global fixed) */}
+            <NotificationPanel onOpenFeedback={() => setShowFeedback(true)} />
+
+            {/* 意見回饋 Modal */}
+            <FeedbackModal show={showFeedback} onClose={() => setShowFeedback(false)} />
 
             {/* ═══ 行動版底部導航 / Mobile Bottom Nav — 兩層滑動導航 ═══ */}
             <nav className="mobile-bottom-nav"

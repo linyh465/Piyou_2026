@@ -167,3 +167,42 @@ class BusPositionsResponse(BaseModel):
     """即時公車位置回應 / Bus Positions Response"""
     positions: list[BusPosition] = Field(default_factory=list)
     updatedAt: Optional[str] = Field(None, description="最後更新時間 / Last updated time")
+
+
+# ── 公告模型 / Announcement Models ──
+
+class Announcement(BaseModel):
+    """單一公告 / Single Announcement"""
+    id: str = Field(..., description="公告 ID (ann_N) / Announcement ID")
+    title: str = Field(..., description="標題 / Title")
+    body: str = Field("", description="內文 / Body text")
+    type: str = Field("info", description="類型 info|warning|urgent / Type")
+    target: str = Field("all", description="對象 / Target audience")
+    published_at: str = Field(..., description="發布時間 ISO 8601 / Published at")
+    expires_at: Optional[str] = Field(None, description="過期時間 / Expires at")
+    link_url: Optional[str] = Field(None, description="連結 URL / Link URL")
+    link_label: Optional[str] = Field(None, description="連結文字 / Link label")
+
+
+class AnnouncementsResponse(BaseModel):
+    """公告列表回應 / Announcements List Response"""
+    announcements: list[Announcement] = Field(default_factory=list)
+    fetched_at: str = Field(..., description="抓取時間 ISO 8601 / Fetched at")
+
+
+# ── 意見回饋模型 / Feedback Models ──
+
+class FeedbackRequest(BaseModel):
+    """意見回饋送出請求 / Feedback Submit Request"""
+    id: str = Field(..., min_length=1, max_length=64, description="前端生成 UUID / Client-generated UUID")
+    category: str = Field(..., pattern=r'^(bug|feature|question|other)$', description="類別 / Category")
+    content: str = Field(..., min_length=10, max_length=1000, description="內容 / Content")
+    contact: Optional[str] = Field(None, max_length=100, description="聯絡方式（選填）/ Contact (optional)")
+
+
+class FeedbackResponse(BaseModel):
+    """意見回饋查詢回應 / Feedback Query Response"""
+    id: str = Field(..., description="回饋 ID / Feedback ID")
+    status: str = Field("pending", description="狀態 pending|replied / Status")
+    admin_reply: Optional[str] = Field(None, description="管理員回覆 / Admin reply")
+    replied_at: Optional[str] = Field(None, description="回覆時間 / Replied at")

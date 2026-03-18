@@ -33,6 +33,7 @@ from app.services.tdx import TDXService
 from app.services.library_scraper import LibraryScraper
 from app.services.scraper_cache import get_cached_scraper, cache_scraper_session
 from app.routers.auth import get_current_user, get_cached_credentials
+from app.services.storage.sheets_synclog import log_sync
 
 router = APIRouter(prefix="/data", tags=["資料 / Data"])
 logger = logging.getLogger(__name__)
@@ -360,14 +361,18 @@ async def get_timetable(user: dict = Depends(get_current_user)):
     """
     # 爬蟲抓取（在執行緒池中執行，避免阻塞事件迴圈）
     # Scraper fetch (run in thread pool to avoid blocking event loop)
+    student_id = user.get("sub", "")
+    _t0 = time.time()
     try:
         scraper = _get_authenticated_scraper(user)
         raw_data = await asyncio.to_thread(scraper.fetch_timetable)
         if raw_data and raw_data.get("courses"):
             result = transform_timetable(raw_data)
             logger.info(f"Fetched {len(result.courses)} real course periods")
+            asyncio.create_task(log_sync("timetable", student_id, "success", int((time.time() - _t0) * 1000)))
             return result
     except HTTPException:
+        asyncio.create_task(log_sync("timetable", student_id, "failed", int((time.time() - _t0) * 1000)))
         raise
     except Exception as e:
         logger.warning(f"Scraper failed, using mock data: {type(e).__name__}: {e}")
@@ -386,14 +391,18 @@ async def get_grades(user: dict = Depends(get_current_user)):
     """
     # 爬蟲抓取（在執行緒池中執行，避免阻塞事件迴圈）
     # Scraper fetch (run in thread pool to avoid blocking event loop)
+    student_id = user.get("sub", "")
+    _t0 = time.time()
     try:
         scraper = _get_authenticated_scraper(user)
         raw_data = await asyncio.to_thread(scraper.fetch_grades)
         if raw_data and (raw_data.get("semesters") or raw_data.get("rows")):
             result = transform_grades(raw_data)
             logger.info(f"Fetched {sum(len(s.courses) for s in result.semesters)} grade rows across {len(result.semesters)} semesters")
+            asyncio.create_task(log_sync("grades", student_id, "success", int((time.time() - _t0) * 1000)))
             return result
     except HTTPException:
+        asyncio.create_task(log_sync("grades", student_id, "failed", int((time.time() - _t0) * 1000)))
         raise
     except Exception as e:
         logger.warning(f"Scraper failed, using mock data: {type(e).__name__}: {e}")
@@ -528,6 +537,7 @@ async def get_library(user: dict = Depends(get_current_user)):
                 f"{len(result.reserves)} reserves, "
                 f"{len(result.history)} history items"
             )
+            asyncio.create_task(log_sync("library", user.get("sub", ""), "success", 0))
             return result
 
     except HTTPException:
@@ -596,6 +606,7 @@ async def put_tasks(request: Request, user: dict = Depends(get_current_user)):
         data = {"tasks": tasks, "updated_at": datetime.now(timezone.utc).isoformat()}
         path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
         logger.info(f"Saved {len(tasks)} tasks for student")
+        asyncio.create_task(log_sync("tasks", student_id, "success", 0))
         return {"status": "ok", "count": len(tasks)}
     except Exception as e:
         logger.warning(f"Task write error: {e}")
