@@ -21,6 +21,8 @@ import asyncio
 from datetime import datetime, timezone
 from typing import Any
 
+from googleapiclient.errors import HttpError
+
 logger = logging.getLogger(__name__)
 
 ANNOUNCEMENTS_CACHE_TTL = 5 * 60   # 5 分鐘 / 5 minutes
@@ -181,14 +183,18 @@ def _write_feedback_sync(data: dict) -> None:
         "",         # replied_at 初始空白
     ]
 
-    service.spreadsheets().values().append(
-        spreadsheetId=sheets_id,
-        range="feedback!A:I",
-        valueInputOption="RAW",
-        insertDataOption="INSERT_ROWS",
-        body={"values": [row]},
-    ).execute()
-    logger.info(f"SheetsNotify: appended feedback id={data.get('id')}")
+    try:
+        service.spreadsheets().values().append(
+            spreadsheetId=sheets_id,
+            range="feedback!A:I",
+            valueInputOption="RAW",
+            insertDataOption="INSERT_ROWS",
+            body={"values": [row]},
+        ).execute()
+        logger.info(f"SheetsNotify: appended feedback id={data.get('id')}")
+    except HttpError as e:
+        logger.error(f"SheetsNotify: failed to write feedback id={data.get('id')}: {e}")
+        raise
 
 
 async def write_feedback(data: dict) -> None:
