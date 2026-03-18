@@ -5,7 +5,7 @@
  *
  * 掛載於 main.jsx（router tree 外）/ Mounted in main.jsx (outside router tree)
  */
-import { useState, useEffect } from 'react';
+import { useState, useEffect, startTransition } from 'react';
 import useNotifyStore from '../stores/notifyStore';
 
 const SESSION_KEY = 'piyou_announce_shown';
@@ -42,8 +42,8 @@ export default function AnnouncementModal() {
     useEffect(() => {
         if (sessionStorage.getItem(SESSION_KEY)) return; // 本 session 已彈過
         if (unreadIds.length > 0) {
-            setVisible(true);
             sessionStorage.setItem(SESSION_KEY, '1');
+            startTransition(() => setVisible(true));
         }
     }, [unreadIds]);
 
