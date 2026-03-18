@@ -3,16 +3,17 @@
  * fixed 定位於右上角，點擊展開公告下拉列表。
  * Fixed at top-right corner; click to open announcement dropdown.
  *
- * 注入於 Layout.jsx 的 sidebar-main 內 / Injected inside Layout.jsx sidebar-main
+ * 使用 CSS custom properties 與 inline styles 以維持 iOS-native 風格一致性
+ * Uses CSS vars + inline styles to match iOS-native design consistency.
  */
 import { useState, useRef, useEffect } from 'react';
 import useNotifyStore from '../stores/notifyStore';
 import { IconBell } from './Icons';
 
-const TYPE_DOT = {
-    urgent: 'bg-red-500',
-    warning: 'bg-amber-400',
-    info: 'bg-blue-400',
+const TYPE_DOT_COLOR = {
+    urgent: 'var(--color-danger)',
+    warning: 'var(--color-warning)',
+    info: 'var(--color-brand)',
 };
 
 export default function NotificationPanel({ onOpenFeedback }) {
@@ -42,9 +43,7 @@ export default function NotificationPanel({ onOpenFeedback }) {
     }, [open]);
 
     const handleBellClick = () => {
-        if (!open) {
-            fetchAnnouncements(); // 開啟面板時刷新（會命中快取）
-        }
+        if (!open) fetchAnnouncements();
         setOpen((prev) => !prev);
     };
 
@@ -58,18 +57,48 @@ export default function NotificationPanel({ onOpenFeedback }) {
     return (
         <div
             ref={panelRef}
-            className="fixed z-[150]"
-            style={{ top: '12px', right: '14px' }}
+            style={{ position: 'fixed', top: '12px', right: '14px', zIndex: 150 }}
         >
             {/* 鈴鐺按鈕 / Bell button */}
             <button
                 onClick={handleBellClick}
-                className="relative p-2 rounded-full bg-white dark:bg-gray-800 shadow border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                style={{
+                    position: 'relative',
+                    padding: '8px',
+                    borderRadius: '50%',
+                    background: 'var(--bg-card)',
+                    boxShadow: 'var(--shadow-card, 0 1px 3px rgba(0,0,0,0.08))',
+                    border: '1px solid var(--border)',
+                    color: 'var(--text-muted)',
+                    cursor: 'pointer',
+                    transition: 'background 0.15s',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--bg-card-hover)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--bg-card)'; }}
                 aria-label="通知"
             >
                 <IconBell size={20} />
                 {unreadCount > 0 && (
-                    <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center leading-none">
+                    <span style={{
+                        position: 'absolute',
+                        top: '-4px',
+                        right: '-4px',
+                        minWidth: '18px',
+                        height: '18px',
+                        padding: '0 4px',
+                        borderRadius: '9px',
+                        background: 'var(--color-danger)',
+                        color: 'white',
+                        fontSize: '10px',
+                        fontWeight: 700,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        lineHeight: 1,
+                    }}>
                         {unreadCount > 9 ? '9+' : unreadCount}
                     </span>
                 )}
@@ -77,16 +106,49 @@ export default function NotificationPanel({ onOpenFeedback }) {
 
             {/* 下拉面板 / Dropdown panel */}
             {open && (
-                <div className="absolute top-full right-0 mt-2 w-80 max-h-96 overflow-y-auto rounded-xl shadow-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+                <div style={{
+                    position: 'absolute',
+                    top: '100%',
+                    right: 0,
+                    marginTop: '8px',
+                    width: '320px',
+                    maxHeight: '384px',
+                    overflowY: 'auto',
+                    borderRadius: 'var(--radius-card, 16px)',
+                    boxShadow: '0 8px 30px rgba(0,0,0,0.12)',
+                    background: 'var(--bg-card)',
+                    border: '1px solid var(--border)',
+                }}>
                     {/* 標頭 / Header */}
-                    <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-700">
-                        <span className="text-sm font-semibold text-gray-800 dark:text-gray-100">
+                    <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '14px 16px',
+                        borderBottom: '1px solid var(--border-light)',
+                    }}>
+                        <span style={{
+                            fontSize: '15px',
+                            fontWeight: 600,
+                            color: 'var(--text)',
+                        }}>
                             校園公告
                         </span>
                         {unreadCount > 0 && (
                             <button
                                 onClick={markAllRead}
-                                className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
+                                style={{
+                                    fontSize: '12px',
+                                    color: 'var(--text-muted)',
+                                    background: 'none',
+                                    border: 'none',
+                                    cursor: 'pointer',
+                                    padding: '2px 6px',
+                                    borderRadius: '6px',
+                                    transition: 'color 0.15s',
+                                }}
+                                onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--text-secondary)'; }}
+                                onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-muted)'; }}
                             >
                                 全部已讀
                             </button>
@@ -95,60 +157,112 @@ export default function NotificationPanel({ onOpenFeedback }) {
 
                     {/* 公告列表 / Announcement list */}
                     {items.length === 0 ? (
-                        <div className="px-4 py-8 text-center text-sm text-gray-400 dark:text-gray-500">
+                        <div style={{
+                            padding: '32px 16px',
+                            textAlign: 'center',
+                            fontSize: '14px',
+                            color: 'var(--text-muted)',
+                        }}>
                             目前沒有公告
                         </div>
                     ) : (
-                        <ul>
+                        <div>
                             {items.map((ann) => {
                                 const isUnread = unreadIds.includes(ann.id);
                                 return (
-                                    <li key={ann.id}>
-                                        <button
-                                            onClick={() => handleItemClick(ann.id)}
-                                            className="w-full text-left px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors border-b border-gray-50 dark:border-gray-700/50 last:border-0"
-                                        >
-                                            <div className="flex items-start gap-2">
-                                                <span
-                                                    className={`mt-1.5 w-2 h-2 rounded-full flex-shrink-0 ${
-                                                        isUnread
-                                                            ? TYPE_DOT[ann.type] || 'bg-blue-400'
-                                                            : 'bg-transparent'
-                                                    }`}
-                                                />
-                                                <div className="min-w-0">
-                                                    <p
-                                                        className={`text-sm leading-snug truncate ${
-                                                            isUnread
-                                                                ? 'font-semibold text-gray-900 dark:text-gray-100'
-                                                                : 'text-gray-500 dark:text-gray-400'
-                                                        }`}
-                                                    >
-                                                        {ann.title}
-                                                    </p>
-                                                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5 truncate">
-                                                        {ann.body?.slice(0, 40) || ''}
-                                                    </p>
-                                                    <p className="text-[10px] text-gray-300 dark:text-gray-600 mt-0.5">
-                                                        {new Date(ann.published_at).toLocaleDateString('zh-TW')}
-                                                    </p>
-                                                </div>
-                                            </div>
-                                        </button>
-                                    </li>
+                                    <button
+                                        key={ann.id}
+                                        onClick={() => handleItemClick(ann.id)}
+                                        style={{
+                                            width: '100%',
+                                            textAlign: 'left',
+                                            padding: '12px 16px',
+                                            borderBottom: '1px solid var(--border-light)',
+                                            background: 'transparent',
+                                            border: 'none',
+                                            borderBottomStyle: 'solid',
+                                            borderBottomWidth: '1px',
+                                            borderBottomColor: 'var(--border-light)',
+                                            cursor: 'pointer',
+                                            transition: 'background 0.15s',
+                                            display: 'flex',
+                                            alignItems: 'flex-start',
+                                            gap: '10px',
+                                        }}
+                                        onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--bg-card-hover)'; }}
+                                        onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                                    >
+                                        <span style={{
+                                            marginTop: '6px',
+                                            width: '8px',
+                                            height: '8px',
+                                            borderRadius: '50%',
+                                            flexShrink: 0,
+                                            background: isUnread
+                                                ? (TYPE_DOT_COLOR[ann.type] || 'var(--color-brand)')
+                                                : 'transparent',
+                                        }} />
+                                        <div style={{ minWidth: 0, flex: 1 }}>
+                                            <p style={{
+                                                fontSize: '14px',
+                                                lineHeight: 1.4,
+                                                overflow: 'hidden',
+                                                textOverflow: 'ellipsis',
+                                                whiteSpace: 'nowrap',
+                                                fontWeight: isUnread ? 600 : 400,
+                                                color: isUnread ? 'var(--text)' : 'var(--text-muted)',
+                                            }}>
+                                                {ann.title}
+                                            </p>
+                                            <p style={{
+                                                fontSize: '12px',
+                                                color: 'var(--text-muted)',
+                                                marginTop: '2px',
+                                                overflow: 'hidden',
+                                                textOverflow: 'ellipsis',
+                                                whiteSpace: 'nowrap',
+                                            }}>
+                                                {ann.body?.slice(0, 40) || ''}
+                                            </p>
+                                            <p style={{
+                                                fontSize: '10px',
+                                                color: 'var(--text-muted)',
+                                                marginTop: '2px',
+                                                opacity: 0.6,
+                                            }}>
+                                                {new Date(ann.published_at).toLocaleDateString('zh-TW')}
+                                            </p>
+                                        </div>
+                                    </button>
                                 );
                             })}
-                        </ul>
+                        </div>
                     )}
 
                     {/* 底部意見回饋入口 / Bottom feedback entry */}
-                    <div className="border-t border-gray-100 dark:border-gray-700 px-4 py-2.5">
+                    <div style={{
+                        borderTop: '1px solid var(--border-light)',
+                        padding: '10px 16px',
+                    }}>
                         <button
                             onClick={() => {
                                 setOpen(false);
                                 onOpenFeedback?.();
                             }}
-                            className="w-full text-center text-xs text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors py-1"
+                            style={{
+                                width: '100%',
+                                textAlign: 'center',
+                                fontSize: '12px',
+                                color: 'var(--text-muted)',
+                                background: 'none',
+                                border: 'none',
+                                cursor: 'pointer',
+                                padding: '4px',
+                                borderRadius: '6px',
+                                transition: 'color 0.15s',
+                            }}
+                            onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--text-secondary)'; }}
+                            onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-muted)'; }}
                         >
                             意見回饋
                         </button>

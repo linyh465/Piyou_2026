@@ -3,27 +3,26 @@
  * App 啟動後若有未讀公告，顯示一次（每 session 只彈一次）。
  * Shown once per session when there are unread announcements.
  *
- * 掛載於 main.jsx（router tree 外）/ Mounted in main.jsx (outside router tree)
+ * 使用 CSS custom properties 與 inline styles，與 Settings 頁面 modal 風格一致。
+ * Uses CSS vars + inline styles consistent with Settings page modals.
  */
 import { useState, useEffect, startTransition } from 'react';
+import { createPortal } from 'react-dom';
 import useNotifyStore from '../stores/notifyStore';
 
 const SESSION_KEY = 'piyou_announce_shown';
 
-const TYPE_STYLES = {
+const TYPE_CONFIG = {
     urgent: {
-        header: 'bg-red-500 dark:bg-red-600',
-        badge: 'bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300',
+        bg: 'var(--color-danger)',
         label: '緊急',
     },
     warning: {
-        header: 'bg-amber-500 dark:bg-amber-600',
-        badge: 'bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300',
+        bg: 'var(--color-warning)',
         label: '注意',
     },
     info: {
-        header: 'var(--color-primary, #4f46e5)',  // fallback handled via style
-        badge: 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300',
+        bg: 'var(--color-brand)',
         label: '公告',
     },
 };
@@ -40,7 +39,7 @@ export default function AnnouncementModal() {
 
     // 公告抓回後判斷是否要彈 / After fetch, decide whether to show
     useEffect(() => {
-        if (sessionStorage.getItem(SESSION_KEY)) return; // 本 session 已彈過
+        if (sessionStorage.getItem(SESSION_KEY)) return;
         if (unreadIds.length > 0) {
             sessionStorage.setItem(SESSION_KEY, '1');
             startTransition(() => setVisible(true));
@@ -49,13 +48,12 @@ export default function AnnouncementModal() {
 
     if (!visible || announcements.length === 0) return null;
 
-    // 只展示未讀的公告 / Only show unread announcements
     const unread = announcements.filter((a) => unreadIds.includes(a.id));
     if (unread.length === 0) return null;
 
     const current = unread[Math.min(index, unread.length - 1)];
     const total = unread.length;
-    const style = TYPE_STYLES[current?.type] || TYPE_STYLES.info;
+    const config = TYPE_CONFIG[current?.type] || TYPE_CONFIG.info;
 
     const handleClose = () => {
         markAllRead();
@@ -70,36 +68,98 @@ export default function AnnouncementModal() {
         }
     };
 
-    const isInfo = current?.type === 'info';
+    const secondaryBtnStyle = {
+        fontSize: '14px',
+        padding: '8px 16px',
+        borderRadius: '10px',
+        cursor: 'pointer',
+        transition: 'background 0.15s',
+        background: 'var(--bg-input)',
+        color: 'var(--text-secondary)',
+        border: '1px solid var(--border)',
+        fontWeight: 500,
+    };
 
-    return (
+    const primaryBtnStyle = {
+        fontSize: '14px',
+        padding: '8px 16px',
+        borderRadius: '10px',
+        cursor: 'pointer',
+        transition: 'opacity 0.15s',
+        background: 'var(--color-brand)',
+        color: 'white',
+        border: 'none',
+        fontWeight: 500,
+    };
+
+    return createPortal(
         <div
-            className="fixed inset-0 z-[200] flex items-center justify-center p-4"
-            style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
+            style={{
+                position: 'fixed',
+                top: 0,
+                left: 0,
+                width: '100%',
+                height: '100%',
+                zIndex: 200,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '16px',
+                background: 'rgba(0,0,0,0.5)',
+            }}
+            className="animate-fade-in"
             onClick={handleClose}
         >
             <div
-                className="relative w-full max-w-md rounded-2xl overflow-hidden shadow-2xl bg-white dark:bg-gray-800"
+                style={{
+                    width: '100%',
+                    maxWidth: '420px',
+                    borderRadius: 'var(--radius-card, 16px)',
+                    overflow: 'hidden',
+                    background: 'var(--bg-card)',
+                    boxShadow: '0 8px 30px rgba(0,0,0,0.15)',
+                }}
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* 標題列 / Header */}
-                <div
-                    className={`flex items-center justify-between px-5 py-4 ${isInfo ? '' : style.header} text-white`}
-                    style={isInfo ? { background: 'var(--color-primary, #4f46e5)' } : undefined}
-                >
-                    <div className="flex items-center gap-2">
-                        <span className="text-xs font-semibold uppercase tracking-wider opacity-80">
-                            {style.label}
+                <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '14px 20px',
+                    background: config.bg,
+                    color: 'white',
+                }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <span style={{
+                            fontSize: '12px',
+                            fontWeight: 600,
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.05em',
+                            opacity: 0.85,
+                        }}>
+                            {config.label}
                         </span>
                         {total > 1 && (
-                            <span className="text-xs opacity-70">
+                            <span style={{ fontSize: '12px', opacity: 0.7 }}>
                                 {index + 1} / {total}
                             </span>
                         )}
                     </div>
                     <button
                         onClick={handleClose}
-                        className="text-white/70 hover:text-white transition-colors text-xl leading-none"
+                        style={{
+                            color: 'rgba(255,255,255,0.7)',
+                            background: 'none',
+                            border: 'none',
+                            cursor: 'pointer',
+                            fontSize: '18px',
+                            lineHeight: 1,
+                            padding: '4px',
+                            transition: 'color 0.15s',
+                        }}
+                        onMouseEnter={(e) => { e.currentTarget.style.color = 'white'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.color = 'rgba(255,255,255,0.7)'; }}
                         aria-label="關閉"
                     >
                         ✕
@@ -107,11 +167,21 @@ export default function AnnouncementModal() {
                 </div>
 
                 {/* 內文 / Body */}
-                <div className="px-5 py-5">
-                    <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100 mb-2">
+                <div style={{ padding: '20px' }}>
+                    <h3 style={{
+                        fontSize: '1rem',
+                        fontWeight: 600,
+                        color: 'var(--text)',
+                        marginBottom: '8px',
+                    }}>
                         {current.title}
                     </h3>
-                    <p className="text-sm text-gray-600 dark:text-gray-300 whitespace-pre-line leading-relaxed">
+                    <p style={{
+                        fontSize: '14px',
+                        color: 'var(--text-secondary)',
+                        whiteSpace: 'pre-line',
+                        lineHeight: 1.6,
+                    }}>
                         {current.body}
                     </p>
 
@@ -120,58 +190,67 @@ export default function AnnouncementModal() {
                             href={current.link_url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="mt-3 inline-block text-sm font-medium underline"
-                            style={{ color: 'var(--color-primary, #4f46e5)' }}
+                            style={{
+                                display: 'inline-block',
+                                marginTop: '12px',
+                                fontSize: '14px',
+                                fontWeight: 500,
+                                color: 'var(--color-brand)',
+                                textDecoration: 'underline',
+                            }}
                         >
                             {current.link_label || '了解更多'}
                         </a>
                     )}
 
-                    <p className="mt-3 text-xs text-gray-400 dark:text-gray-500">
+                    <p style={{
+                        marginTop: '12px',
+                        fontSize: '12px',
+                        color: 'var(--text-muted)',
+                    }}>
                         {new Date(current.published_at).toLocaleDateString('zh-TW')}
                     </p>
                 </div>
 
                 {/* 操作列 / Actions */}
-                <div className="flex items-center justify-between px-5 pb-5 gap-2">
+                <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: total > 1 ? 'space-between' : 'flex-end',
+                    padding: '0 20px 20px',
+                    gap: '8px',
+                }}>
                     {total > 1 ? (
                         <>
                             <button
                                 onClick={handlePrev}
                                 disabled={index === 0}
-                                className="text-sm px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 disabled:opacity-30 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                                style={{
+                                    ...secondaryBtnStyle,
+                                    opacity: index === 0 ? 0.3 : 1,
+                                    cursor: index === 0 ? 'default' : 'pointer',
+                                }}
                             >
                                 ← 上一則
                             </button>
                             {index < total - 1 ? (
-                                <button
-                                    onClick={handleNext}
-                                    className="text-sm px-3 py-1.5 rounded-lg text-white transition-colors"
-                                    style={{ background: 'var(--color-primary, #4f46e5)' }}
-                                >
+                                <button onClick={handleNext} style={primaryBtnStyle}>
                                     下一則 →
                                 </button>
                             ) : (
-                                <button
-                                    onClick={handleClose}
-                                    className="text-sm px-3 py-1.5 rounded-lg text-white transition-colors"
-                                    style={{ background: 'var(--color-primary, #4f46e5)' }}
-                                >
+                                <button onClick={handleClose} style={primaryBtnStyle}>
                                     我知道了
                                 </button>
                             )}
                         </>
                     ) : (
-                        <button
-                            onClick={handleClose}
-                            className="ml-auto text-sm px-4 py-1.5 rounded-lg text-white transition-colors"
-                            style={{ background: 'var(--color-primary, #4f46e5)' }}
-                        >
+                        <button onClick={handleClose} style={primaryBtnStyle}>
                             我知道了
                         </button>
                     )}
                 </div>
             </div>
-        </div>
+        </div>,
+        document.body
     );
 }

@@ -2,15 +2,19 @@
  * 意見回饋 Modal / Feedback Modal
  * 學生送出匿名回饋，管理員回覆後可查詢。
  * Students submit anonymous feedback; admin replies are queryable.
+ *
+ * 使用 CSS custom properties 與 inline styles，與 Settings 頁面風格一致。
+ * Uses CSS vars + inline styles consistent with the Settings page.
  */
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import useNotifyStore from '../stores/notifyStore';
 
 const CATEGORIES = [
-    { value: 'bug', label: '🐛 回報問題' },
-    { value: 'feature', label: '💡 功能建議' },
-    { value: 'question', label: '❓ 使用疑問' },
-    { value: 'other', label: '💬 其他' },
+    { value: 'bug', label: '回報問題' },
+    { value: 'feature', label: '功能建議' },
+    { value: 'question', label: '使用疑問' },
+    { value: 'other', label: '其他' },
 ];
 
 const MAX_CONTENT = 1000;
@@ -69,7 +73,6 @@ export default function FeedbackModal({ show, onClose }) {
     };
 
     const handleClose = () => {
-        // 重置狀態 / Reset state
         setCategory('bug');
         setContent('');
         setContact('');
@@ -84,164 +87,273 @@ export default function FeedbackModal({ show, onClose }) {
         onClose();
     };
 
-    return (
+    const inputStyle = {
+        width: '100%',
+        fontSize: '14px',
+        padding: '10px 14px',
+        borderRadius: '10px',
+        border: '1px solid var(--border)',
+        background: 'var(--bg-input)',
+        color: 'var(--text)',
+        outline: 'none',
+        transition: 'border-color 0.2s',
+    };
+
+    return createPortal(
         <div
-            className="fixed inset-0 z-[200] flex items-center justify-center p-4"
-            style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
+            style={{
+                position: 'fixed',
+                top: 0,
+                left: 0,
+                width: '100%',
+                height: '100%',
+                zIndex: 200,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '16px',
+                background: 'rgba(0,0,0,0.5)',
+            }}
+            className="animate-fade-in"
             onClick={handleClose}
         >
             <div
-                className="relative w-full max-w-md rounded-2xl overflow-hidden shadow-2xl bg-white dark:bg-gray-800"
+                className="card"
+                style={{ width: '100%', maxWidth: '420px', maxHeight: '80vh', overflowY: 'auto' }}
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* 標題列 */}
-                <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-gray-700">
-                    <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">意見回饋</h2>
+                <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    paddingBottom: '16px',
+                    borderBottom: '1px solid var(--border-light)',
+                    marginBottom: '16px',
+                }}>
+                    <h3 style={{ fontSize: '1.125rem', fontWeight: 700, color: 'var(--text)' }}>
+                        意見回饋
+                    </h3>
                     <button
                         onClick={handleClose}
-                        className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-xl leading-none"
+                        style={{
+                            color: 'var(--text-muted)',
+                            background: 'none',
+                            border: 'none',
+                            cursor: 'pointer',
+                            fontSize: '18px',
+                            lineHeight: 1,
+                            padding: '4px',
+                        }}
                         aria-label="關閉"
                     >
                         ✕
                     </button>
                 </div>
 
-                <div className="px-5 py-5 space-y-5 max-h-[70vh] overflow-y-auto">
-                    {!submitted ? (
-                        /* 送出表單 / Submit form */
-                        <form onSubmit={handleSubmit} className="space-y-4">
-                            {/* 類別 */}
-                            <div>
-                                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">
-                                    類別
-                                </label>
-                                <div className="grid grid-cols-2 gap-2">
-                                    {CATEGORIES.map((c) => (
+                {!submitted ? (
+                    /* 送出表單 / Submit form */
+                    <form onSubmit={handleSubmit}>
+                        {/* 類別 */}
+                        <div style={{ marginBottom: '16px' }}>
+                            <label style={{ display: 'block', fontSize: '12px', fontWeight: 500, color: 'var(--text-muted)', marginBottom: '8px' }}>
+                                類別
+                            </label>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                                {CATEGORIES.map((c) => {
+                                    const isActive = category === c.value;
+                                    return (
                                         <button
                                             key={c.value}
                                             type="button"
                                             onClick={() => setCategory(c.value)}
-                                            className={`text-sm py-2 px-3 rounded-lg border transition-colors text-left ${
-                                                category === c.value
-                                                    ? 'border-transparent text-white'
-                                                    : 'border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
-                                            }`}
-                                            style={category === c.value ? { background: 'var(--color-primary, #4f46e5)' } : undefined}
+                                            style={{
+                                                fontSize: '14px',
+                                                padding: '10px 12px',
+                                                borderRadius: '10px',
+                                                cursor: 'pointer',
+                                                transition: 'all 0.2s',
+                                                textAlign: 'left',
+                                                fontWeight: 500,
+                                                background: isActive ? 'var(--color-brand-subtle)' : 'var(--bg-input)',
+                                                color: isActive ? 'var(--color-brand)' : 'var(--text-secondary)',
+                                                border: isActive ? '2px solid var(--color-brand)' : '2px solid transparent',
+                                            }}
                                         >
                                             {c.label}
                                         </button>
-                                    ))}
-                                </div>
+                                    );
+                                })}
                             </div>
+                        </div>
 
-                            {/* 內容 */}
-                            <div>
-                                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">
-                                    內容（至少 10 字）
-                                </label>
-                                <textarea
-                                    value={content}
-                                    onChange={(e) => setContent(e.target.value.slice(0, MAX_CONTENT))}
-                                    rows={4}
-                                    placeholder="請描述您的問題或建議..."
-                                    className="w-full text-sm px-3 py-2.5 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 resize-none focus:outline-none focus:ring-2 focus:ring-indigo-300 dark:focus:ring-indigo-600"
-                                />
-                                <div className="text-right text-xs text-gray-400 dark:text-gray-500 mt-0.5">
-                                    {content.length} / {MAX_CONTENT}
-                                </div>
+                        {/* 內容 */}
+                        <div style={{ marginBottom: '16px' }}>
+                            <label style={{ display: 'block', fontSize: '12px', fontWeight: 500, color: 'var(--text-muted)', marginBottom: '8px' }}>
+                                內容（至少 10 字）
+                            </label>
+                            <textarea
+                                value={content}
+                                onChange={(e) => setContent(e.target.value.slice(0, MAX_CONTENT))}
+                                rows={4}
+                                placeholder="請描述您的問題或建議..."
+                                style={{
+                                    ...inputStyle,
+                                    resize: 'none',
+                                }}
+                            />
+                            <div style={{ textAlign: 'right', fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>
+                                {content.length} / {MAX_CONTENT}
                             </div>
+                        </div>
 
-                            {/* 聯絡方式（選填） */}
-                            <div>
-                                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">
-                                    聯絡方式（選填，留空即匿名）
-                                </label>
-                                <input
-                                    type="text"
-                                    value={contact}
-                                    onChange={(e) => setContact(e.target.value.slice(0, 100))}
-                                    placeholder="e-mail 或其他聯絡方式"
-                                    className="w-full text-sm px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-300 dark:focus:ring-indigo-600"
-                                />
+                        {/* 聯絡方式（選填） */}
+                        <div style={{ marginBottom: '16px' }}>
+                            <label style={{ display: 'block', fontSize: '12px', fontWeight: 500, color: 'var(--text-muted)', marginBottom: '8px' }}>
+                                聯絡方式（選填，留空即匿名）
+                            </label>
+                            <input
+                                type="text"
+                                value={contact}
+                                onChange={(e) => setContact(e.target.value.slice(0, 100))}
+                                placeholder="e-mail 或其他聯絡方式"
+                                style={inputStyle}
+                            />
+                        </div>
+
+                        {submitError && (
+                            <div style={{
+                                padding: '12px',
+                                borderRadius: '10px',
+                                marginBottom: '12px',
+                                background: 'rgba(239, 68, 68, 0.1)',
+                                color: 'var(--color-danger)',
+                                fontSize: '14px',
+                            }}>
+                                {submitError}
                             </div>
+                        )}
 
-                            {submitError && (
-                                <p className="text-xs text-red-500 dark:text-red-400">{submitError}</p>
-                            )}
+                        <button
+                            type="submit"
+                            disabled={submitting || content.trim().length < 10}
+                            className="btn btn-primary"
+                            style={{
+                                width: '100%',
+                                padding: '12px',
+                                fontSize: '15px',
+                                opacity: (submitting || content.trim().length < 10) ? 0.5 : 1,
+                            }}
+                        >
+                            {submitting ? '送出中…' : '送出回饋'}
+                        </button>
+                    </form>
+                ) : (
+                    /* 送出成功 / Submit success */
+                    <div style={{ textAlign: 'center', padding: '8px 0' }}>
+                        <div style={{ fontSize: '14px', fontWeight: 500, color: 'var(--color-success)', marginBottom: '8px' }}>
+                            回饋已送出，謝謝！
+                        </div>
+                        <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '8px' }}>
+                            您的回饋 ID（可用於查詢管理員回覆）：
+                        </p>
+                        <code style={{
+                            display: 'block',
+                            fontSize: '12px',
+                            background: 'var(--bg-secondary)',
+                            borderRadius: '10px',
+                            padding: '10px 14px',
+                            wordBreak: 'break-all',
+                            color: 'var(--text-secondary)',
+                            userSelect: 'all',
+                            fontFamily: 'monospace',
+                        }}>
+                            {submittedId}
+                        </code>
+                    </div>
+                )}
 
-                            <button
-                                type="submit"
-                                disabled={submitting || content.trim().length < 10}
-                                className="w-full py-2.5 rounded-xl text-sm font-medium text-white disabled:opacity-40 transition-opacity"
-                                style={{ background: 'var(--color-primary, #4f46e5)' }}
-                            >
-                                {submitting ? '送出中…' : '送出回饋'}
-                            </button>
-                        </form>
-                    ) : (
-                        /* 送出成功 / Submit success */
-                        <div className="text-center space-y-3 py-2">
-                            <div className="text-3xl">✅</div>
-                            <p className="text-sm font-medium text-gray-800 dark:text-gray-100">回饋已送出，謝謝！</p>
-                            <p className="text-xs text-gray-500 dark:text-gray-400">
-                                您的回饋 ID（可用於查詢管理員回覆）：
-                            </p>
-                            <code className="block text-xs bg-gray-100 dark:bg-gray-700 rounded-lg px-3 py-2 break-all text-gray-700 dark:text-gray-200 select-all">
-                                {submittedId}
-                            </code>
+                {/* 查詢回覆區 / Reply query section */}
+                <div style={{
+                    borderTop: '1px solid var(--border-light)',
+                    marginTop: '20px',
+                    paddingTop: '16px',
+                }}>
+                    <p style={{ fontSize: '12px', fontWeight: 500, color: 'var(--text-muted)', marginBottom: '10px' }}>
+                        查詢管理員回覆
+                    </p>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                        <input
+                            type="text"
+                            value={queryId}
+                            onChange={(e) => setQueryId(e.target.value)}
+                            placeholder="貼上回饋 ID"
+                            style={{ ...inputStyle, flex: 1, fontSize: '12px' }}
+                        />
+                        <button
+                            onClick={handleQuery}
+                            disabled={querying || !queryId.trim()}
+                            className="btn btn-ghost"
+                            style={{
+                                fontSize: '12px',
+                                padding: '8px 14px',
+                                whiteSpace: 'nowrap',
+                                opacity: (querying || !queryId.trim()) ? 0.4 : 1,
+                            }}
+                        >
+                            {querying ? '查詢中…' : '查詢'}
+                        </button>
+                    </div>
+
+                    {queryError && (
+                        <div style={{
+                            padding: '10px',
+                            borderRadius: '10px',
+                            marginTop: '8px',
+                            background: 'rgba(239, 68, 68, 0.1)',
+                            color: 'var(--color-danger)',
+                            fontSize: '12px',
+                        }}>
+                            {queryError}
                         </div>
                     )}
 
-                    {/* 查詢回覆區 / Reply query section */}
-                    <div className="border-t border-gray-100 dark:border-gray-700 pt-4 space-y-2">
-                        <p className="text-xs font-medium text-gray-500 dark:text-gray-400">查詢管理員回覆</p>
-                        <div className="flex gap-2">
-                            <input
-                                type="text"
-                                value={queryId}
-                                onChange={(e) => setQueryId(e.target.value)}
-                                placeholder="貼上回饋 ID"
-                                className="flex-1 text-xs px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-indigo-300"
-                            />
-                            <button
-                                onClick={handleQuery}
-                                disabled={querying || !queryId.trim()}
-                                className="text-xs px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-40 transition-colors whitespace-nowrap"
-                            >
-                                {querying ? '查詢中…' : '查詢'}
-                            </button>
-                        </div>
-
-                        {queryError && (
-                            <p className="text-xs text-red-500 dark:text-red-400">{queryError}</p>
-                        )}
-
-                        {queryResult && (
-                            <div className="rounded-lg bg-gray-50 dark:bg-gray-700/50 p-3 space-y-1">
-                                <p className="text-xs text-gray-500 dark:text-gray-400">
-                                    狀態：
-                                    <span className={`font-medium ${queryResult.status === 'replied' ? 'text-green-600 dark:text-green-400' : 'text-gray-600 dark:text-gray-300'}`}>
-                                        {queryResult.status === 'replied' ? '已回覆' : '待處理'}
-                                    </span>
-                                </p>
-                                {queryResult.admin_reply && (
-                                    <>
-                                        <p className="text-xs font-medium text-gray-700 dark:text-gray-200 mt-1">管理員回覆：</p>
-                                        <p className="text-xs text-gray-600 dark:text-gray-300 whitespace-pre-line">
-                                            {queryResult.admin_reply}
+                    {queryResult && (
+                        <div style={{
+                            borderRadius: '10px',
+                            background: 'var(--bg-input)',
+                            padding: '12px',
+                            marginTop: '10px',
+                        }}>
+                            <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                                狀態：
+                                <span style={{
+                                    fontWeight: 500,
+                                    color: queryResult.status === 'replied' ? 'var(--color-success)' : 'var(--text-secondary)',
+                                }}>
+                                    {queryResult.status === 'replied' ? '已回覆' : '待處理'}
+                                </span>
+                            </p>
+                            {queryResult.admin_reply && (
+                                <>
+                                    <p style={{ fontSize: '12px', fontWeight: 500, color: 'var(--text-secondary)', marginTop: '8px' }}>
+                                        管理員回覆：
+                                    </p>
+                                    <p style={{ fontSize: '12px', color: 'var(--text-muted)', whiteSpace: 'pre-line', marginTop: '4px' }}>
+                                        {queryResult.admin_reply}
+                                    </p>
+                                    {queryResult.replied_at && (
+                                        <p style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '4px', opacity: 0.6 }}>
+                                            {new Date(queryResult.replied_at).toLocaleDateString('zh-TW')}
                                         </p>
-                                        {queryResult.replied_at && (
-                                            <p className="text-[10px] text-gray-400 dark:text-gray-500">
-                                                {new Date(queryResult.replied_at).toLocaleDateString('zh-TW')}
-                                            </p>
-                                        )}
-                                    </>
-                                )}
-                            </div>
-                        )}
-                    </div>
+                                    )}
+                                </>
+                            )}
+                        </div>
+                    )}
                 </div>
             </div>
-        </div>
+        </div>,
+        document.body
     );
 }
