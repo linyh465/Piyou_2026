@@ -247,39 +247,45 @@ export default function Grades() {
                 </div>
             ) : currentSem ? (
                 <>
-                    {/* GPA + 加權平均 + 排名卡片 */}
+                    {/* GPA + 加權平均儀錶卡 */}
                     <div className="card">
-                        <div className="grade-overview" style={{ flexDirection: 'column', alignItems: 'center' }}>
+                        <div className="grade-overview">
                             <div className="grade-gauges-row">
                                 <GpaGauge gpa={overallStats?.gpa ?? semGpa} label="歷年 GPA" />
                                 {semAvg && <AvgGauge avg={semAvg} label="加權平均" />}
                             </div>
-                            <div style={{ display: 'flex', gap: '24px', width: '100%', justifyContent: 'center', marginTop: '8px' }}>
-                                <div style={{ textAlign: 'center' }}>
-                                    <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>班級排名</span>
-                                    <p style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text)' }}>
-                                        {classRankParsed?.rank ?? '--'}<span style={{ fontSize: '14px', color: 'var(--text-muted)', fontWeight: 400 }}> / {classRankParsed?.total ?? '--'}</span>
-                                    </p>
-                                    {classRankParsed && (
-                                        <p style={{ fontSize: '12px', color: 'var(--color-success)', fontWeight: 600 }}>
-                                            {((classRankParsed.rank / classRankParsed.total) * 100).toFixed(2)}%
-                                        </p>
-                                    )}
-                                </div>
-                                <div style={{ textAlign: 'center' }}>
-                                    <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>系所排名</span>
-                                    <p style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text)' }}>
-                                        {deptRankParsed?.rank ?? '--'}<span style={{ fontSize: '14px', color: 'var(--text-muted)', fontWeight: 400 }}> / {deptRankParsed?.total ?? '--'}</span>
-                                    </p>
-                                    {deptRankParsed && (
-                                        <p style={{ fontSize: '12px', color: 'var(--color-success)', fontWeight: 600 }}>
-                                            {((deptRankParsed.rank / deptRankParsed.total) * 100).toFixed(2)}%
-                                        </p>
-                                    )}
-                                </div>
-                            </div>
                         </div>
                     </div>
+
+                    {/* 排名卡片 */}
+                    {(classRankParsed || deptRankParsed) && (
+                        <div className="card" style={{ padding: '16px' }}>
+                            <div className="grade-rank-row">
+                                {classRankParsed && (
+                                    <div className="grade-rank-pill">
+                                        <span className="grade-rank-pill-label">班級排名</span>
+                                        <span className="grade-rank-pill-value">
+                                            {classRankParsed.rank}<span> / {classRankParsed.total}</span>
+                                        </span>
+                                        <span className="grade-rank-pill-pct">
+                                            前 {((classRankParsed.rank / classRankParsed.total) * 100).toFixed(1)}%
+                                        </span>
+                                    </div>
+                                )}
+                                {deptRankParsed && (
+                                    <div className="grade-rank-pill">
+                                        <span className="grade-rank-pill-label">系所排名</span>
+                                        <span className="grade-rank-pill-value">
+                                            {deptRankParsed.rank}<span> / {deptRankParsed.total}</span>
+                                        </span>
+                                        <span className="grade-rank-pill-pct">
+                                            前 {((deptRankParsed.rank / deptRankParsed.total) * 100).toFixed(1)}%
+                                        </span>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
 
                     {/* 修課成績列表 */}
                     <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
