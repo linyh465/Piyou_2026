@@ -2,97 +2,85 @@
  * 應用佈局外殼 / App Layout Shell — iOS 風格
  * 桌面版 (md+)：群組化側邊欄；行動版：底部兩層導航 + 滑動動畫
  */
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
 import useTimetableStore from '../stores/timetableStore';
 import {
     IconHome, IconCalendar, IconCheckSquare,
     IconSettings, IconChartBar, IconCloudLightning, IconCloudOff, IconBus,
-    IconLibrary, IconArrowLeft, IconSchool,
+    IconLibrary, IconArrowLeft, IconSchool
 } from './Icons';
+import NotificationPanel from './NotificationPanel';
+import FeedbackModal from './FeedbackModal';
 
 // ── 學校相關路徑 / School-related paths ──
 const schoolPaths = ['/timetable', '/grades', '/library'];
 
+// 上次瀏覽的學校子頁面（預設課表）/ Last visited school sub-page (default: timetable)
+// 模組層級變數，僅在事件處理器中更新 / Module-level variable, updated only in event handlers
 let _lastSchoolPath = '/timetable';
 let _touchStartX = 0;
 
-// ── 路由 → 翻譯 key 對應 / Route to nav translation key mapping ──
-const ROUTE_TITLE_KEYS = {
-    '/': 'home',
-    '/tasks': 'tasks',
-    '/timetable': 'timetable',
-    '/grades': 'grades',
-    '/transport': 'transport',
-    '/library': 'library',
-    '/settings': 'settings',
-};
+// ── 側邊欄群組 / Sidebar Menu Groups ──（桌面版不變）
+const menuGroups = [
+    {
+        label: '總覽',
+        items: [
+            { to: '/', icon: IconHome, label: '首頁', end: true },
+            { to: '/tasks', icon: IconCheckSquare, label: '任務' },
+        ],
+    },
+    {
+        label: '校務',
+        items: [
+            { to: '/timetable', icon: IconCalendar, label: '課表' },
+            { to: '/grades', icon: IconChartBar, label: '成績' },
+        ],
+    },
+    {
+        label: '生活',
+        items: [
+            { to: '/transport', icon: IconBus, label: '交通' },
+            { to: '/library', icon: IconLibrary, label: '圖書館' },
+        ],
+    },
+];
+
+// ── 行動版第一層導航 / Mobile Level 1 Nav ──
+const mobileMainItems = [
+    { to: '/settings', icon: IconSettings, label: '設定' },
+    { to: '/tasks', icon: IconCheckSquare, label: '任務' },
+    { to: '/', icon: IconHome, label: '首頁', end: true },
+    { to: '/transport', icon: IconBus, label: '交通' },
+    { key: 'school', icon: IconSchool, label: '學校', isCategory: true },
+];
+
+// ── 行動版第二層導航（學校）/ Mobile Level 2 Nav (School) ──
+const mobileSchoolItems = [
+    { to: '/grades', icon: IconChartBar, label: '成績' },
+    { to: '/timetable', icon: IconCalendar, label: '課表' },
+    { to: '/library', icon: IconLibrary, label: '圖書館' },
+    { key: 'back', icon: IconArrowLeft, label: '上一頁', isBack: true },
+];
 
 export default function Layout() {
-    const { t } = useTranslation('nav');
     const timetable = useTimetableStore((s) => s.timetable);
     const grades = useTimetableStore((s) => s.grades);
     const syncStatus = (timetable.length > 0 || grades.length > 0) ? 'synced' : 'error';
 
+    const [showFeedback, setShowFeedback] = useState(false);
+
     const location = useLocation();
     const navigate = useNavigate();
 
+    // 導航層級：從路徑直接推導 / Navigation layer: derived from pathname
     const navLayer = useMemo(
         () => schoolPaths.some((p) => location.pathname.startsWith(p)) ? 'school' : 'main',
         [location.pathname]
     );
 
+    // 進入學校前的路徑 / Path before entering school
     const [prevPath, setPrevPath] = useState('/');
-
-    // ── 動態 document.title / Dynamic document.title ──
-    useEffect(() => {
-        const key = ROUTE_TITLE_KEYS[location.pathname];
-        const pageName = key ? t(key) : '';
-        document.title = pageName ? `${pageName} · Piyou` : 'Piyou';
-    }, [location.pathname, t]);
-
-    // ── 側邊欄群組 / Sidebar Menu Groups ──
-    const menuGroups = [
-        {
-            label: t('overview'),
-            items: [
-                { to: '/', icon: IconHome, label: t('home'), end: true },
-                { to: '/tasks', icon: IconCheckSquare, label: t('tasks') },
-            ],
-        },
-        {
-            label: t('school'),
-            items: [
-                { to: '/timetable', icon: IconCalendar, label: t('timetable') },
-                { to: '/grades', icon: IconChartBar, label: t('grades') },
-            ],
-        },
-        {
-            label: t('life'),
-            items: [
-                { to: '/transport', icon: IconBus, label: t('transport') },
-                { to: '/library', icon: IconLibrary, label: t('library') },
-            ],
-        },
-    ];
-
-    // ── 行動版第一層導航 / Mobile Level 1 Nav ──
-    const mobileMainItems = [
-        { to: '/settings', icon: IconSettings, label: t('settings') },
-        { to: '/tasks', icon: IconCheckSquare, label: t('tasks') },
-        { to: '/', icon: IconHome, label: t('home'), end: true },
-        { to: '/transport', icon: IconBus, label: t('transport') },
-        { key: 'school', icon: IconSchool, label: t('schoolCategory'), isCategory: true },
-    ];
-
-    // ── 行動版第二層導航（學校）/ Mobile Level 2 Nav (School) ──
-    const mobileSchoolItems = [
-        { to: '/grades', icon: IconChartBar, label: t('grades') },
-        { to: '/timetable', icon: IconCalendar, label: t('timetable') },
-        { to: '/library', icon: IconLibrary, label: t('library') },
-        { key: 'back', icon: IconArrowLeft, label: t('back'), isBack: true },
-    ];
 
     const handleSchoolClick = () => {
         setPrevPath(location.pathname);
@@ -115,7 +103,9 @@ export default function Layout() {
         }
     };
 
+    /** 渲染單個導航項 / Render a single nav item */
     const renderNavItem = (item) => {
+        // 「學校」分類按鈕
         if (item.isCategory) {
             const isSchoolActive = schoolPaths.some((p) => location.pathname.startsWith(p));
             return (
@@ -133,6 +123,7 @@ export default function Layout() {
             );
         }
 
+        // 「上一頁」返回按鈕
         if (item.isBack) {
             return (
                 <button
@@ -147,8 +138,10 @@ export default function Layout() {
             );
         }
 
+        // 學校子頁面連結 — 點擊時記錄路徑 / School sub-page link — record path on click
         const isSchoolLink = item.to && schoolPaths.some((p) => item.to.startsWith(p));
 
+        // 一般導航連結
         return (
             <NavLink
                 key={item.to}
@@ -207,10 +200,12 @@ export default function Layout() {
                             </div>
                         </div>
                     ))}
+
                 </nav>
 
                 {/* 底部設定與狀態區 / Bottom Status & Settings */}
                 <div className="sidebar-footer">
+                    {/* 同步狀態指示 / Sync Status */}
                     <div className="sidebar-sync-bar">
                         <div className="sidebar-sync-inner">
                             {syncStatus === 'synced' ? (
@@ -219,7 +214,7 @@ export default function Layout() {
                                 <IconCloudOff size={14} className="sidebar-sync-icon-err" />
                             )}
                             <span className="sidebar-sync-text">
-                                {syncStatus === 'synced' ? t('syncedStatus') : t('notSyncedStatus')}
+                                {syncStatus === 'synced' ? '校務資料已同步' : '校務資料未同步'}
                             </span>
                         </div>
                     </div>
@@ -231,7 +226,7 @@ export default function Layout() {
                         }
                     >
                         <IconSettings size={20} />
-                        <span>{t('settings')}</span>
+                        <span>系統設定</span>
                     </NavLink>
                 </div>
             </aside>
@@ -241,14 +236,22 @@ export default function Layout() {
                 <Outlet />
             </main>
 
-            {/* ═══ 行動版底部導航 / Mobile Bottom Nav ═══ */}
+            {/* 通知鈴鐺（全頁固定）/ Notification bell (global fixed) */}
+            <NotificationPanel onOpenFeedback={() => setShowFeedback(true)} />
+
+            {/* 意見回饋 Modal */}
+            <FeedbackModal show={showFeedback} onClose={() => setShowFeedback(false)} />
+
+            {/* ═══ 行動版底部導航 / Mobile Bottom Nav — 兩層滑動導航 ═══ */}
             <nav className="mobile-bottom-nav"
                  onTouchStart={handleTouchStart}
                  onTouchEnd={handleTouchEnd}>
                 <div className="mobile-nav-slider">
+                    {/* 第一層：主導航 */}
                     <div className={`mobile-nav-layer ${navLayer === 'main' ? 'mobile-nav-layer--active' : 'mobile-nav-layer--left'}`}>
                         {mobileMainItems.map(renderNavItem)}
                     </div>
+                    {/* 第二層：學校子導航 */}
                     <div className={`mobile-nav-layer ${navLayer === 'school' ? 'mobile-nav-layer--active' : 'mobile-nav-layer--right'}`}>
                         {mobileSchoolItems.map(renderNavItem)}
                     </div>

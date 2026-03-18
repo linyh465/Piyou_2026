@@ -32,8 +32,10 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(application: FastAPI):
     """啟動 / 關閉事件 — 取代已棄用的 on_event"""
+    from app.services.storage.sheets_setup import ensure_sheets_exist
     logger.info("🐾 Piyou API starting up / 披呦 API 啟動中...")
     logger.info("Zero-log credential filter installed / 零日誌憑證過濾器已安裝")
+    await ensure_sheets_exist()
     yield
     logger.info("🐾 Piyou API shutting down / 披呦 API 關閉中...")
 
@@ -83,11 +85,12 @@ app.add_middleware(HTTPSRedirectMiddleware)
 # ── 註冊路由 / Register Routes ──
 # 所有業務路由統一掛載在 /api/v1 前綴下
 # All business routes mounted under /api/v1 prefix
-from app.routers import auth, data, error_report
+from app.routers import auth, data, error_report, notify
 
 app.include_router(auth.router, prefix="/api/v1")
 app.include_router(data.router, prefix="/api/v1")
 app.include_router(error_report.router, prefix="/api/v1")
+app.include_router(notify.router, prefix="/api/v1")
 
 
 # ── 健康檢查 / Health Check ──
