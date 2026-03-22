@@ -215,39 +215,62 @@ export default function AnnouncementModal() {
                 {/* 操作列 / Actions */}
                 <div style={{
                     display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: total > 1 ? 'space-between' : 'flex-end',
+                    flexDirection: 'column',
                     padding: '0 20px 20px',
                     gap: '8px',
                 }}>
-                    {total > 1 ? (
-                        <>
-                            <button
-                                onClick={handlePrev}
-                                disabled={index === 0}
-                                style={{
-                                    ...secondaryBtnStyle,
-                                    opacity: index === 0 ? 0.3 : 1,
-                                    cursor: index === 0 ? 'default' : 'pointer',
-                                }}
-                            >
-                                ← 上一則
+                    <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: total > 1 ? 'space-between' : 'flex-end',
+                        gap: '8px',
+                    }}>
+                        {total > 1 ? (
+                            <>
+                                <button
+                                    onClick={handlePrev}
+                                    disabled={index === 0}
+                                    style={{
+                                        ...secondaryBtnStyle,
+                                        opacity: index === 0 ? 0.3 : 1,
+                                        cursor: index === 0 ? 'default' : 'pointer',
+                                    }}
+                                >
+                                    ← 上一則
+                                </button>
+                                {index < total - 1 ? (
+                                    <button onClick={handleNext} style={primaryBtnStyle}>
+                                        下一則 →
+                                    </button>
+                                ) : (
+                                    <button onClick={handleClose} style={primaryBtnStyle}>
+                                        我知道了
+                                    </button>
+                                )}
+                            </>
+                        ) : (
+                            <button onClick={handleClose} style={primaryBtnStyle}>
+                                我知道了
                             </button>
-                            {index < total - 1 ? (
-                                <button onClick={handleNext} style={primaryBtnStyle}>
-                                    下一則 →
-                                </button>
-                            ) : (
-                                <button onClick={handleClose} style={primaryBtnStyle}>
-                                    我知道了
-                                </button>
-                            )}
-                        </>
-                    ) : (
-                        <button onClick={handleClose} style={primaryBtnStyle}>
-                            我知道了
-                        </button>
-                    )}
+                        )}
+                    </div>
+                    <button
+                        onClick={() => { markRead(current.id); setVisible(false); }}
+                        style={{
+                            fontSize: '12px',
+                            color: 'var(--text-muted)',
+                            background: 'none',
+                            border: 'none',
+                            cursor: 'pointer',
+                            padding: '4px 0',
+                            textAlign: 'center',
+                            opacity: 0.7,
+                        }}
+                        onMouseEnter={(e) => { e.currentTarget.style.opacity = '1'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.opacity = '0.7'; }}
+                    >
+                        不再顯示此公告
+                    </button>
                 </div>
             </div>
         </div>,
