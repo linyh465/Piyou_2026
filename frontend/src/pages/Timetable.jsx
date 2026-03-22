@@ -108,7 +108,7 @@ function ClassroomView({ timetable }) {
                 <div>
                     <label style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>星期</label>
                     <select value={selectedDay} onChange={e => setSelectedDay(Number(e.target.value))}
-                        style={{ padding: '6px 10px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg-card)', color: 'var(--text-primary)', fontSize: '14px' }}>
+                        style={{ padding: '6px 10px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg-card)', color: 'var(--text)', fontSize: '14px' }}>
                         {[1, 2, 3, 4, 5].map(d => (
                             <option key={d} value={d}>週{DAY_LABELS[d]}{d === todayDay ? '（今天）' : ''}</option>
                         ))}
@@ -117,7 +117,7 @@ function ClassroomView({ timetable }) {
                 <div>
                     <label style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>節次</label>
                     <select value={selectedPeriod} onChange={e => setSelectedPeriod(Number(e.target.value))}
-                        style={{ padding: '6px 10px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg-card)', color: 'var(--text-primary)', fontSize: '14px' }}>
+                        style={{ padding: '6px 10px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg-card)', color: 'var(--text)', fontSize: '14px' }}>
                         {Object.entries(PERIOD_TIMES).map(([p, t]) => (
                             <option key={p} value={Number(p)}>第{p}節 {t}</option>
                         ))}
@@ -209,7 +209,7 @@ function ExportICSModal({ timetable, onClose }) {
                             type="date"
                             value={startDate}
                             onChange={e => setStartDate(e.target.value)}
-                            style={{ width: '100%', padding: '8px 12px', borderRadius: '10px', border: '1px solid var(--border)', background: 'var(--bg-card)', color: 'var(--text-primary)', fontSize: '15px' }}
+                            style={{ width: '100%', padding: '8px 12px', borderRadius: '10px', border: '1px solid var(--border)', background: 'var(--bg-card)', color: 'var(--text)', fontSize: '15px' }}
                         />
                     </div>
                     <div>
@@ -220,7 +220,7 @@ function ExportICSModal({ timetable, onClose }) {
                             min={1}
                             max={30}
                             onChange={e => setWeeks(Number(e.target.value))}
-                            style={{ width: '100%', padding: '8px 12px', borderRadius: '10px', border: '1px solid var(--border)', background: 'var(--bg-card)', color: 'var(--text-primary)', fontSize: '15px' }}
+                            style={{ width: '100%', padding: '8px 12px', borderRadius: '10px', border: '1px solid var(--border)', background: 'var(--bg-card)', color: 'var(--text)', fontSize: '15px' }}
                         />
                     </div>
                     <p style={{ fontSize: '12px', color: 'var(--text-muted)', lineHeight: '1.5' }}>

@@ -95,6 +95,9 @@
   --ring-brand: rgba(0, 122, 255, 0.35);
   --skeleton-from: #2C2C2E;
   --skeleton-via: #3A3A3C;
+  /* 深色模式下品牌柔和色預設（各主題會覆蓋） */
+  --color-brand-subtle: rgba(0, 122, 255, 0.12);
+  --color-brand-gradient: linear-gradient(135deg, #0A84FF, #64D2FF);
 }
 
 /* ══════════════════════════════════════════════════════
@@ -129,6 +132,7 @@
 .dark.theme-violet,
 .dark .theme-violet {
   --color-brand-subtle: rgba(139, 92, 246, 0.12);
+  --color-brand-gradient: linear-gradient(135deg, #8B5CF6, #C4B5FD);
   --ring-brand: rgba(139, 92, 246, 0.35);
 }
 
@@ -144,6 +148,7 @@
 .dark.theme-amber,
 .dark .theme-amber {
   --color-brand-subtle: rgba(217, 119, 6, 0.12);
+  --color-brand-gradient: linear-gradient(135deg, #D97706, #FBBF24);
   --ring-brand: rgba(217, 119, 6, 0.35);
 }
 
@@ -159,6 +164,7 @@
 .dark.theme-crimson,
 .dark .theme-crimson {
   --color-brand-subtle: rgba(220, 38, 38, 0.12);
+  --color-brand-gradient: linear-gradient(135deg, #DC2626, #F87171);
   --ring-brand: rgba(220, 38, 38, 0.35);
 }
 
@@ -174,6 +180,7 @@
 .dark.theme-emerald,
 .dark .theme-emerald {
   --color-brand-subtle: rgba(5, 150, 105, 0.12);
+  --color-brand-gradient: linear-gradient(135deg, #059669, #34D399);
   --ring-brand: rgba(5, 150, 105, 0.35);
 }
 
@@ -189,6 +196,7 @@
 .dark.theme-rose,
 .dark .theme-rose {
   --color-brand-subtle: rgba(225, 29, 72, 0.12);
+  --color-brand-gradient: linear-gradient(135deg, #E11D48, #FB7185);
   --ring-brand: rgba(225, 29, 72, 0.35);
 }
 
@@ -204,6 +212,7 @@
 .dark.theme-wisteria,
 .dark .theme-wisteria {
   --color-brand-subtle: rgba(192, 38, 211, 0.12);
+  --color-brand-gradient: linear-gradient(135deg, #C026D3, #E879F9);
   --ring-brand: rgba(192, 38, 211, 0.35);
 }
 
@@ -351,7 +360,7 @@ body {
 }
 
 .dark .btn-soft {
-  background: rgba(0, 122, 255, 0.15);
+  background: var(--color-brand-subtle);
   color: var(--color-brand-light);
 }
 
@@ -691,11 +700,11 @@ body {
 }
 
 .sidebar-sync-icon-ok {
-  color: #22c55e;
+  color: var(--color-success);
 }
 
 .sidebar-sync-icon-err {
-  color: #ef4444;
+  color: var(--color-danger);
 }
 
 .sidebar-sync-text {
@@ -1791,7 +1800,7 @@ body {
 }
 
 .dark .transport-stop-active {
-  background: rgba(0, 122, 255, 0.1) !important;
+  background: var(--color-brand-subtle) !important;
 }
 
 /* ══════════════════════════════════════════════════════
