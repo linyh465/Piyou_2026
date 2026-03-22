@@ -57,7 +57,7 @@ export default function NotificationPanel({ onOpenFeedback }) {
     return (
         <div
             ref={panelRef}
-            style={{ position: 'fixed', top: '12px', right: '14px', zIndex: 150 }}
+            style={{ position: 'fixed', top: 'calc(env(safe-area-inset-top, 0px) + 12px)', right: '14px', zIndex: 150 }}
         >
             {/* 鈴鐺按鈕 / Bell button */}
             <button

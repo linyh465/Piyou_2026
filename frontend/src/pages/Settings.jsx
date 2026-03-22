@@ -335,22 +335,22 @@ export default function Settings() {
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                                 <input
                                     type="text"
-                                    placeholder="學號 Student ID"
+                                    placeholder="E校園帳號（學號）"
                                     value={studentId}
                                     onChange={(e) => setStudentId(e.target.value)}
                                     className="input"
                                     style={{ padding: '12px 16px', fontSize: '15px' }}
-                                    aria-label="學號"
+                                    aria-label="E校園帳號"
                                     autoComplete="username"
                                 />
                                 <input
                                     type="password"
-                                    placeholder="密碼 Password"
+                                    placeholder="E校園密碼"
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
                                     className="input"
                                     style={{ padding: '12px 16px', fontSize: '15px' }}
-                                    aria-label="密碼"
+                                    aria-label="E校園密碼"
                                     autoComplete="current-password"
                                 />
                             </div>
