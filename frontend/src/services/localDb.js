@@ -90,6 +90,26 @@ export const localDb = {
     replaceAllTasks(tasks) {
         writeTasks(Array.isArray(tasks) ? tasks : []);
     },
+
+    /**
+     * 合併伺服器任務與本地任務（多裝置同步）/ Merge server tasks with local (multi-device sync)
+     * 策略：以 task id 為鍵，保留 updated_at 較新者；任一端獨有的任務皆保留。
+     * Strategy: key by task id, keep whichever updated_at is newer; tasks unique to either side are kept.
+     */
+    mergeWithServer(serverTasks) {
+        const local = readTasks();
+        const merged = new Map();
+        // 先放本地任務
+        for (const t of local) merged.set(t.id, t);
+        // 再合併伺服器任務：若伺服器版本較新則覆蓋
+        for (const s of (Array.isArray(serverTasks) ? serverTasks : [])) {
+            const l = merged.get(s.id);
+            if (!l || (s.updated_at || '') > (l.updated_at || '')) {
+                merged.set(s.id, s);
+            }
+        }
+        writeTasks([...merged.values()]);
+    },
 };
 
 export default localDb;

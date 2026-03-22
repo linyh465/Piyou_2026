@@ -128,7 +128,9 @@ const useTaskStore = create((set, get) => ({
         try {
             const res = await api.get('/data/tasks', { timeout: 15000 });
             const serverTasks = res.data.tasks || [];
-            localDb.replaceAllTasks(serverTasks);
+            // 合併而非覆蓋，保留兩端獨有任務，以 updated_at 較新者為準
+            // Merge instead of replace: keep tasks unique to either side, newer updated_at wins
+            localDb.mergeWithServer(serverTasks);
             await get().loadTasks();
             set({ isSyncing: false });
         } catch (err) {
