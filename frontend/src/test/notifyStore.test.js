@@ -29,6 +29,7 @@ const SAMPLE_ANNOUNCEMENTS = [
         expires_at: null,
         link_url: null,
         link_label: null,
+        version: 1,
     },
     {
         id: 'ann_3',
@@ -40,6 +41,7 @@ const SAMPLE_ANNOUNCEMENTS = [
         expires_at: null,
         link_url: null,
         link_label: null,
+        version: 2,
     },
 ];
 
@@ -71,12 +73,15 @@ describe('markRead()', () => {
         expect(unreadIds).toContain('ann_3');
     });
 
-    it('markRead 同時寫入 localStorage', () => {
-        useNotifyStore.setState({ unreadIds: ['ann_2'] });
+    it('markRead 同時寫入 localStorage（version-based）', () => {
+        useNotifyStore.setState({
+            announcements: SAMPLE_ANNOUNCEMENTS,
+            unreadIds: ['ann_2'],
+        });
         useNotifyStore.getState().markRead('ann_2');
 
-        const stored = JSON.parse(localStorage.getItem('piyou_read_announce_ids') || '[]');
-        expect(stored).toContain('ann_2');
+        const stored = JSON.parse(localStorage.getItem('piyou_read_announce_versions') || '{}');
+        expect(stored['ann_2']).toBe(1); // version of ann_2 is 1
     });
 });
 
@@ -92,7 +97,7 @@ describe('markAllRead()', () => {
         expect(useNotifyStore.getState().unreadIds).toHaveLength(0);
     });
 
-    it('markAllRead 將所有 ID 存入 localStorage', () => {
+    it('markAllRead 將所有版本號存入 localStorage', () => {
         useNotifyStore.setState({
             announcements: SAMPLE_ANNOUNCEMENTS,
             unreadIds: ['ann_2', 'ann_3'],
@@ -100,9 +105,9 @@ describe('markAllRead()', () => {
 
         useNotifyStore.getState().markAllRead();
 
-        const stored = JSON.parse(localStorage.getItem('piyou_read_announce_ids') || '[]');
-        expect(stored).toContain('ann_2');
-        expect(stored).toContain('ann_3');
+        const stored = JSON.parse(localStorage.getItem('piyou_read_announce_versions') || '{}');
+        expect(stored['ann_2']).toBe(1); // version of ann_2
+        expect(stored['ann_3']).toBe(2); // version of ann_3
     });
 });
 
