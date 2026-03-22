@@ -365,7 +365,6 @@ function getRandomBlessing(lang) {
 
 // ── 主頁面 / Main Page ──
 export default function Dashboard() {
-    const { t } = useTranslation('dashboard');
     const { lang } = useLangStore();
     const now = new Date();
     const greeting = getGreeting(now.getHours(), lang);

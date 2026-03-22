@@ -9,6 +9,7 @@
   "noTasks": "No tasks",
   "noTasksHint": "Tap \"New Task\" to create your first task",
   "completedCount": "{{done}}/{{total}} completed",
+  "dueDate": "Due Date (optional)",
   "markDone": "Mark complete",
   "cancelDone": "Mark incomplete",
   "filter": {

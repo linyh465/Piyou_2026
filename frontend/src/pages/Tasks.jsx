@@ -67,7 +67,12 @@ function TaskForm({ editTask, onClose }) {
                 </select>
             </div>
 
-            <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} className="input" aria-label="due date" />
+            <div>
+                <label style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'block', marginBottom: '6px' }}>
+                    {t('dueDate')}
+                </label>
+                <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} className="input" aria-label="due date" />
+            </div>
 
             <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', paddingTop: '4px' }}>
                 <button type="button" onClick={onClose} className="btn btn-ghost" style={{ fontSize: '13px' }}>{tCommon('cancel')}</button>

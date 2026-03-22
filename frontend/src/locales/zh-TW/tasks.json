@@ -9,6 +9,7 @@
   "noTasks": "沒有任務",
   "noTasksHint": "按「新增」建立第一個任務",
   "completedCount": "{{done}}/{{total}} 已完成",
+  "dueDate": "截止日期（選填）",
   "markDone": "標記完成",
   "cancelDone": "取消完成",
   "filter": {
