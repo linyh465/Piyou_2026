@@ -33,6 +33,17 @@
 }
 
 /* ══════════════════════════════════════════════════════
+   Samsung / Windows 高對比模式適配 / High Contrast Mode Fix
+   forced-color-adjust: none 讓 app 使用自己的 CSS 變數，
+   不受 OS 強制高對比色覆蓋，確保淺色/深色切換正常運作。
+   ══════════════════════════════════════════════════════ */
+@media (forced-colors: active) {
+  html, body, :root, .dark {
+    forced-color-adjust: none;
+  }
+}
+
+/* ══════════════════════════════════════════════════════
    淺色模式（預設）/ Light Mode (default)
    ══════════════════════════════════════════════════════ */
 :root {
