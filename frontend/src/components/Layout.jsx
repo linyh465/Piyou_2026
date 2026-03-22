@@ -236,8 +236,8 @@ export default function Layout() {
                 <Outlet />
             </main>
 
-            {/* 通知鈴鐺（全頁固定）/ Notification bell (global fixed) */}
-            <NotificationPanel onOpenFeedback={() => setShowFeedback(true)} />
+            {/* 通知鈴鐺（僅首頁）/ Notification bell (home only) */}
+            {location.pathname === '/' && <NotificationPanel onOpenFeedback={() => setShowFeedback(true)} />}
 
             {/* 意見回饋 Modal */}
             <FeedbackModal show={showFeedback} onClose={() => setShowFeedback(false)} />

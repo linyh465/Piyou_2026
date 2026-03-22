@@ -396,6 +396,17 @@ function TodayView({ timetable, isLoading, onCourseClick }) {
     const dayIndex = now.getDay();
     const currentMinutes = now.getHours() * 60 + now.getMinutes();
 
+    // 今天日期標頭
+    const dateLabel = `${now.getMonth() + 1}月${now.getDate()}日`;
+    const todayLabel = `週${DAY_LABELS[dayIndex]} · ${dateLabel}`;
+
+    // 明天（僅週一~週五）
+    const tomorrowDay = dayIndex === 5 ? 1 : dayIndex === 6 ? 1 : dayIndex + 1;
+    const isTomorrowWeekday = tomorrowDay >= 1 && tomorrowDay <= 5;
+    const tomorrowClasses = isTomorrowWeekday
+        ? timetable.filter((c) => c.day === tomorrowDay).sort((a, b) => (a.period || 0) - (b.period || 0))
+        : [];
+
     const todayClasses = timetable
         .filter((c) => c.day === dayIndex)
         .sort((a, b) => (a.period || 0) - (b.period || 0));
@@ -415,15 +426,43 @@ function TodayView({ timetable, isLoading, onCourseClick }) {
 
     if (!todayClasses.length) {
         return (
-            <div className="card" style={{ textAlign: 'center', padding: '40px 20px' }}>
-                <p style={{ fontSize: '1.125rem', fontWeight: 600, color: 'var(--text-secondary)' }}>{t('noClassesToday')}</p>
-                <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: 6 }}>{t('enjoyRest')}</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <p style={{ fontSize: '13px', color: 'var(--text-muted)', fontWeight: 500 }}>{todayLabel}</p>
+                <div className="card" style={{ textAlign: 'center', padding: '40px 20px' }}>
+                    <p style={{ fontSize: '1.125rem', fontWeight: 600, color: 'var(--text-secondary)' }}>{t('noClassesToday')}</p>
+                    <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: 6 }}>{t('enjoyRest')}</p>
+                </div>
+                {tomorrowClasses.length > 0 && (
+                    <>
+                        <p style={{ fontSize: '13px', color: 'var(--text-muted)', fontWeight: 500 }}>
+                            明天 週{DAY_LABELS[tomorrowDay]}
+                        </p>
+                        {tomorrowClasses.map((course, i) => (
+                            <div key={i} className="card tt-today-card" style={{ cursor: 'pointer', opacity: 0.75 }}
+                                onClick={() => onCourseClick(course)} role="button" tabIndex={0}
+                                onKeyDown={(e) => { if (e.key === 'Enter') onCourseClick(course); }}>
+                                <h4 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text)' }}>{course.name}</h4>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginTop: 8, fontSize: '13px', color: 'var(--text-secondary)' }}>
+                                    <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                                        <IconClock size={14} /> {PERIOD_TIMES[course.period]} - {PERIOD_END_TIMES[course.period]}
+                                    </span>
+                                    {course.location && (
+                                        <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                                            <IconMapPin size={14} /> {course.location}
+                                        </span>
+                                    )}
+                                </div>
+                            </div>
+                        ))}
+                    </>
+                )}
             </div>
         );
     }
 
     return (
         <div className="card-stack">
+            <p style={{ fontSize: '13px', color: 'var(--text-muted)', fontWeight: 500, paddingBottom: '4px' }}>{todayLabel}</p>
             {todayClasses.map((course, i) => {
                 const startMin = (parseInt(PERIOD_TIMES[course.period]?.split(':')[0]) || 0) * 60 +
                     (parseInt(PERIOD_TIMES[course.period]?.split(':')[1]) || 0);

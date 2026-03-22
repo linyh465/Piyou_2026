@@ -333,17 +333,50 @@ function LibrarySection() {
     );
 }
 
+const ZH_BLESSINGS = [
+    '今天也要元氣滿滿 ✨', '加油，你最棒了 💪', '一步一步來，穩穩的 🌟',
+    '今天也是充滿可能的一天 🌈', '記得喝水、好好吃飯 🥤', '你做得到的 🎯',
+    '今天也辛苦了 ☕', '保持微笑，一切都會好的 😊', '休息也是前進的一部分 🌙',
+    '今天的你已經很厲害了 🏆',
+];
+const EN_BLESSINGS = [
+    'Have a great day! ✨', 'You\'ve got this 💪', 'One step at a time 🌟',
+    'Today is full of possibilities 🌈', 'Stay hydrated and eat well 🥤',
+    'Believe in yourself 🎯', 'Keep up the good work ☕',
+    'Keep smiling — it\'ll be okay 😊', 'Rest is part of the journey 🌙',
+    'You\'re doing amazing 🏆',
+];
+
+function getGreeting(hour, lang) {
+    if (lang === 'en') {
+        if (hour < 12) return 'Good morning';
+        if (hour < 18) return 'Good afternoon';
+        return 'Good evening';
+    }
+    if (hour < 12) return '早安';
+    if (hour < 18) return '午安';
+    return '晚安';
+}
+
+function getRandomBlessing(lang) {
+    const list = lang === 'en' ? EN_BLESSINGS : ZH_BLESSINGS;
+    return list[Math.floor(Math.random() * list.length)];
+}
+
 // ── 主頁面 / Main Page ──
 export default function Dashboard() {
     const { t } = useTranslation('dashboard');
     const { lang } = useLangStore();
     const now = new Date();
+    const greeting = getGreeting(now.getHours(), lang);
+    const blessing = getRandomBlessing(lang);
 
     return (
         <div className="dash-page animate-fade-in">
             <div>
-                <h1 className="dash-hero-title">{t('title')}</h1>
+                <h1 className="dash-hero-title">{greeting}</h1>
                 <p className="dash-hero-date">{formatDate(now, lang)}</p>
+                <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '4px' }}>{blessing}</p>
             </div>
             <CurrentClassCard />
             <TaskSection />
