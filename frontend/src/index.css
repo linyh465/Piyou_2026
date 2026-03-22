@@ -192,6 +192,21 @@
   --ring-brand: rgba(225, 29, 72, 0.35);
 }
 
+/* ── 紫藤 Wisteria — 幽夢花期 ── */
+.theme-wisteria {
+  --color-brand: #C026D3;
+  --color-brand-light: #E879F9;
+  --color-brand-dark: #A21CAF;
+  --color-brand-subtle: #F9DCFD;
+  --color-brand-gradient: linear-gradient(135deg, #C026D3, #E879F9);
+  --ring-brand: rgba(192, 38, 211, 0.25);
+}
+.dark.theme-wisteria,
+.dark .theme-wisteria {
+  --color-brand-subtle: rgba(192, 38, 211, 0.12);
+  --ring-brand: rgba(192, 38, 211, 0.35);
+}
+
 /* ══════════════════════════════════════════════════════
    全域基礎 / Global Base
    ══════════════════════════════════════════════════════ */
