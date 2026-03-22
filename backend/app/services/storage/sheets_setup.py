@@ -19,7 +19,10 @@ logger = logging.getLogger(__name__)
 REQUIRED_SHEETS: dict[str, list[str]] = {
     "announcements": [
         "id", "title", "body", "type", "target",
-        "published_at", "expires_at", "link_url", "link_label",
+        "published_at", "expires_at", "link_url", "link_label", "version",
+    ],
+    "admin_accounts": [
+        "username", "password_hash", "created_at", "is_active",
     ],
     "feedback": [
         "id", "submitted_at", "category", "content", "contact",
