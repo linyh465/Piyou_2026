@@ -173,7 +173,7 @@ class BusPositionsResponse(BaseModel):
 
 class Announcement(BaseModel):
     """單一公告 / Single Announcement"""
-    id: str = Field(..., description="公告 ID (ann_N) / Announcement ID")
+    id: str = Field(..., description="公告 ID / Announcement ID")
     title: str = Field(..., description="標題 / Title")
     body: str = Field("", description="內文 / Body text")
     type: str = Field("info", description="類型 info|warning|urgent / Type")
@@ -182,6 +182,46 @@ class Announcement(BaseModel):
     expires_at: Optional[str] = Field(None, description="過期時間 / Expires at")
     link_url: Optional[str] = Field(None, description="連結 URL / Link URL")
     link_label: Optional[str] = Field(None, description="連結文字 / Link label")
+    version: int = Field(1, description="版本號（更新時遞增，觸發所有用戶重新彈窗）/ Version (incremented on update to re-popup)")
+
+
+# ── 管理員模型 / Admin Models ──
+
+class AdminLoginRequest(BaseModel):
+    """管理員登入請求 / Admin Login Request"""
+    username: str = Field(..., min_length=1, max_length=50, description="管理員帳號 / Admin username")
+    password: str = Field(..., min_length=1, max_length=128, description="管理員密碼 / Admin password")
+
+
+class AdminLoginResponse(BaseModel):
+    """管理員登入回應 / Admin Login Response"""
+    token: str = Field(..., description="Admin JWT Token")
+    username: str = Field(..., description="管理員帳號 / Username")
+
+
+class AnnouncementCreate(BaseModel):
+    """新增公告 / Create Announcement"""
+    title: str = Field(..., min_length=1, max_length=200, description="標題 / Title")
+    body: str = Field("", max_length=2000, description="內文 / Body")
+    type: str = Field("info", pattern=r'^(info|warning|urgent)$', description="類型 / Type")
+    target: str = Field("all", max_length=50, description="對象 / Target")
+    published_at: str = Field(..., description="發布時間 ISO 8601 / Published at")
+    expires_at: Optional[str] = Field(None, description="過期時間 / Expires at")
+    link_url: Optional[str] = Field(None, max_length=500, description="連結 / Link URL")
+    link_label: Optional[str] = Field(None, max_length=100, description="連結文字 / Link label")
+
+
+class AnnouncementUpdate(BaseModel):
+    """更新公告 / Update Announcement"""
+    title: Optional[str] = Field(None, min_length=1, max_length=200)
+    body: Optional[str] = Field(None, max_length=2000)
+    type: Optional[str] = Field(None, pattern=r'^(info|warning|urgent)$')
+    target: Optional[str] = Field(None, max_length=50)
+    published_at: Optional[str] = None
+    expires_at: Optional[str] = None
+    link_url: Optional[str] = Field(None, max_length=500)
+    link_label: Optional[str] = Field(None, max_length=100)
+    republish: bool = Field(False, description="是否重置為未讀（version 遞增）/ Re-popup for all users")
 
 
 class AnnouncementsResponse(BaseModel):

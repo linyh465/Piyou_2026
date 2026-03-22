@@ -7,21 +7,47 @@ import { create } from 'zustand';
 import { api } from '../services/apiClient';
 
 const ANNOUNCE_CACHE_KEY = 'piyou_announce_cache';
-const READ_IDS_KEY = 'piyou_read_announce_ids';
+const READ_VERSIONS_KEY = 'piyou_read_announce_versions'; // {id: version}
 const CACHE_TTL = 5 * 60 * 1000; // 5 分鐘 / 5 minutes
 
-/** 從 localStorage 讀取已讀 ID 集合 */
-function loadReadIds() {
+/**
+ * 從 localStorage 讀取已讀版本 map。
+ * 新格式：{id: version}（version-based re-popup 支援）
+ * 舊格式向後相容：若為 array，遷移為 {id: 1}
+ * Read the read-versions map from localStorage.
+ * New format: {id: version}. Old array format is migrated to {id: 1}.
+ */
+function loadReadVersions() {
     try {
-        return new Set(JSON.parse(localStorage.getItem(READ_IDS_KEY) || '[]'));
+        const raw = localStorage.getItem(READ_VERSIONS_KEY);
+        if (raw) {
+            const parsed = JSON.parse(raw);
+            if (typeof parsed === 'object' && !Array.isArray(parsed)) return parsed;
+        }
+        // 舊格式遷移 / Migrate old format
+        const oldRaw = localStorage.getItem('piyou_read_announce_ids');
+        if (oldRaw) {
+            const oldIds = JSON.parse(oldRaw);
+            const migrated = Object.fromEntries((Array.isArray(oldIds) ? oldIds : []).map((id) => [id, 1]));
+            localStorage.setItem(READ_VERSIONS_KEY, JSON.stringify(migrated));
+            localStorage.removeItem('piyou_read_announce_ids');
+            return migrated;
+        }
+        return {};
     } catch {
-        return new Set();
+        return {};
     }
 }
 
-/** 將已讀 ID 集合存回 localStorage */
-function saveReadIds(ids) {
-    localStorage.setItem(READ_IDS_KEY, JSON.stringify([...ids]));
+/** 儲存已讀版本 map / Save read-versions map */
+function saveReadVersions(versions) {
+    localStorage.setItem(READ_VERSIONS_KEY, JSON.stringify(versions));
+}
+
+/** 判斷公告是否未讀（版本號比對）/ Check if announcement is unread (version comparison) */
+function isUnread(announcement, readVersions) {
+    const readVer = readVersions[announcement.id] || 0;
+    return readVer < (announcement.version || 1);
 }
 
 const useNotifyStore = create((set, get) => ({
@@ -55,10 +81,10 @@ const useNotifyStore = create((set, get) => ({
         try {
             const cached = JSON.parse(localStorage.getItem(ANNOUNCE_CACHE_KEY) || 'null');
             if (cached && Date.now() - cached.fetchedAt < CACHE_TTL) {
-                const readIds = loadReadIds();
+                const readVersions = loadReadVersions();
                 const unreadIds = cached.announcements
-                    .map((a) => a.id)
-                    .filter((id) => !readIds.has(id));
+                    .filter((a) => isUnread(a, readVersions))
+                    .map((a) => a.id);
                 set({ announcements: cached.announcements, unreadIds });
                 return;
             }
@@ -71,11 +97,11 @@ const useNotifyStore = create((set, get) => ({
             const res = await api.get('/notify/announcements');
             const announcements = res.data.announcements || [];
 
-            // 計算未讀 / Compute unread
-            const readIds = loadReadIds();
+            // 計算未讀（版本號比對）/ Compute unread (version comparison)
+            const readVersions = loadReadVersions();
             const unreadIds = announcements
-                .map((a) => a.id)
-                .filter((id) => !readIds.has(id));
+                .filter((a) => isUnread(a, readVersions))
+                .map((a) => a.id);
 
             // 存快取 / Store cache
             localStorage.setItem(
@@ -106,23 +132,26 @@ const useNotifyStore = create((set, get) => ({
     },
 
     /**
-     * 標記單一公告為已讀 / Mark single announcement as read
+     * 標記單一公告為已讀（記錄當前版本號）/ Mark single announcement as read (record current version)
      */
     markRead: (id) => {
-        const readIds = loadReadIds();
-        readIds.add(id);
-        saveReadIds(readIds);
+        const { announcements } = get();
+        const ann = announcements.find((a) => a.id === id);
+        const version = ann?.version || 1;
+        const readVersions = loadReadVersions();
+        readVersions[id] = version;
+        saveReadVersions(readVersions);
         set((state) => ({ unreadIds: state.unreadIds.filter((uid) => uid !== id) }));
     },
 
     /**
-     * 標記所有公告為已讀 / Mark all announcements as read
+     * 標記所有公告為已讀（記錄當前版本號）/ Mark all announcements as read (record current versions)
      */
     markAllRead: () => {
         const { announcements } = get();
-        const readIds = loadReadIds();
-        announcements.forEach((a) => readIds.add(a.id));
-        saveReadIds(readIds);
+        const readVersions = loadReadVersions();
+        announcements.forEach((a) => { readVersions[a.id] = a.version || 1; });
+        saveReadVersions(readVersions);
         set({ unreadIds: [] });
     },
 

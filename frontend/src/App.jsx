@@ -19,6 +19,7 @@ const Tasks = lazy(() => import('./pages/Tasks'));
 const Transport = lazy(() => import('./pages/Transport'));
 const Library = lazy(() => import('./pages/Library'));
 const Settings = lazy(() => import('./pages/Settings'));
+const Admin = lazy(() => import('./pages/Admin'));
 
 // ── 載入中佔位 / Loading fallback ──
 function PageLoader() {
@@ -53,6 +54,9 @@ export default function App() {
               <Route path="library" element={<Library />} />
               <Route path="settings" element={<Settings />} />
             </Route>
+
+            {/* 管理員頁面（獨立，不套 Layout）/ Admin page (standalone, no Layout) */}
+            <Route path="/admin" element={<Admin />} />
 
             {/* 未知路由導回首頁 / Unknown routes redirect to home */}
             <Route path="*" element={<Navigate to="/" replace />} />

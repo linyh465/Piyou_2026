@@ -4,8 +4,13 @@ Google Sheets 公告與意見回饋儲存 / Google Sheets Announcement & Feedbac
 Uses the same Service Account auth pattern as sheets.py.
 
 試算表工作表 / Spreadsheet worksheets:
-  announcements  公告（管理員填寫，後端只讀）
+  announcements  公告（管理員 CRUD，含 UUID 和版本號）
+  admin_accounts 管理員帳號（username, bcrypt_hash, created_at, is_active）
   feedback       意見回饋（學生提交，管理員回覆）
+
+公告欄位 / Announcement columns:
+  A=id(UUID)  B=title  C=body  D=type  E=target
+  F=published_at  G=expires_at  H=link_url  I=link_label  J=version
 
 快取策略 / Cache strategy:
   公告：模組層級記憶體快取，TTL 5 分鐘
@@ -14,6 +19,7 @@ Uses the same Service Account auth pattern as sheets.py.
   Feedback reads: module-level in-memory cache, 2-minute TTL
 """
 import os
+import uuid
 import json
 import time
 import logging
@@ -73,15 +79,19 @@ def _read_announcements_sync() -> list[dict]:
     """
     讀取 announcements 工作表（跳過 header 列 A1）。
     過濾規則：published_at 非空、非未來時間、未過期。
+    欄位：A=id(UUID), B=title, C=body, D=type, E=target,
+          F=published_at, G=expires_at, H=link_url, I=link_label, J=version
     Reads announcements sheet (skip header row A1).
     Filter: published_at non-empty, not future, not expired.
+    Columns: A=id(UUID), B=title, C=body, D=type, E=target,
+             F=published_at, G=expires_at, H=link_url, I=link_label, J=version
     """
     service = _build_service()
     sheets_id = _get_sheets_id()
 
     result = service.spreadsheets().values().get(
         spreadsheetId=sheets_id,
-        range="announcements!A2:I",
+        range="announcements!A2:J",
     ).execute()
     rows: list[list[str]] = result.get("values", [])
 
@@ -89,8 +99,8 @@ def _read_announcements_sync() -> list[dict]:
     announcements: list[dict] = []
 
     for i, row in enumerate(rows):
-        # pad 至 9 欄 / pad to 9 columns
-        row = row + [""] * (9 - len(row))
+        # pad 至 10 欄 / pad to 10 columns (A-J)
+        row = row + [""] * (10 - len(row))
         published_at = row[5].strip()
         if not published_at:
             continue  # 草稿 / draft
@@ -117,8 +127,15 @@ def _read_announcements_sync() -> list[dict]:
         if not title:
             continue  # 沒有標題的跳過 / skip rows without title
 
+        # 欄 A 有 UUID 則用之；舊資料回退到列號 / Use UUID from col A; fall back to row number
+        row_id = row[0].strip() if row[0].strip() else f"ann_{i + 2}"
+        try:
+            version = int(row[9].strip()) if row[9].strip() else 1
+        except ValueError:
+            version = 1
+
         announcements.append({
-            "id": f"ann_{i + 2}",  # 用列號當穩定 ID / row number as stable ID
+            "id": row_id,
             "title": title,
             "body": row[2].strip(),
             "type": row[3].strip() or "info",
@@ -127,6 +144,7 @@ def _read_announcements_sync() -> list[dict]:
             "expires_at": expires_at or None,
             "link_url": row[7].strip() or None,
             "link_label": row[8].strip() or None,
+            "version": version,
         })
 
     # 最新公告排前面 / newest first
@@ -242,3 +260,266 @@ async def get_feedback_by_id(feedback_id: str) -> dict | None:
     if result:
         _fb_cache[feedback_id] = {**result, "_cached_at": time.time()}
     return result
+
+
+# ══════════════════════════════════════════
+#  管理員帳號 / Admin Accounts
+# ══════════════════════════════════════════
+
+def _get_admin_account_sync(username: str) -> dict | None:
+    """
+    從 admin_accounts 工作表查找管理員帳號。
+    Columns: A=username  B=bcrypt_hash  C=created_at  D=is_active
+    Find admin account from admin_accounts sheet.
+    """
+    service = _build_service()
+    sheets_id = _get_sheets_id()
+
+    result = service.spreadsheets().values().get(
+        spreadsheetId=sheets_id,
+        range="admin_accounts!A2:D",
+    ).execute()
+    rows: list[list[str]] = result.get("values", [])
+
+    for row in rows:
+        row = row + [""] * (4 - len(row))
+        if row[0].strip().lower() == username.strip().lower():
+            is_active = row[3].strip().lower()
+            if is_active in ("false", "0", "no", "inactive"):
+                return None  # 帳號停用 / Account disabled
+            return {
+                "username": row[0].strip(),
+                "password_hash": row[1].strip(),
+            }
+    return None
+
+
+async def get_admin_account(username: str) -> dict | None:
+    """非同步查詢管理員帳號 / Async get admin account."""
+    return await asyncio.to_thread(_get_admin_account_sync, username)
+
+
+# ══════════════════════════════════════════
+#  公告 CRUD / Announcement CRUD
+# ══════════════════════════════════════════
+
+def _find_announcement_row_sync(ann_id: str) -> tuple[int, list[str]] | None:
+    """
+    掃描 announcements 工作表 A 欄，找到 id 對應的列號（1-based）。
+    Scan announcements sheet column A for matching id; return (row_number, row_data).
+    """
+    service = _build_service()
+    sheets_id = _get_sheets_id()
+
+    result = service.spreadsheets().values().get(
+        spreadsheetId=sheets_id,
+        range="announcements!A2:J",
+    ).execute()
+    rows: list[list[str]] = result.get("values", [])
+
+    for i, row in enumerate(rows):
+        row = row + [""] * (10 - len(row))
+        if row[0].strip() == ann_id:
+            return (i + 2, row)  # 1-based row number (row 2 = first data row)
+    return None
+
+
+def _create_announcement_sync(data: dict) -> dict:
+    """
+    新增一列公告至 announcements 工作表。
+    Append a new announcement row to the announcements sheet.
+    Returns the created announcement dict.
+    """
+    service = _build_service()
+    sheets_id = _get_sheets_id()
+
+    ann_id = str(uuid.uuid4())
+    row = [
+        ann_id,
+        data.get("title", ""),
+        data.get("body", ""),
+        data.get("type", "info"),
+        data.get("target", "all"),
+        data.get("published_at", ""),
+        data.get("expires_at", "") or "",
+        data.get("link_url", "") or "",
+        data.get("link_label", "") or "",
+        "1",  # version starts at 1
+    ]
+
+    service.spreadsheets().values().append(
+        spreadsheetId=sheets_id,
+        range="announcements!A:J",
+        valueInputOption="RAW",
+        insertDataOption="INSERT_ROWS",
+        body={"values": [row]},
+    ).execute()
+
+    logger.info(f"SheetsNotify: created announcement id={ann_id}")
+    return {**data, "id": ann_id, "version": 1}
+
+
+def _update_announcement_sync(ann_id: str, updates: dict, republish: bool) -> dict | None:
+    """
+    更新公告列。若 republish=True 則版本號遞增（觸發所有用戶重新彈窗）。
+    Update announcement row. Increments version if republish=True.
+    """
+    service = _build_service()
+    sheets_id = _get_sheets_id()
+
+    found = _find_announcement_row_sync(ann_id)
+    if not found:
+        return None
+    row_num, row = found
+
+    # 套用更新欄位 / Apply field updates
+    field_map = {
+        "title": 1, "body": 2, "type": 3, "target": 4,
+        "published_at": 5, "expires_at": 6, "link_url": 7, "link_label": 8,
+    }
+    for field, col_idx in field_map.items():
+        if field in updates and updates[field] is not None:
+            row[col_idx] = updates[field]
+        elif field in ("expires_at", "link_url", "link_label") and field in updates:
+            row[col_idx] = ""  # allow clearing optional fields
+
+    if republish:
+        try:
+            row[9] = str(int(row[9] or "1") + 1)
+        except ValueError:
+            row[9] = "2"
+
+    service.spreadsheets().values().update(
+        spreadsheetId=sheets_id,
+        range=f"announcements!A{row_num}:J{row_num}",
+        valueInputOption="RAW",
+        body={"values": [row]},
+    ).execute()
+
+    version = int(row[9]) if row[9] else 1
+    logger.info(f"SheetsNotify: updated announcement id={ann_id} version={version}")
+    return {
+        "id": ann_id,
+        "title": row[1],
+        "body": row[2],
+        "type": row[3] or "info",
+        "target": row[4] or "all",
+        "published_at": row[5],
+        "expires_at": row[6] or None,
+        "link_url": row[7] or None,
+        "link_label": row[8] or None,
+        "version": version,
+    }
+
+
+def _delete_announcement_sync(ann_id: str) -> bool:
+    """
+    刪除公告列（清空整列內容）。
+    Delete announcement by clearing the row.
+    """
+    service = _build_service()
+    sheets_id = _get_sheets_id()
+
+    found = _find_announcement_row_sync(ann_id)
+    if not found:
+        return False
+    row_num, _ = found
+
+    service.spreadsheets().values().clear(
+        spreadsheetId=sheets_id,
+        range=f"announcements!A{row_num}:J{row_num}",
+    ).execute()
+
+    logger.info(f"SheetsNotify: deleted announcement id={ann_id} (row {row_num} cleared)")
+    return True
+
+
+def _reply_feedback_sync(feedback_id: str, reply: str) -> bool:
+    """
+    更新 feedback 工作表的管理員回覆欄。
+    Update admin reply columns in feedback sheet.
+    Columns: A=id ... G=status  H=admin_reply  I=replied_at
+    """
+    service = _build_service()
+    sheets_id = _get_sheets_id()
+
+    result = service.spreadsheets().values().get(
+        spreadsheetId=sheets_id,
+        range="feedback!A2:I",
+    ).execute()
+    rows: list[list[str]] = result.get("values", [])
+
+    for i, row in enumerate(rows):
+        row = row + [""] * (9 - len(row))
+        if row[0].strip() == feedback_id:
+            row_num = i + 2
+            row[6] = "replied"
+            row[7] = reply
+            row[8] = datetime.now(timezone.utc).isoformat()
+            service.spreadsheets().values().update(
+                spreadsheetId=sheets_id,
+                range=f"feedback!A{row_num}:I{row_num}",
+                valueInputOption="RAW",
+                body={"values": [row]},
+            ).execute()
+            # 清除回饋快取 / Clear feedback cache
+            global _fb_cache
+            _fb_cache.pop(feedback_id, None)
+            logger.info(f"SheetsNotify: replied to feedback id={feedback_id}")
+            return True
+    return False
+
+
+def _list_feedback_sync() -> list[dict]:
+    """列出所有意見回饋（管理員用）/ List all feedback (admin use)."""
+    service = _build_service()
+    sheets_id = _get_sheets_id()
+
+    result = service.spreadsheets().values().get(
+        spreadsheetId=sheets_id,
+        range="feedback!A2:I",
+    ).execute()
+    rows: list[list[str]] = result.get("values", [])
+
+    items = []
+    for row in rows:
+        row = row + [""] * (9 - len(row))
+        if not row[0].strip():
+            continue
+        items.append({
+            "id": row[0].strip(),
+            "submitted_at": row[1].strip(),
+            "category": row[2].strip(),
+            "content": row[3].strip(),
+            "contact": row[4].strip() or None,
+            "device_id": row[5].strip(),
+            "status": row[6].strip() or "pending",
+            "admin_reply": row[7].strip() or None,
+            "replied_at": row[8].strip() or None,
+        })
+    return items
+
+
+async def create_announcement(data: dict) -> dict:
+    """非同步新增公告 / Async create announcement."""
+    return await asyncio.to_thread(_create_announcement_sync, data)
+
+
+async def update_announcement(ann_id: str, updates: dict, republish: bool) -> dict | None:
+    """非同步更新公告 / Async update announcement."""
+    return await asyncio.to_thread(_update_announcement_sync, ann_id, updates, republish)
+
+
+async def delete_announcement(ann_id: str) -> bool:
+    """非同步刪除公告 / Async delete announcement."""
+    return await asyncio.to_thread(_delete_announcement_sync, ann_id)
+
+
+async def reply_feedback(feedback_id: str, reply: str) -> bool:
+    """非同步回覆意見回饋 / Async reply to feedback."""
+    return await asyncio.to_thread(_reply_feedback_sync, feedback_id, reply)
+
+
+async def list_feedback() -> list[dict]:
+    """非同步列出所有回饋（管理員用）/ Async list all feedback (admin)."""
+    return await asyncio.to_thread(_list_feedback_sync)

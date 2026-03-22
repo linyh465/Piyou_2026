@@ -1,0 +1,436 @@
+/**
+ * 管理員後台 / Admin Dashboard
+ * 路徑：/#/admin（不顯示於一般導覽列）
+ * Route: /#/admin (hidden from normal navigation)
+ *
+ * 功能 / Features:
+ * - 管理員登入（Google Sheets bcrypt 驗證）
+ * - 公告 CRUD（新增/編輯/刪除/重新發布）
+ * - 意見回饋列表與回覆
+ */
+import { useState, useEffect, useCallback } from 'react';
+import { api } from '../services/apiClient';
+
+const ADMIN_TOKEN_KEY = 'piyou_admin_token';
+
+function getStoredToken() {
+    return sessionStorage.getItem(ADMIN_TOKEN_KEY) || '';
+}
+
+function storeToken(token) {
+    sessionStorage.setItem(ADMIN_TOKEN_KEY, token);
+}
+
+function clearToken() {
+    sessionStorage.removeItem(ADMIN_TOKEN_KEY);
+}
+
+function adminHeaders(token) {
+    return { headers: { Authorization: `Bearer ${token}` } };
+}
+
+// ── 樣式常數 / Style constants ──
+const card = {
+    background: 'var(--bg-card)',
+    borderRadius: '16px',
+    padding: '16px',
+    boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
+    marginBottom: '12px',
+};
+
+const inputStyle = {
+    width: '100%',
+    padding: '10px 14px',
+    borderRadius: '10px',
+    border: '1px solid var(--border)',
+    background: 'var(--bg-input)',
+    color: 'var(--text)',
+    fontSize: '14px',
+    boxSizing: 'border-box',
+    marginBottom: '10px',
+};
+
+const btnPrimary = {
+    width: '100%',
+    padding: '12px',
+    borderRadius: '12px',
+    border: 'none',
+    background: 'var(--color-brand)',
+    color: 'white',
+    fontSize: '15px',
+    fontWeight: 600,
+    cursor: 'pointer',
+};
+
+const btnDanger = {
+    padding: '6px 12px',
+    borderRadius: '8px',
+    border: 'none',
+    background: 'var(--color-danger)',
+    color: 'white',
+    fontSize: '13px',
+    cursor: 'pointer',
+};
+
+const btnGhost = {
+    padding: '6px 12px',
+    borderRadius: '8px',
+    border: '1px solid var(--border)',
+    background: 'var(--bg-input)',
+    color: 'var(--text-secondary)',
+    fontSize: '13px',
+    cursor: 'pointer',
+};
+
+const TYPE_COLORS = {
+    info: 'var(--color-brand)',
+    warning: 'var(--color-warning)',
+    urgent: 'var(--color-danger)',
+};
+
+const TYPE_LABELS = { info: '公告', warning: '注意', urgent: '緊急' };
+
+// ══════════════════════════════════════
+//  登入表單 / Login Form
+// ══════════════════════════════════════
+function LoginForm({ onLogin }) {
+    const [username, setUsername] = useState('');
+    const [password, setPassword] = useState('');
+    const [error, setError] = useState('');
+    const [loading, setLoading] = useState(false);
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        if (!username || !password) return;
+        setLoading(true);
+        setError('');
+        try {
+            const res = await api.post('/notify/admin/login', { username, password });
+            storeToken(res.data.token);
+            onLogin(res.data.token, res.data.username);
+        } catch (err) {
+            setError(err.response?.data?.detail || '登入失敗');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', background: 'var(--bg)' }}>
+            <div style={{ ...card, width: '100%', maxWidth: '360px' }}>
+                <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text)', marginBottom: '4px' }}>披呦管理後台</h2>
+                <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '20px' }}>Piyou Admin Dashboard</p>
+                {error && (
+                    <div style={{ padding: '10px', borderRadius: '10px', background: 'rgba(239,68,68,0.1)', color: 'var(--color-danger)', fontSize: '14px', marginBottom: '12px' }}>
+                        {error}
+                    </div>
+                )}
+                <form onSubmit={handleSubmit}>
+                    <input style={inputStyle} type="text" placeholder="管理員帳號" value={username} onChange={(e) => setUsername(e.target.value)} autoComplete="username" />
+                    <input style={inputStyle} type="password" placeholder="管理員密碼" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" />
+                    <button type="submit" style={{ ...btnPrimary, opacity: loading ? 0.6 : 1 }} disabled={loading}>
+                        {loading ? '登入中…' : '登入'}
+                    </button>
+                </form>
+            </div>
+        </div>
+    );
+}
+
+// ══════════════════════════════════════
+//  公告表單 / Announcement Form
+// ══════════════════════════════════════
+function AnnouncementForm({ initial, onSave, onCancel }) {
+    const now = new Date().toISOString().slice(0, 16);
+    const [title, setTitle] = useState(initial?.title || '');
+    const [body, setBody] = useState(initial?.body || '');
+    const [type, setType] = useState(initial?.type || 'info');
+    const [publishedAt, setPublishedAt] = useState(initial?.published_at?.slice(0, 16) || now);
+    const [expiresAt, setExpiresAt] = useState(initial?.expires_at?.slice(0, 16) || '');
+    const [linkUrl, setLinkUrl] = useState(initial?.link_url || '');
+    const [linkLabel, setLinkLabel] = useState(initial?.link_label || '');
+    const [republish, setRepublish] = useState(false);
+    const [saving, setSaving] = useState(false);
+    const [error, setError] = useState('');
+
+    const handleSave = async () => {
+        if (!title.trim()) { setError('標題不能為空'); return; }
+        setSaving(true);
+        setError('');
+        const data = {
+            title: title.trim(),
+            body: body.trim(),
+            type,
+            target: 'all',
+            published_at: new Date(publishedAt).toISOString(),
+            expires_at: expiresAt ? new Date(expiresAt).toISOString() : null,
+            link_url: linkUrl.trim() || null,
+            link_label: linkLabel.trim() || null,
+            ...(initial ? { republish } : {}),
+        };
+        try {
+            await onSave(data);
+        } catch (err) {
+            setError(err.response?.data?.detail || '儲存失敗');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const selectStyle = { ...inputStyle, marginBottom: '10px' };
+
+    return (
+        <div style={card}>
+            <h3 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text)', marginBottom: '12px' }}>
+                {initial ? '編輯公告' : '新增公告'}
+            </h3>
+            {error && <div style={{ padding: '8px', borderRadius: '8px', background: 'rgba(239,68,68,0.1)', color: 'var(--color-danger)', fontSize: '13px', marginBottom: '10px' }}>{error}</div>}
+            <input style={inputStyle} type="text" placeholder="標題 *" value={title} onChange={(e) => setTitle(e.target.value)} />
+            <textarea style={{ ...inputStyle, minHeight: '80px', resize: 'vertical', fontFamily: 'inherit' }} placeholder="內文" value={body} onChange={(e) => setBody(e.target.value)} />
+            <select style={selectStyle} value={type} onChange={(e) => setType(e.target.value)}>
+                <option value="info">公告 (info)</option>
+                <option value="warning">注意 (warning)</option>
+                <option value="urgent">緊急 (urgent)</option>
+            </select>
+            <label style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>發布時間</label>
+            <input style={inputStyle} type="datetime-local" value={publishedAt} onChange={(e) => setPublishedAt(e.target.value)} />
+            <label style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>過期時間（選填）</label>
+            <input style={inputStyle} type="datetime-local" value={expiresAt} onChange={(e) => setExpiresAt(e.target.value)} />
+            <input style={inputStyle} type="url" placeholder="連結 URL（選填）" value={linkUrl} onChange={(e) => setLinkUrl(e.target.value)} />
+            <input style={inputStyle} type="text" placeholder="連結文字（選填）" value={linkLabel} onChange={(e) => setLinkLabel(e.target.value)} />
+            {initial && (
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '12px', cursor: 'pointer' }}>
+                    <input type="checkbox" checked={republish} onChange={(e) => setRepublish(e.target.checked)} />
+                    重新發布（所有用戶再次看到此公告）
+                </label>
+            )}
+            <div style={{ display: 'flex', gap: '8px' }}>
+                <button onClick={onCancel} style={{ ...btnGhost, flex: 1 }}>取消</button>
+                <button onClick={handleSave} disabled={saving} style={{ ...btnPrimary, flex: 2, opacity: saving ? 0.6 : 1 }}>
+                    {saving ? '儲存中…' : '儲存'}
+                </button>
+            </div>
+        </div>
+    );
+}
+
+// ══════════════════════════════════════
+//  主後台 / Main Dashboard
+// ══════════════════════════════════════
+export default function Admin() {
+    const [token, setToken] = useState(getStoredToken);
+    const [adminName, setAdminName] = useState('');
+    const [tab, setTab] = useState('announcements'); // 'announcements' | 'feedback'
+    const [announcements, setAnnouncements] = useState([]);
+    const [feedback, setFeedback] = useState([]);
+    const [loading, setLoading] = useState(false);
+    const [showCreateForm, setShowCreateForm] = useState(false);
+    const [editingId, setEditingId] = useState(null);
+    const [replyingId, setReplyingId] = useState(null);
+    const [replyText, setReplyText] = useState('');
+    const [msg, setMsg] = useState('');
+
+    const showMsg = (text) => { setMsg(text); setTimeout(() => setMsg(''), 3000); };
+
+    const handleLogin = (t, name) => { setToken(t); setAdminName(name); };
+    const handleLogout = () => { clearToken(); setToken(''); setAdminName(''); };
+
+    const loadAnnouncements = useCallback(async () => {
+        if (!token) return;
+        setLoading(true);
+        try {
+            const res = await api.get('/notify/admin/announcements', adminHeaders(token));
+            setAnnouncements(res.data.announcements || []);
+        } catch (err) {
+            if (err.response?.status === 403) handleLogout();
+        } finally {
+            setLoading(false);
+        }
+    }, [token]);
+
+    const loadFeedback = useCallback(async () => {
+        if (!token) return;
+        setLoading(true);
+        try {
+            const res = await api.get('/notify/admin/feedback', adminHeaders(token));
+            setFeedback(res.data.feedback || []);
+        } catch (err) {
+            if (err.response?.status === 403) handleLogout();
+        } finally {
+            setLoading(false);
+        }
+    }, [token]);
+
+    useEffect(() => {
+        if (token) {
+            if (tab === 'announcements') loadAnnouncements();
+            else loadFeedback();
+        }
+    }, [token, tab, loadAnnouncements, loadFeedback]);
+
+    const handleCreate = async (data) => {
+        await api.post('/notify/admin/announcements', data, adminHeaders(token));
+        setShowCreateForm(false);
+        await loadAnnouncements();
+        showMsg('公告已新增');
+    };
+
+    const handleUpdate = async (id, data) => {
+        await api.put(`/notify/admin/announcements/${id}`, data, adminHeaders(token));
+        setEditingId(null);
+        await loadAnnouncements();
+        showMsg('公告已更新');
+    };
+
+    const handleDelete = async (id, title) => {
+        if (!window.confirm(`確定刪除「${title}」？`)) return;
+        await api.delete(`/notify/admin/announcements/${id}`, adminHeaders(token));
+        await loadAnnouncements();
+        showMsg('公告已刪除');
+    };
+
+    const handleReply = async (id) => {
+        if (!replyText.trim()) return;
+        await api.put(`/notify/admin/feedback/${id}/reply`, { reply: replyText }, adminHeaders(token));
+        setReplyingId(null);
+        setReplyText('');
+        await loadFeedback();
+        showMsg('回覆已儲存');
+    };
+
+    if (!token) return <LoginForm onLogin={handleLogin} />;
+
+    const editingAnn = editingId ? announcements.find((a) => a.id === editingId) : null;
+
+    return (
+        <div style={{ minHeight: '100vh', background: 'var(--bg)', padding: '16px', paddingTop: 'calc(env(safe-area-inset-top, 0px) + 16px)' }}>
+            {/* Header */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+                <div>
+                    <h1 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text)', margin: 0 }}>披呦管理後台</h1>
+                    {adminName && <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0 }}>{adminName}</p>}
+                </div>
+                <button onClick={handleLogout} style={btnGhost}>登出</button>
+            </div>
+
+            {/* Toast */}
+            {msg && (
+                <div style={{ padding: '10px 16px', borderRadius: '10px', background: 'var(--color-success)', color: 'white', fontSize: '14px', marginBottom: '12px' }}>
+                    {msg}
+                </div>
+            )}
+
+            {/* Tabs */}
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
+                {['announcements', 'feedback'].map((t) => (
+                    <button key={t} onClick={() => setTab(t)} style={{
+                        padding: '8px 16px', borderRadius: '10px', border: 'none', cursor: 'pointer',
+                        background: tab === t ? 'var(--color-brand)' : 'var(--bg-input)',
+                        color: tab === t ? 'white' : 'var(--text-secondary)',
+                        fontWeight: tab === t ? 600 : 400, fontSize: '14px',
+                    }}>
+                        {t === 'announcements' ? '公告管理' : '意見回饋'}
+                    </button>
+                ))}
+            </div>
+
+            {/* Announcements Tab */}
+            {tab === 'announcements' && (
+                <>
+                    {!showCreateForm && !editingId && (
+                        <button onClick={() => setShowCreateForm(true)} style={{ ...btnPrimary, marginBottom: '12px' }}>
+                            + 新增公告
+                        </button>
+                    )}
+                    {showCreateForm && (
+                        <AnnouncementForm onSave={handleCreate} onCancel={() => setShowCreateForm(false)} />
+                    )}
+                    {editingAnn && (
+                        <AnnouncementForm
+                            initial={editingAnn}
+                            onSave={(data) => handleUpdate(editingId, data)}
+                            onCancel={() => setEditingId(null)}
+                        />
+                    )}
+                    {loading && <p style={{ color: 'var(--text-muted)', fontSize: '14px' }}>載入中…</p>}
+                    {!loading && !showCreateForm && !editingId && announcements.map((ann) => (
+                        <div key={ann.id} style={{ ...card, borderLeft: `4px solid ${TYPE_COLORS[ann.type] || TYPE_COLORS.info}` }}>
+                            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '8px' }}>
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
+                                        <span style={{ fontSize: '11px', fontWeight: 600, color: TYPE_COLORS[ann.type] || TYPE_COLORS.info }}>
+                                            {TYPE_LABELS[ann.type] || ann.type}
+                                        </span>
+                                        <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>v{ann.version || 1}</span>
+                                    </div>
+                                    <p style={{ fontWeight: 600, color: 'var(--text)', fontSize: '14px', margin: '0 0 4px' }}>{ann.title}</p>
+                                    {ann.body && <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: '0 0 4px', whiteSpace: 'pre-line' }}>{ann.body}</p>}
+                                    <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: 0 }}>
+                                        {new Date(ann.published_at).toLocaleString('zh-TW')}
+                                        {ann.expires_at && ` → ${new Date(ann.expires_at).toLocaleString('zh-TW')}`}
+                                    </p>
+                                </div>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flexShrink: 0 }}>
+                                    <button onClick={() => { setEditingId(ann.id); setShowCreateForm(false); }} style={btnGhost}>編輯</button>
+                                    <button onClick={() => handleDelete(ann.id, ann.title)} style={btnDanger}>刪除</button>
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                    {!loading && !showCreateForm && !editingId && announcements.length === 0 && (
+                        <p style={{ color: 'var(--text-muted)', fontSize: '14px', textAlign: 'center', marginTop: '40px' }}>目前沒有公告</p>
+                    )}
+                </>
+            )}
+
+            {/* Feedback Tab */}
+            {tab === 'feedback' && (
+                <>
+                    <button onClick={loadFeedback} style={{ ...btnGhost, marginBottom: '12px' }}>重新整理</button>
+                    {loading && <p style={{ color: 'var(--text-muted)', fontSize: '14px' }}>載入中…</p>}
+                    {!loading && feedback.map((fb) => (
+                        <div key={fb.id} style={{ ...card, borderLeft: `4px solid ${fb.status === 'replied' ? 'var(--color-success)' : 'var(--border)'}` }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                                <span style={{ fontSize: '11px', fontWeight: 600, color: fb.status === 'replied' ? 'var(--color-success)' : 'var(--text-muted)' }}>
+                                    {fb.status === 'replied' ? '已回覆' : '待處理'} · {fb.category}
+                                </span>
+                                <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                                    {fb.submitted_at ? new Date(fb.submitted_at).toLocaleString('zh-TW') : ''}
+                                </span>
+                            </div>
+                            <p style={{ fontSize: '14px', color: 'var(--text)', margin: '0 0 6px', whiteSpace: 'pre-line' }}>{fb.content}</p>
+                            {fb.contact && <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: '0 0 6px' }}>聯絡：{fb.contact}</p>}
+                            {fb.admin_reply && (
+                                <div style={{ padding: '8px', borderRadius: '8px', background: 'var(--bg-input)', marginBottom: '8px' }}>
+                                    <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: '0 0 2px' }}>管理員回覆</p>
+                                    <p style={{ fontSize: '13px', color: 'var(--text)', margin: 0 }}>{fb.admin_reply}</p>
+                                </div>
+                            )}
+                            {replyingId === fb.id ? (
+                                <div>
+                                    <textarea
+                                        style={{ ...inputStyle, minHeight: '60px', resize: 'vertical', fontFamily: 'inherit' }}
+                                        placeholder="輸入回覆…"
+                                        value={replyText}
+                                        onChange={(e) => setReplyText(e.target.value)}
+                                    />
+                                    <div style={{ display: 'flex', gap: '8px' }}>
+                                        <button onClick={() => { setReplyingId(null); setReplyText(''); }} style={{ ...btnGhost, flex: 1 }}>取消</button>
+                                        <button onClick={() => handleReply(fb.id)} style={{ ...btnPrimary, flex: 2 }}>送出回覆</button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <button onClick={() => { setReplyingId(fb.id); setReplyText(fb.admin_reply || ''); }} style={btnGhost}>
+                                    {fb.admin_reply ? '修改回覆' : '回覆'}
+                                </button>
+                            )}
+                        </div>
+                    ))}
+                    {!loading && feedback.length === 0 && (
+                        <p style={{ color: 'var(--text-muted)', fontSize: '14px', textAlign: 'center', marginTop: '40px' }}>目前沒有回饋</p>
+                    )}
+                </>
+            )}
+        </div>
+    );
+}
