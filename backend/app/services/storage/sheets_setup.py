@@ -109,6 +109,26 @@ def _ensure_sheets_sync() -> None:
         else:
             logger.info(f"SheetsSetup: '{name}' already has headers, skipping")
 
+    # 4. 若 admin_accounts 空且設定了預設 hash，自動 seed 第一筆管理員帳號
+    # Auto-seed first admin account if sheet is empty and env var is set
+    default_hash = os.getenv("ADMIN_DEFAULT_PASSWORD_HASH", "")
+    default_user = os.getenv("ADMIN_DEFAULT_USERNAME", "admin")
+    if default_hash:
+        result = service.spreadsheets().values().get(
+            spreadsheetId=sheets_id,
+            range="admin_accounts!A2:A2",
+        ).execute()
+        if not result.get("values"):
+            from datetime import datetime, timezone
+            now = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+            service.spreadsheets().values().update(
+                spreadsheetId=sheets_id,
+                range="admin_accounts!A2",
+                valueInputOption="RAW",
+                body={"values": [[default_user, default_hash, now, "TRUE"]]},
+            ).execute()
+            logger.info(f"SheetsSetup: seeded default admin account '{default_user}'")
+
 
 async def ensure_sheets_exist() -> None:
     """
