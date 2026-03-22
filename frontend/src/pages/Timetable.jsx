@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import useTimetableStore from '../stores/timetableStore';
 import { IconCalendar, IconRefresh, IconTrash, IconMapPin, IconClock, IconUser, IconDotsVertical } from '../components/Icons';
 import SyncLoginModal from '../components/SyncLoginModal';
+import { downloadICS } from '../utils/icsExport';
 
 const PERIOD_TIMES = {
     1: '08:10', 2: '09:10', 3: '10:10', 4: '11:10',
@@ -41,6 +42,62 @@ function getColorForCourse(name) {
     for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
     const palette = COURSE_COLORS[Math.abs(hash) % COURSE_COLORS.length];
     return isDarkMode() ? palette.dark : palette.light;
+}
+
+// ── 行事曆匯出 Modal ──
+function ExportICSModal({ timetable, onClose }) {
+    const today = new Date();
+    const defaultStart = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-01`;
+    const [startDate, setStartDate] = useState(defaultStart);
+    const [weeks, setWeeks] = useState(18);
+
+    const handleExport = () => {
+        downloadICS(timetable, startDate, weeks);
+        onClose();
+    };
+
+    return (
+        <div className="tt-modal-backdrop" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+            <div className="tt-modal-sheet animate-fade-in" style={{ maxWidth: '360px' }}>
+                <div className="tt-modal-handle" />
+                <div className="tt-modal-header" style={{ background: 'var(--color-primary)', padding: '16px 20px' }}>
+                    <h2 className="tt-modal-title" style={{ color: '#fff', fontSize: '17px' }}>匯出行事曆</h2>
+                    <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: '13px', marginTop: '4px' }}>匯出至 Apple Calendar / Google Calendar</p>
+                </div>
+                <div className="tt-modal-body" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    <div>
+                        <label style={{ fontSize: '13px', color: 'var(--text-muted)', display: 'block', marginBottom: '6px' }}>學期開始日期</label>
+                        <input
+                            type="date"
+                            value={startDate}
+                            onChange={e => setStartDate(e.target.value)}
+                            style={{ width: '100%', padding: '8px 12px', borderRadius: '10px', border: '1px solid var(--border-color)', background: 'var(--bg-card)', color: 'var(--text-primary)', fontSize: '15px' }}
+                        />
+                    </div>
+                    <div>
+                        <label style={{ fontSize: '13px', color: 'var(--text-muted)', display: 'block', marginBottom: '6px' }}>學期週數（預設 18 週）</label>
+                        <input
+                            type="number"
+                            value={weeks}
+                            min={1}
+                            max={30}
+                            onChange={e => setWeeks(Number(e.target.value))}
+                            style={{ width: '100%', padding: '8px 12px', borderRadius: '10px', border: '1px solid var(--border-color)', background: 'var(--bg-card)', color: 'var(--text-primary)', fontSize: '15px' }}
+                        />
+                    </div>
+                    <p style={{ fontSize: '12px', color: 'var(--text-muted)', lineHeight: '1.5' }}>
+                        匯出後，在 iPhone 點選 .ics 檔即可加入行事曆；Android / 電腦請用 Google Calendar 匯入。
+                    </p>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                        <button onClick={onClose} className="btn btn-ghost" style={{ flex: 1 }}>取消</button>
+                        <button onClick={handleExport} className="btn btn-soft" style={{ flex: 2, background: 'var(--color-primary)', color: '#fff' }}>
+                            <IconCalendar size={15} /> 下載 .ics
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
 }
 
 // ── 課程詳細 Modal ──
@@ -282,6 +339,7 @@ export default function Timetable() {
     const [selectedCourse, setSelectedCourse] = useState(null);
     const [showSyncModal, setShowSyncModal] = useState(false);
     const [showMenu, setShowMenu] = useState(false);
+    const [showExportModal, setShowExportModal] = useState(false);
     const menuRef = useRef(null);
 
     useEffect(() => {
@@ -333,6 +391,11 @@ export default function Timetable() {
                                 <IconRefresh size={14} className={isLoadingTimetable ? 'animate-spin' : ''} /> {tCommon('refresh')}
                             </button>
                             {timetable.length > 0 && (
+                                <button onClick={() => { setShowExportModal(true); setShowMenu(false); }} className="btn btn-ghost">
+                                    <IconCalendar size={14} /> 匯出行事曆
+                                </button>
+                            )}
+                            {timetable.length > 0 && (
                                 <button onClick={() => { handleClearTimetable(); setShowMenu(false); }} className="btn btn-ghost" style={{ color: 'var(--color-danger)' }}>
                                     <IconTrash size={14} /> {t('clearData')}
                                 </button>
@@ -378,6 +441,7 @@ export default function Timetable() {
 
             <CourseDetailModal course={selectedCourse} onClose={() => setSelectedCourse(null)} />
             <SyncLoginModal show={showSyncModal} onClose={() => setShowSyncModal(false)} />
+            {showExportModal && <ExportICSModal timetable={timetable} onClose={() => setShowExportModal(false)} />}
         </div>
     );
 }
