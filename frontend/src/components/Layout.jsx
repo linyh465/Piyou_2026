@@ -63,9 +63,12 @@ const mobileSchoolItems = [
     { key: 'back', icon: IconArrowLeft, label: '上一頁', isBack: true },
 ];
 
+const SYNC_STEP_LABELS = { '課表': '同步課表…', '成績': '同步成績…', '圖書館': '同步圖書館…', '任務': '同步任務…', done: '✓ 同步完成', error: '同步失敗' };
+
 export default function Layout() {
     const timetable = useTimetableStore((s) => s.timetable);
     const grades = useTimetableStore((s) => s.grades);
+    const bgSyncStep = useTimetableStore((s) => s.bgSyncStep);
     const syncStatus = (timetable.length > 0 || grades.length > 0) ? 'synced' : 'error';
 
     const [showFeedback, setShowFeedback] = useState(false);
@@ -235,6 +238,25 @@ export default function Layout() {
             <main className="sidebar-main">
                 <Outlet />
             </main>
+
+            {/* 背景同步進度條（樂觀 UI）/ Background sync progress bar */}
+            {bgSyncStep && (
+                <div style={{
+                    position: 'fixed',
+                    top: 'calc(env(safe-area-inset-top, 0px) + 0px)',
+                    left: 0, right: 0,
+                    zIndex: 400,
+                    padding: '8px 16px',
+                    background: bgSyncStep === 'done' ? 'var(--color-success)' : bgSyncStep === 'error' ? 'var(--color-danger)' : 'var(--color-brand)',
+                    color: 'white',
+                    fontSize: '13px',
+                    fontWeight: 500,
+                    textAlign: 'center',
+                    transition: 'background 0.3s',
+                }}>
+                    {SYNC_STEP_LABELS[bgSyncStep] || '同步中…'}
+                </div>
+            )}
 
             {/* 通知鈴鐺（僅首頁）/ Notification bell (home only) */}
             {location.pathname === '/' && <NotificationPanel onOpenFeedback={() => setShowFeedback(true)} />}

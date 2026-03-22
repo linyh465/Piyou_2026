@@ -15,7 +15,7 @@ export default function SyncLoginModal({ show, onClose }) {
     const { login, error, clearError } = useAuthStore();
     const {
         fetchTimetable, fetchGrades, canSync,
-        recordSyncSuccess, recordSyncError, serverCooldown,
+        recordSyncSuccess, recordSyncError, serverCooldown, setBgSyncStep,
     } = useTimetableStore();
     const { fetchLibrary } = useLibraryStore();
     const { syncTasksFromServer, syncTasksToServer } = useTaskStore();
@@ -59,19 +59,28 @@ export default function SyncLoginModal({ show, onClose }) {
 
             const success = await login(studentId.trim(), password);
             if (success) {
-                await fetchTimetable();
-                await fetchGrades();
-                await fetchLibrary();
-                await syncTasksFromServer();
-                await syncTasksToServer();
-                recordSyncSuccess();
-                setSyncSuccess(true);
-                setTimeout(() => {
-                    onClose();
-                    setPassword('');
-                    setSyncSuccess(false);
-                    setIsSyncing(false);
-                }, 1500);
+                // 登入成功 → 立即關閉 Modal，背景繼續同步（樂觀 UI）
+                onClose();
+                setPassword('');
+                setIsSyncing(false);
+
+                // 背景同步序列
+                setBgSyncStep('課表');
+                try {
+                    await fetchTimetable();
+                    setBgSyncStep('成績');
+                    await fetchGrades();
+                    setBgSyncStep('圖書館');
+                    await fetchLibrary();
+                    setBgSyncStep('任務');
+                    await syncTasksFromServer();
+                    await syncTasksToServer();
+                    recordSyncSuccess();
+                    setBgSyncStep('done');
+                } catch {
+                    setBgSyncStep('error');
+                }
+                setTimeout(() => setBgSyncStep(null), 3000);
             } else {
                 recordSyncError();
                 setIsSyncing(false);

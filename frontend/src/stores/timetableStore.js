@@ -36,6 +36,11 @@ const useTimetableStore = create((set, get) => ({
     lastSyncTime: parseInt(localStorage.getItem('piyou_last_sync') || '0', 10),
     serverCooldown: null, // { allowed, reason?, remaining_seconds? }
 
+    // 背景同步進度（樂觀 UI）/ Background sync progress (optimistic UI)
+    // null | '課表' | '成績' | '圖書館' | '任務' | 'done' | 'error'
+    bgSyncStep: null,
+    setBgSyncStep: (step) => set({ bgSyncStep: step }),
+
     /**
      * 向伺服器查詢冷卻狀態 / Query server for cooldown status
      * 回傳 { allowed, reason?, remainingMs? }

@@ -335,7 +335,7 @@ export default function Settings() {
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                                 <input
                                     type="text"
-                                    placeholder="E校園帳號（學號）"
+                                    placeholder="E校園帳號"
                                     value={studentId}
                                     onChange={(e) => setStudentId(e.target.value)}
                                     className="input"
