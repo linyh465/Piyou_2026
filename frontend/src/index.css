@@ -36,7 +36,7 @@
    淺色模式（預設）/ Light Mode (default)
    ══════════════════════════════════════════════════════ */
 :root {
-  --bg: #F2F2F7;
+  --bg: #FFFFFF;
   --bg-secondary: #E5E5EA;
   --bg-card: #FFFFFF;
   --bg-card-hover: #F9F9FB;
@@ -192,19 +192,19 @@
   --ring-brand: rgba(225, 29, 72, 0.35);
 }
 
-/* ── 紫藤 Wisteria — 幽夢花期 ── */
+/* ── 紫櫻 Wisteria — 微醺紫粉 ── */
 .theme-wisteria {
-  --color-brand: #C026D3;
+  --color-brand: #F9DCFD;
   --color-brand-light: #E879F9;
   --color-brand-dark: #A21CAF;
   --color-brand-subtle: #F9DCFD;
-  --color-brand-gradient: linear-gradient(135deg, #C026D3, #E879F9);
-  --ring-brand: rgba(192, 38, 211, 0.25);
+  --color-brand-gradient: linear-gradient(135deg, #F9DCFD, #E879F9);
+  --ring-brand: rgba(249, 220, 253, 0.25);
 }
 .dark.theme-wisteria,
 .dark .theme-wisteria {
-  --color-brand-subtle: rgba(192, 38, 211, 0.12);
-  --ring-brand: rgba(192, 38, 211, 0.35);
+  --color-brand-subtle: rgba(249, 220, 253, 0.12);
+  --ring-brand: rgba(249, 220, 253, 0.35);
 }
 
 /* ══════════════════════════════════════════════════════
