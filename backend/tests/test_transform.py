@@ -4,7 +4,7 @@
 Tests various scenarios for transform_timetable and transform_grades.
 """
 import pytest
-from app.routers.data import transform_timetable, transform_grades
+from app.routers.data import transform_timetable, transform_grades, _translate_room
 
 
 # ══════════════════════════════════════════
@@ -390,3 +390,44 @@ class TestTransformGrades:
         result = transform_grades(raw)
         assert len(result.semesters) == 1
         assert result.semesters[0].name == "112-2"
+
+
+# ══════════════════════════════════════════
+#  _translate_room 教室代碼轉換測試
+# ══════════════════════════════════════════
+
+class TestTranslateRoom:
+    """教室代碼中文轉換測試 / Building code translation tests"""
+
+    def test_ph_room(self):
+        assert _translate_room("PH222") == "主顧樓 222"
+
+    def test_ak_room(self):
+        assert _translate_room("AK101") == "任垣樓 101"
+
+    def test_ak3c_priority_over_ak(self):
+        """AK-3C 應優先於 AK 匹配 / AK-3C must match before AK"""
+        assert _translate_room("AK-3C101") == "計算機中心 101"
+
+    def test_sf_room(self):
+        assert _translate_room("SF305") == "方濟樓 305"
+
+    def test_1r_room(self):
+        assert _translate_room("1R201") == "第一研究大樓 201"
+
+    def test_2r_room(self):
+        assert _translate_room("2R301") == "第二研究大樓 301"
+
+    def test_st_no_number(self):
+        assert _translate_room("ST") == "體育館"
+
+    def test_unknown_code_passthrough(self):
+        """無法辨識的代碼原樣回傳 / Unknown codes pass through"""
+        assert _translate_room("ZZ999") == "ZZ999"
+
+    def test_empty_string(self):
+        assert _translate_room("") == ""
+
+    def test_already_chinese(self):
+        """已是中文（舊資料）原樣回傳 / Already Chinese passes through"""
+        assert _translate_room("理 101") == "理 101"

@@ -136,6 +136,42 @@ PERIOD_TIME = {
     13: "20:50-21:40",
 }
 
+# 大樓代碼 → 中文名稱（依長度降序排列，避免 AK-3C 被 AK 提前命中）
+# Building code → Chinese name (sorted by length desc to avoid prefix collision)
+BUILDING_CODE_MAP: dict[str, str] = {
+    "AK-3C": "計算機中心",
+    "AK": "任垣樓",
+    "SP": "伯鐸樓",
+    "JA": "靜安樓",
+    "TG": "格倫樓",
+    "PH": "主顧樓",
+    "SF": "方濟樓",
+    "SY": "思源樓",
+    "2R": "第二研究大樓",
+    "1R": "第一研究大樓",
+    "ST": "體育館",
+    "SD": "田徑場",
+}
+# 依代碼長度降序排列，確保較長代碼優先匹配 / Sort by code length desc for greedy prefix match
+_BUILDING_CODES_SORTED = sorted(BUILDING_CODE_MAP.keys(), key=len, reverse=True)
+
+
+def _translate_room(room: str) -> str:
+    """
+    將教室代碼轉換為中文顯示名稱。
+    例：'PH222' → '主顧樓 222'，'AK-3C101' → '計算機中心 101'
+    Translate room code to Chinese display name.
+    e.g. 'PH222' → '主顧樓 222', 'AK-3C101' → '計算機中心 101'
+    """
+    if not room:
+        return room
+    for code in _BUILDING_CODES_SORTED:
+        if room.upper().startswith(code.upper()):
+            room_number = room[len(code):].strip()
+            zh_name = BUILDING_CODE_MAP[code]
+            return f"{zh_name} {room_number}".strip() if room_number else zh_name
+    return room  # 無法辨識則原樣回傳 / Return as-is if unrecognized
+
 
 def transform_timetable(scraper_data: dict) -> TimetableResponse:
     """爬蟲課表 → API 格式 / Scraper timetable → API format"""
@@ -158,7 +194,7 @@ def transform_timetable(scraper_data: dict) -> TimetableResponse:
                 day=day_int,
                 period=period,
                 startMinute=PERIOD_START.get(period, 0),
-                location=raw.get("room", ""),
+                location=_translate_room(raw.get("room", "")),
                 teacher=teacher_name or None,
                 teacher_email=teacher_email or None,
                 time=PERIOD_TIME.get(period, ""),
