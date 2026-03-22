@@ -108,7 +108,7 @@ function ClassroomView({ timetable }) {
                 <div>
                     <label style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>星期</label>
                     <select value={selectedDay} onChange={e => setSelectedDay(Number(e.target.value))}
-                        style={{ padding: '6px 10px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--bg-card)', color: 'var(--text-primary)', fontSize: '14px' }}>
+                        style={{ padding: '6px 10px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg-card)', color: 'var(--text-primary)', fontSize: '14px' }}>
                         {[1, 2, 3, 4, 5].map(d => (
                             <option key={d} value={d}>週{DAY_LABELS[d]}{d === todayDay ? '（今天）' : ''}</option>
                         ))}
@@ -117,7 +117,7 @@ function ClassroomView({ timetable }) {
                 <div>
                     <label style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>節次</label>
                     <select value={selectedPeriod} onChange={e => setSelectedPeriod(Number(e.target.value))}
-                        style={{ padding: '6px 10px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--bg-card)', color: 'var(--text-primary)', fontSize: '14px' }}>
+                        style={{ padding: '6px 10px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg-card)', color: 'var(--text-primary)', fontSize: '14px' }}>
                         {Object.entries(PERIOD_TIMES).map(([p, t]) => (
                             <option key={p} value={Number(p)}>第{p}節 {t}</option>
                         ))}
@@ -198,7 +198,7 @@ function ExportICSModal({ timetable, onClose }) {
         <div className="tt-modal-backdrop" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
             <div className="tt-modal-sheet animate-fade-in" style={{ maxWidth: '360px' }}>
                 <div className="tt-modal-handle" />
-                <div className="tt-modal-header" style={{ background: 'var(--color-primary)', padding: '16px 20px' }}>
+                <div className="tt-modal-header" style={{ background: 'var(--color-brand)', padding: '16px 20px' }}>
                     <h2 className="tt-modal-title" style={{ color: '#fff', fontSize: '17px' }}>匯出行事曆</h2>
                     <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: '13px', marginTop: '4px' }}>匯出至 Apple Calendar / Google Calendar</p>
                 </div>
@@ -209,18 +209,18 @@ function ExportICSModal({ timetable, onClose }) {
                             type="date"
                             value={startDate}
                             onChange={e => setStartDate(e.target.value)}
-                            style={{ width: '100%', padding: '8px 12px', borderRadius: '10px', border: '1px solid var(--border-color)', background: 'var(--bg-card)', color: 'var(--text-primary)', fontSize: '15px' }}
+                            style={{ width: '100%', padding: '8px 12px', borderRadius: '10px', border: '1px solid var(--border)', background: 'var(--bg-card)', color: 'var(--text-primary)', fontSize: '15px' }}
                         />
                     </div>
                     <div>
-                        <label style={{ fontSize: '13px', color: 'var(--text-muted)', display: 'block', marginBottom: '6px' }}>學期週數（預設 18 週）</label>
+                        <label style={{ fontSize: '13px', color: 'var(--text-muted)', display: 'block', marginBottom: '6px' }}>學期週數（16+2 彈性學習週，共 18 週）</label>
                         <input
                             type="number"
                             value={weeks}
                             min={1}
                             max={30}
                             onChange={e => setWeeks(Number(e.target.value))}
-                            style={{ width: '100%', padding: '8px 12px', borderRadius: '10px', border: '1px solid var(--border-color)', background: 'var(--bg-card)', color: 'var(--text-primary)', fontSize: '15px' }}
+                            style={{ width: '100%', padding: '8px 12px', borderRadius: '10px', border: '1px solid var(--border)', background: 'var(--bg-card)', color: 'var(--text-primary)', fontSize: '15px' }}
                         />
                     </div>
                     <p style={{ fontSize: '12px', color: 'var(--text-muted)', lineHeight: '1.5' }}>
@@ -228,7 +228,7 @@ function ExportICSModal({ timetable, onClose }) {
                     </p>
                     <div style={{ display: 'flex', gap: '8px' }}>
                         <button onClick={onClose} className="btn btn-ghost" style={{ flex: 1 }}>取消</button>
-                        <button onClick={handleExport} className="btn btn-soft" style={{ flex: 2, background: 'var(--color-primary)', color: '#fff' }}>
+                        <button onClick={handleExport} className="btn btn-soft" style={{ flex: 2, background: 'var(--color-brand)', color: '#fff' }}>
                             <IconCalendar size={15} /> 下載 .ics
                         </button>
                     </div>
@@ -528,11 +528,13 @@ export default function Timetable() {
                             <button onClick={() => { fetchTimetable(); setShowMenu(false); }} disabled={isLoadingTimetable} className="btn btn-ghost">
                                 <IconRefresh size={14} className={isLoadingTimetable ? 'animate-spin' : ''} /> {tCommon('refresh')}
                             </button>
+                            {/* 行事曆匯出暫時停用，待開放時移除此註解
                             {timetable.length > 0 && (
                                 <button onClick={() => { setShowExportModal(true); setShowMenu(false); }} className="btn btn-ghost">
                                     <IconCalendar size={14} /> 匯出行事曆
                                 </button>
                             )}
+                            */}
                             {timetable.length > 0 && (
                                 <button onClick={() => { handleClearTimetable(); setShowMenu(false); }} className="btn btn-ghost" style={{ color: 'var(--color-danger)' }}>
                                     <IconTrash size={14} /> {t('clearData')}
