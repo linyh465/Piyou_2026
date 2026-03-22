@@ -16,7 +16,7 @@ services:
       # 開發時掛載原始碼，支援 hot-reload
       - ./backend:/app
     environment:
-      - CORS_ORIGINS=http://localhost:5173,http://localhost:3000,http://localhost
+      - CORS_ORIGINS=http://localhost:5173,http://localhost:3000,http://localhost,https://piyou.me,https://www.piyou.me
     command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
 
   frontend:
