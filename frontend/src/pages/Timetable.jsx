@@ -7,6 +7,7 @@ import useTimetableStore from '../stores/timetableStore';
 import { IconCalendar, IconRefresh, IconTrash, IconMapPin, IconClock, IconUser, IconDotsVertical } from '../components/Icons';
 import SyncLoginModal from '../components/SyncLoginModal';
 import { downloadICS } from '../utils/icsExport';
+import { parseRoom, BUILDINGS } from '../data/buildings';
 
 const PERIOD_TIMES = {
     1: '08:10', 2: '09:10', 3: '10:10', 4: '11:10',
@@ -42,6 +43,143 @@ function getColorForCourse(name) {
     for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
     const palette = COURSE_COLORS[Math.abs(hash) % COURSE_COLORS.length];
     return isDarkMode() ? palette.dark : palette.light;
+}
+
+const DAY_LABELS = ['日', '一', '二', '三', '四', '五', '六'];
+
+// ── 教室查詢 View ──
+function ClassroomView({ timetable }) {
+    const now = new Date();
+    const todayDay = now.getDay(); // 0=Sun
+    const currentHour = now.getHours();
+    const currentMinute = now.getMinutes();
+    const currentMinutes = currentHour * 60 + currentMinute;
+
+    // 推算當前節次
+    const periodEntries = Object.entries(PERIOD_TIMES);
+    const periodEndEntries = Object.entries(PERIOD_END_TIMES);
+    function getCurrentPeriod() {
+        for (let i = 0; i < periodEntries.length; i++) {
+            const [p, start] = periodEntries[i];
+            const [, end] = periodEndEntries[i];
+            const [sh, sm] = start.split(':').map(Number);
+            const [eh, em] = end.split(':').map(Number);
+            if (currentMinutes >= sh * 60 + sm && currentMinutes <= eh * 60 + em) return Number(p);
+        }
+        return 1;
+    }
+
+    const [selectedDay, setSelectedDay] = useState(todayDay === 0 || todayDay === 6 ? 1 : todayDay);
+    const [selectedPeriod, setSelectedPeriod] = useState(getCurrentPeriod());
+
+    // 找出此時段有課的教室（從個人課表）
+    const occupied = timetable
+        .filter(c => c.day === selectedDay && c.period === selectedPeriod && c.location)
+        .map(c => ({ ...c, parsed: parseRoom(c.location) }));
+
+    // 找出有教室資訊的所有唯一教室（整個課表）
+    const allRooms = [...new Map(
+        timetable.filter(c => c.location).map(c => [c.location, parseRoom(c.location)])
+    ).entries()].map(([loc, parsed]) => ({ loc, parsed }));
+
+    // 按大樓分組「空著的」（在課表中出現但此時段沒課）
+    const occupiedLocs = new Set(occupied.map(c => c.location));
+    const possiblyEmpty = allRooms.filter(r => !occupiedLocs.has(r.loc));
+
+    // 按大樓 groupBy
+    function groupByBuilding(items) {
+        const groups = {};
+        for (const item of items) {
+            const code = item.parsed?.code || '其他';
+            const label = BUILDINGS[code] ? `${code} ${BUILDINGS[code].zh}` : code;
+            if (!groups[label]) groups[label] = [];
+            groups[label].push(item);
+        }
+        return groups;
+    }
+
+    const occupiedGroups = groupByBuilding(occupied.map(c => ({ loc: c.location, parsed: c.parsed, name: c.name })));
+    const emptyGroups = groupByBuilding(possiblyEmpty);
+
+    return (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            {/* 選擇器 */}
+            <div className="card" style={{ padding: '14px 16px', display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+                <div>
+                    <label style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>星期</label>
+                    <select value={selectedDay} onChange={e => setSelectedDay(Number(e.target.value))}
+                        style={{ padding: '6px 10px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--bg-card)', color: 'var(--text-primary)', fontSize: '14px' }}>
+                        {[1, 2, 3, 4, 5].map(d => (
+                            <option key={d} value={d}>週{DAY_LABELS[d]}{d === todayDay ? '（今天）' : ''}</option>
+                        ))}
+                    </select>
+                </div>
+                <div>
+                    <label style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>節次</label>
+                    <select value={selectedPeriod} onChange={e => setSelectedPeriod(Number(e.target.value))}
+                        style={{ padding: '6px 10px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--bg-card)', color: 'var(--text-primary)', fontSize: '14px' }}>
+                        {Object.entries(PERIOD_TIMES).map(([p, t]) => (
+                            <option key={p} value={Number(p)}>第{p}節 {t}</option>
+                        ))}
+                    </select>
+                </div>
+            </div>
+
+            {/* 有課教室 */}
+            {occupied.length > 0 && (
+                <div className="card" style={{ padding: '14px 16px' }}>
+                    <p style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-danger)', marginBottom: '10px' }}>此時段有課的教室</p>
+                    {Object.entries(occupiedGroups).map(([building, items]) => (
+                        <div key={building} style={{ marginBottom: '8px' }}>
+                            <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px' }}>{building}</p>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                                {items.map((item, i) => (
+                                    <span key={i} style={{ background: 'rgba(239,68,68,0.1)', color: 'var(--color-danger)', padding: '4px 10px', borderRadius: '8px', fontSize: '13px', fontWeight: 500 }}>
+                                        {item.loc} {item.name ? `（${item.name}）` : ''}
+                                    </span>
+                                ))}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
+
+            {/* 此時段課表中沒課的教室 */}
+            {possiblyEmpty.length > 0 && (
+                <div className="card" style={{ padding: '14px 16px' }}>
+                    <p style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-success)', marginBottom: '10px' }}>此時段課表中無課（可能空著）</p>
+                    {Object.entries(emptyGroups).map(([building, items]) => (
+                        <div key={building} style={{ marginBottom: '8px' }}>
+                            <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px' }}>{building}</p>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                                {items.map((item, i) => (
+                                    <span key={i} style={{ background: 'rgba(34,197,94,0.1)', color: 'var(--color-success)', padding: '4px 10px', borderRadius: '8px', fontSize: '13px', fontWeight: 500 }}>
+                                        {item.loc}
+                                    </span>
+                                ))}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
+
+            {timetable.length === 0 && (
+                <div className="card" style={{ textAlign: 'center', padding: '32px', color: 'var(--text-muted)' }}>
+                    <p>請先同步課表資料</p>
+                </div>
+            )}
+
+            {timetable.length > 0 && occupied.length === 0 && possiblyEmpty.length === 0 && (
+                <div className="card" style={{ textAlign: 'center', padding: '24px', color: 'var(--text-muted)' }}>
+                    <p style={{ fontSize: '14px' }}>此時段課表中無教室資訊</p>
+                </div>
+            )}
+
+            <p style={{ fontSize: '11px', color: 'var(--text-muted)', textAlign: 'center', lineHeight: '1.5' }}>
+                ⚠️ 僅供參考，資料來源為你的個人課表。其他課程的教室使用情況未列入。
+            </p>
+        </div>
+    );
 }
 
 // ── 行事曆匯出 Modal ──
@@ -412,6 +550,9 @@ export default function Timetable() {
                 <button className={`tt-view-btn ${view === 'today' ? 'active' : ''}`} onClick={() => setView('today')}>
                     {t('todayView')}
                 </button>
+                <button className={`tt-view-btn ${view === 'classroom' ? 'active' : ''}`} onClick={() => setView('classroom')}>
+                    教室查詢
+                </button>
             </div>
 
             {isTimeout && (
@@ -427,11 +568,9 @@ export default function Timetable() {
                 </div>
             )}
 
-            {view === 'week' ? (
-                <WeekView timetable={timetable} isLoading={isLoadingTimetable} onCourseClick={setSelectedCourse} />
-            ) : (
-                <TodayView timetable={timetable} isLoading={isLoadingTimetable} onCourseClick={setSelectedCourse} />
-            )}
+            {view === 'week' && <WeekView timetable={timetable} isLoading={isLoadingTimetable} onCourseClick={setSelectedCourse} />}
+            {view === 'today' && <TodayView timetable={timetable} isLoading={isLoadingTimetable} onCourseClick={setSelectedCourse} />}
+            {view === 'classroom' && <ClassroomView timetable={timetable} />}
 
             {!isLoadingTimetable && timetable.length > 0 && (
                 <p style={{ fontSize: '13px', color: 'var(--text-muted)', textAlign: 'center', paddingTop: '4px' }}>
