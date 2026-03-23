@@ -2,6 +2,7 @@
  * 成績頁面 / Grades Page — iOS 風格
  */
 import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import useTimetableStore from '../stores/timetableStore';
 import { IconChartBar, IconRefresh, IconBook, IconTrash, IconUser, IconDotsVertical, IconXCircle } from '../components/Icons';
@@ -11,6 +12,7 @@ import { scoreToGPA } from '../utils/scoreToGPA';
 /** 科目詳細 Modal / Course detail bottom sheet */
 function CourseDetailModal({ course, onClose }) {
     if (!course) return null;
+    // Portal to document.body to escape will-change:transform stacking context
     const gpa = isNumericCourse(course) ? scoreToGPA(course.score) : null;
     const rows = [
         course.score != null && { label: '分數', value: displayScore(course), highlight: true },
@@ -19,7 +21,7 @@ function CourseDetailModal({ course, onClose }) {
         course.credits != null && { label: '學分', value: `${course.credits} 學分` },
         course.course_type && { label: '修別', value: course.course_type },
     ].filter(Boolean);
-    return (
+    return createPortal(
         <>
             <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 900, backdropFilter: 'blur(2px)' }} />
             <div style={{
@@ -51,7 +53,8 @@ function CourseDetailModal({ course, onClose }) {
                     ))}
                 </div>
             </div>
-        </>
+        </>,
+        document.body
     );
 }
 

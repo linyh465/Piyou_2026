@@ -7,6 +7,7 @@
  * RWD: mobile stacked cards, desktop wide cards.
  */
 import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import useLibraryStore from '../stores/libraryStore';
 import { IconBook, IconRefresh, IconTrash, IconClock, IconCheckCircle, IconStar, IconUser, IconDotsVertical, IconXCircle } from '../components/Icons';
@@ -27,7 +28,7 @@ function BookDetailModal({ book, onClose }) {
         book.queue_position && { label: '預約排序', value: `第 ${book.queue_position} 位` },
         book.is_overdue && { label: '狀態', value: '逾期', warn: true },
     ].filter(Boolean);
-    return (
+    return createPortal(
         <>
             <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 900, backdropFilter: 'blur(2px)' }} />
             <div style={{
@@ -52,7 +53,8 @@ function BookDetailModal({ book, onClose }) {
                     ))}
                 </div>
             </div>
-        </>
+        </>,
+        document.body
     );
 }
 

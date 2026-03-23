@@ -3,12 +3,24 @@
  * 以自訂分享碼分享文字與連結；訂閱他人分享碼即可在此頁看到內容。
  * Share text & links via custom codes; subscribe by entering a code.
  */
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
     IconLink2, IconPlus, IconTrash, IconRefresh, IconXCircle,
     IconCheck, IconMinus, IconEdit, IconLock, IconEye, IconEyeOff,
 } from '../components/Icons';
 import { trackEvent } from '../services/analytics';
+
+// ── 響應式斷點 / Responsive breakpoint hook ──
+
+function useIsDesktop(breakpoint = 768) {
+    const [isDesktop, setIsDesktop] = useState(() => window.innerWidth >= breakpoint);
+    useEffect(() => {
+        const handler = () => setIsDesktop(window.innerWidth >= breakpoint);
+        window.addEventListener('resize', handler);
+        return () => window.removeEventListener('resize', handler);
+    }, [breakpoint]);
+    return isDesktop;
+}
 
 function getDeviceId() {
     let id = localStorage.getItem('piyou_device_id');
@@ -630,6 +642,9 @@ export default function Share() {
     const deviceId = getDeviceId();
     const [shares, setShares] = useState(loadShares);
     const [refreshing, setRefreshing] = useState(false);
+    const isDesktop = useIsDesktop();
+    // Track scroll container ref so sticky sidebar works correctly
+    const containerRef = useRef(null);
 
     const refreshAll = useCallback(async () => {
         const list = loadShares();
@@ -666,31 +681,20 @@ export default function Share() {
     const handleRemove = (code) => setShares((prev) => prev.filter((s) => s.code !== code));
     const handleUpdated = (entry) => {
         if (entry._oldCode && entry._oldCode !== entry.code) {
-            // code was renamed
             setShares(loadShares());
         } else {
             setShares((prev) => prev.map((s) => s.code === entry.code ? { ...s, ...entry } : s));
         }
     };
 
-    return (
-        <div className="section-stack animate-fade-in" style={{ maxWidth: '600px' }}>
-
-            {/* 頁首 */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <IconLink2 size={22} style={{ color: 'var(--color-brand)' }} />
-                <h1 style={{ fontSize: '20px', fontWeight: 700, margin: 0 }}>共享平台</h1>
-                <button onClick={refreshAll} disabled={refreshing}
-                    style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: refreshing ? 'not-allowed' : 'pointer', color: 'var(--text-muted)', padding: '4px' }}
-                    title="重新整理">
-                    <IconRefresh size={18} style={{ opacity: refreshing ? 0.4 : 1 }} />
-                </button>
-            </div>
-
+    // ── 左側欄（訂閱 + 建立）/ Left panel (subscribe + create) ──
+    const leftPanel = (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             {/* 資安免責聲明 */}
             <div style={{
                 background: 'rgba(234,179,8,0.08)', borderRadius: '12px', padding: '12px 16px',
-                border: '1px solid rgba(234,179,8,0.25)', fontSize: '12px', color: 'var(--text-secondary)', lineHeight: '1.7',
+                border: '1px solid rgba(234,179,8,0.25)', fontSize: '12px',
+                color: 'var(--text-secondary)', lineHeight: '1.7',
             }}>
                 <strong style={{ color: 'var(--color-warning)', display: 'block', marginBottom: '4px' }}>資安提醒</strong>
                 點擊他人分享的連結前請先確認來源可信，勿輕易輸入個人資料或帳號密碼。本平台不對第三方連結的安全性負責，分享內容由使用者自行負責。若發現違規內容，請向管理員檢舉。
@@ -699,36 +703,101 @@ export default function Share() {
             {/* 訂閱分享碼 */}
             <div style={{
                 background: 'var(--bg-card)', borderRadius: '14px', padding: '16px 18px',
-                border: '1px solid var(--border-subtle)', marginBottom: '16px',
+                border: '1px solid var(--border-subtle)',
             }}>
-                <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '10px' }}>
+                <p style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text)', margin: '0 0 8px' }}>訂閱分享碼</p>
+                <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '10px' }}>
                     輸入分享碼，即可訂閱並查看對方分享的內容
                 </div>
                 <SubscribeForm onSubscribed={handleSubscribed} />
             </div>
 
             {/* 建立分享 */}
-            <div style={{ marginBottom: '20px' }}>
-                <CreateForm deviceId={deviceId} onCreated={handleCreated} />
+            <CreateForm deviceId={deviceId} onCreated={handleCreated} />
+        </div>
+    );
+
+    // ── 右側欄（分享列表）/ Right panel (share cards) ──
+    const rightPanel = (
+        shares.length === 0 ? (
+            <div style={{
+                textAlign: 'center', color: 'var(--text-muted)', fontSize: '14px',
+                padding: isDesktop ? '60px 0' : '40px 0',
+            }}>
+                尚無訂閱的分享<br />
+                <span style={{ fontSize: '12px' }}>輸入分享碼或建立自己的分享開始吧</span>
+            </div>
+        ) : (
+            <div style={{
+                display: 'grid',
+                gridTemplateColumns: isDesktop ? 'repeat(auto-fill, minmax(300px, 1fr))' : '1fr',
+                gap: '12px',
+                alignItems: 'start',
+            }}>
+                {shares.map((entry) => (
+                    <ShareCard
+                        key={entry.code}
+                        entry={entry}
+                        deviceId={deviceId}
+                        onRemove={handleRemove}
+                        onUpdated={handleUpdated}
+                    />
+                ))}
+            </div>
+        )
+    );
+
+    return (
+        <div ref={containerRef} className="animate-fade-in" style={{ width: '100%', boxSizing: 'border-box' }}>
+            {/* 頁首 / Header */}
+            <div style={{
+                display: 'flex', alignItems: 'center', gap: '10px',
+                marginBottom: '20px',
+            }}>
+                <IconLink2 size={22} style={{ color: 'var(--color-brand)' }} />
+                <h1 style={{ fontSize: '20px', fontWeight: 700, margin: 0 }}>共享平台</h1>
+                {isDesktop && (
+                    <span style={{ fontSize: '13px', color: 'var(--text-muted)', marginLeft: '4px' }}>Share Platform</span>
+                )}
+                <button onClick={refreshAll} disabled={refreshing}
+                    style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: refreshing ? 'not-allowed' : 'pointer', color: 'var(--text-muted)', padding: '4px' }}
+                    title="重新整理">
+                    <IconRefresh size={18} style={{ opacity: refreshing ? 0.4 : 1 }} />
+                </button>
             </div>
 
-            {/* 分享列表 */}
-            {shares.length === 0 ? (
-                <div style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: '14px', padding: '40px 0' }}>
-                    尚無訂閱的分享<br />
-                    <span style={{ fontSize: '12px' }}>輸入分享碼或建立自己的分享開始吧</span>
+            {isDesktop ? (
+                /* ── 桌機版：左右兩欄 / Desktop: two-column layout ── */
+                <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: '320px 1fr',
+                    gap: '24px',
+                    alignItems: 'start',
+                }}>
+                    {/* 左欄：sticky 側邊欄 */}
+                    <div style={{ position: 'sticky', top: '16px' }}>
+                        {leftPanel}
+                    </div>
+                    {/* 右欄：分享卡片 */}
+                    <div>
+                        {shares.length > 0 && (
+                            <p style={{ fontSize: '13px', color: 'var(--text-muted)', margin: '0 0 12px' }}>
+                                共 {shares.length} 則分享
+                            </p>
+                        )}
+                        {rightPanel}
+                    </div>
                 </div>
             ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    {shares.map((entry) => (
-                        <ShareCard
-                            key={entry.code}
-                            entry={entry}
-                            deviceId={deviceId}
-                            onRemove={handleRemove}
-                            onUpdated={handleUpdated}
-                        />
-                    ))}
+                /* ── 手機版：單欄 / Mobile: single-column layout ── */
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    {leftPanel}
+                    {shares.length > 0 && (
+                        <p style={{ fontSize: '13px', color: 'var(--text-muted)', margin: '4px 0 0' }}>
+                            共 {shares.length} 則分享
+                        </p>
+                    )}
+                    {rightPanel}
                 </div>
             )}
         </div>
