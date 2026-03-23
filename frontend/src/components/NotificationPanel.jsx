@@ -21,7 +21,6 @@ export default function NotificationPanel({ onOpenFeedback }) {
         announcements,
         unreadIds,
         getUnreadCount,
-        markRead,
         markAllRead,
         fetchAnnouncements,
         openAnnouncement,

@@ -28,7 +28,7 @@ const TYPE_CONFIG = {
 };
 
 export default function AnnouncementModal() {
-    const { announcements, unreadIds, markRead, markAllRead, fetchAnnouncements, openedAnnId, closeOpenedAnn } = useNotifyStore();
+    const { announcements, unreadIds, markRead, fetchAnnouncements, openedAnnId, closeOpenedAnn } = useNotifyStore();
     const [autoVisible, setAutoVisible] = useState(false);
     const [index, setIndex] = useState(0);
 
