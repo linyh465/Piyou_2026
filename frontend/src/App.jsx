@@ -19,6 +19,7 @@ const Tasks = lazy(() => import('./pages/Tasks'));
 const Transport = lazy(() => import('./pages/Transport'));
 const Library = lazy(() => import('./pages/Library'));
 const Settings = lazy(() => import('./pages/Settings'));
+const Share = lazy(() => import('./pages/Share'));
 const Admin = lazy(() => import('./pages/Admin'));
 
 // ── 載入中佔位 / Loading fallback ──
@@ -53,6 +54,7 @@ export default function App() {
               <Route path="transport" element={<Transport />} />
               <Route path="library" element={<Library />} />
               <Route path="settings" element={<Settings />} />
+              <Route path="share" element={<Share />} />
             </Route>
 
             {/* 管理員頁面（獨立，不套 Layout）/ Admin page (standalone, no Layout) */}

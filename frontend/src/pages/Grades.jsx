@@ -12,122 +12,6 @@ function isNumericCourse(course) {
     return course.score != null && course.score_text == null;
 }
 
-// ── GPA 模擬器 / GPA Simulator ──
-function GpaSimulator({ courses }) {
-    const numericCourses = (courses || []).filter(isNumericCourse);
-    const [simScores, setSimScores] = useState(() =>
-        Object.fromEntries(numericCourses.map((c, i) => [i, String(c.score ?? '')]))
-    );
-    const [open, setOpen] = useState(false);
-
-    if (!numericCourses.length) return null;
-
-    const simStats = (() => {
-        let totalGPA = 0, credits = 0;
-        numericCourses.forEach((c, i) => {
-            const cr = c.credits || 0;
-            const sc = parseFloat(simScores[i]);
-            if (!isNaN(sc) && cr > 0) {
-                totalGPA += scoreToGPA(Math.min(Math.max(sc, 0), 100)) * cr;
-                credits += cr;
-            }
-        });
-        if (!credits) return null;
-        let gpa = (totalGPA / credits).toFixed(2);
-        if (parseFloat(gpa) > 4.3) gpa = '4.30';
-        return { gpa, credits };
-    })();
-
-    const originalStats = (() => {
-        let totalGPA = 0, credits = 0;
-        numericCourses.forEach(c => {
-            const cr = c.credits || 0;
-            if (cr > 0) { totalGPA += scoreToGPA(c.score || 0) * cr; credits += cr; }
-        });
-        if (!credits) return null;
-        let gpa = (totalGPA / credits).toFixed(2);
-        if (parseFloat(gpa) > 4.3) gpa = '4.30';
-        return { gpa };
-    })();
-
-    const delta = simStats && originalStats
-        ? (parseFloat(simStats.gpa) - parseFloat(originalStats.gpa)).toFixed(2)
-        : null;
-    const deltaColor = delta === null ? 'var(--text-muted)' : parseFloat(delta) > 0 ? 'var(--color-success)' : parseFloat(delta) < 0 ? 'var(--color-danger)' : 'var(--text-muted)';
-
-    return (
-        <div className="card" style={{ overflow: 'hidden' }}>
-            <button
-                onClick={() => setOpen(v => !v)}
-                style={{
-                    width: '100%', padding: '16px 20px', background: 'none', border: 'none',
-                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                    cursor: 'pointer', color: 'var(--text)',
-                }}
-            >
-                <span style={{ fontSize: '15px', fontWeight: 600 }}>🎯 GPA 模擬器</span>
-                <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>{open ? '收起' : '展開'}</span>
-            </button>
-            {open && (
-                <div style={{ padding: '0 20px 20px', borderTop: '1px solid var(--border-light)' }}>
-                    <p style={{ fontSize: '13px', color: 'var(--text-muted)', margin: '12px 0 16px' }}>
-                        輸入假設分數，即時預覽 GPA 變化
-                    </p>
-                    {/* 模擬結果列 */}
-                    <div style={{
-                        display: 'flex', gap: '20px', justifyContent: 'center',
-                        padding: '14px', background: 'var(--bg-secondary)', borderRadius: '12px',
-                        marginBottom: '16px',
-                    }}>
-                        <div style={{ textAlign: 'center' }}>
-                            <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px' }}>目前 GPA</p>
-                            <p style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text)' }}>{originalStats?.gpa ?? '--'}</p>
-                        </div>
-                        <div style={{ textAlign: 'center' }}>
-                            <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px' }}>模擬 GPA</p>
-                            <p style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--color-brand)' }}>{simStats?.gpa ?? '--'}</p>
-                        </div>
-                        {delta !== null && (
-                            <div style={{ textAlign: 'center' }}>
-                                <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px' }}>變化</p>
-                                <p style={{ fontSize: '1.5rem', fontWeight: 700, color: deltaColor }}>
-                                    {parseFloat(delta) > 0 ? '+' : ''}{delta}
-                                </p>
-                            </div>
-                        )}
-                    </div>
-                    {/* 課程分數輸入 */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                        {numericCourses.map((c, i) => (
-                            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                <p style={{
-                                    flex: 1, fontSize: '14px', color: 'var(--text)',
-                                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                                }}>
-                                    {c.name}
-                                    <span style={{ fontSize: '12px', color: 'var(--text-muted)', marginLeft: '4px' }}>
-                                        ({c.credits} 學分)
-                                    </span>
-                                </p>
-                                <input
-                                    type="number" min="0" max="100"
-                                    value={simScores[i]}
-                                    onChange={e => setSimScores(prev => ({ ...prev, [i]: e.target.value }))}
-                                    style={{
-                                        width: '70px', padding: '6px 10px', borderRadius: '8px',
-                                        border: '1px solid var(--border)', background: 'var(--bg-card)',
-                                        color: 'var(--text)', fontSize: '14px', textAlign: 'center',
-                                    }}
-                                />
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            )}
-        </div>
-    );
-}
-
 function calculateStats(courses) {
     const numeric = (courses || []).filter(isNumericCourse);
     if (!numeric.length) return { gpa: null, weightedAvg: null, numericCredits: 0 };
@@ -425,7 +309,6 @@ export default function Grades() {
                         ))}
                     </div>
 
-                    <GpaSimulator courses={currentSem.courses} />
                 </>
             ) : (
                 <div className="card" style={{ textAlign: 'center', padding: '40px 20px' }}>
@@ -441,8 +324,7 @@ export default function Grades() {
                 padding: '14px 18px', marginTop: '4px',
             }}>
                 <p style={{ fontSize: '13px', color: 'var(--text-muted)', textAlign: 'center', lineHeight: '1.6' }}>
-                    ⚠️ 此頁面資料僅供查詢參考，<strong>無法作為正式成績證明</strong>。
-                    如需成績單，請至教務系統申請。
+                    此成績頁面僅供參考，請以<strong>綜合業務組</strong>為準。
                 </p>
             </div>
 

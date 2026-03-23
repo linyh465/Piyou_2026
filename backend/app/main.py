@@ -85,12 +85,13 @@ app.add_middleware(HTTPSRedirectMiddleware)
 # ── 註冊路由 / Register Routes ──
 # 所有業務路由統一掛載在 /api/v1 前綴下
 # All business routes mounted under /api/v1 prefix
-from app.routers import auth, data, error_report, notify
+from app.routers import auth, data, error_report, notify, share
 
 app.include_router(auth.router, prefix="/api/v1")
 app.include_router(data.router, prefix="/api/v1")
 app.include_router(error_report.router, prefix="/api/v1")
 app.include_router(notify.router, prefix="/api/v1")
+app.include_router(share.router, prefix="/api/v1")
 
 
 # ── 健康檢查 / Health Check ──

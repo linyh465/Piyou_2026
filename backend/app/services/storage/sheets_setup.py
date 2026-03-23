@@ -34,6 +34,9 @@ REQUIRED_SHEETS: dict[str, list[str]] = {
     "push_subscriptions": [
         "device_id", "endpoint", "p256dh", "auth", "subscribed_at",
     ],
+    "shared_items": [
+        "code", "title", "body", "link_url", "device_id_hash", "created_at", "is_deleted",
+    ],
 }
 
 

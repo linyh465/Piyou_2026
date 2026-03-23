@@ -6,7 +6,7 @@
  * 排版間距與字體大小統一與首頁 Dashboard 一致
  * Layout spacing and font sizes unified with Dashboard.
  */
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import useThemeStore from '../stores/themeStore';
 import { COLOR_THEMES } from '../stores/themeStore';
@@ -15,6 +15,7 @@ import useTimetableStore from '../stores/timetableStore';
 import useTaskStore from '../stores/taskStore';
 import useLibraryStore from '../stores/libraryStore';
 import useNotifyStore from '../stores/notifyStore';
+import { getPushStatus, subscribePush, unsubscribePush } from '../services/pushService';
 import {
     IconUser, IconSun, IconMoon, IconBell, IconSettings,
     IconLogOut, IconChevronRight, IconBook, IconCheckCircle, IconXCircle
@@ -111,6 +112,36 @@ export default function Settings() {
         try { return JSON.parse(localStorage.getItem('piyou_announceNotify') ?? 'true'); } catch { return true; }
     });
     const [showFeedback, setShowFeedback] = useState(false);
+
+    // ── PWA 推播通知 / PWA Push Notifications ──
+    // 'unsupported' | 'denied' | 'subscribed' | 'unsubscribed' | 'loading'
+    const [pushStatus, setPushStatus] = useState('loading');
+    const [pushLoading, setPushLoading] = useState(false);
+
+    const refreshPushStatus = useCallback(async () => {
+        const status = await getPushStatus().catch(() => 'unsupported');
+        setPushStatus(status);
+    }, []);
+
+    useEffect(() => { refreshPushStatus(); }, [refreshPushStatus]);
+
+    const handlePushToggle = async (enable) => {
+        if (pushLoading) return;
+        setPushLoading(true);
+        try {
+            if (enable) {
+                await subscribePush();
+            } else {
+                await unsubscribePush();
+            }
+            await refreshPushStatus();
+        } catch (e) {
+            alert(e.message || '推播設定失敗，請重試');
+            await refreshPushStatus();
+        } finally {
+            setPushLoading(false);
+        }
+    };
 
     // 持久化通知偏好至 localStorage / Persist notification prefs
     useEffect(() => { localStorage.setItem('piyou_busNotify', JSON.stringify(busNotify)); }, [busNotify]);
@@ -482,6 +513,29 @@ export default function Settings() {
             <div className="card-stack">
                 <SectionHeader title="通知" titleEn="Notifications" />
                 <div className="card">
+                    {/* PWA 推播通知開關 */}
+                    {pushStatus !== 'unsupported' && (
+                        <SettingItem
+                            icon={IconBell}
+                            label="推播通知"
+                            labelEn={
+                                pushStatus === 'denied' ? '請在瀏覽器設定中開啟通知權限' :
+                                pushStatus === 'loading' ? 'Push Notifications' :
+                                'Push Notifications'
+                            }
+                        >
+                            {pushStatus === 'denied' ? (
+                                <span style={{ fontSize: '12px', color: 'var(--color-danger)' }}>已封鎖</span>
+                            ) : (
+                                <Toggle
+                                    checked={pushStatus === 'subscribed'}
+                                    onChange={handlePushToggle}
+                                    aria-label="推播通知"
+                                />
+                            )}
+                            {pushLoading && <span style={{ fontSize: '12px', color: 'var(--text-muted)', marginLeft: '4px' }}>…</span>}
+                        </SettingItem>
+                    )}
                     <SettingItem icon={IconBell} label="校園公告通知" labelEn="Campus announcement alerts">
                         <Toggle checked={announceNotify} onChange={handleAnnounceNotifyToggle} aria-label="校園公告通知" />
                     </SettingItem>

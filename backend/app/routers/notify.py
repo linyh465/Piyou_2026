@@ -23,6 +23,7 @@ import logging
 from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, HTTPException, Header, Request, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from pydantic import BaseModel
 from typing import Optional
 
 from app.models.schemas import (
@@ -47,6 +48,7 @@ from app.services.storage.sheets_notify import (
     reply_feedback,
     list_feedback,
 )
+from app.services.storage import sheets_push
 
 router = APIRouter(prefix="/notify", tags=["通知 / Notify"])
 logger = logging.getLogger(__name__)
@@ -354,3 +356,131 @@ async def admin_reply_feedback(
         return {"ok": True}
     except RuntimeError as exc:
         raise HTTPException(status_code=503, detail=str(exc))
+
+
+# ══════════════════════════════════════════
+#  PWA 推播通知 / PWA Push Notifications
+# ══════════════════════════════════════════
+
+# VAPID 設定 / VAPID configuration
+# 生成方式 / To generate: npx web-push generate-vapid-keys
+# 環境變數 / Env vars required:
+#   VAPID_PRIVATE_KEY  — VAPID private key (base64url)
+#   VAPID_PUBLIC_KEY   — VAPID public key  (base64url)
+#   VAPID_CLAIMS_EMAIL — mailto: email for claims (e.g. admin@example.com)
+
+_VAPID_PRIVATE_KEY = os.getenv("VAPID_PRIVATE_KEY", "")
+_VAPID_PUBLIC_KEY = os.getenv("VAPID_PUBLIC_KEY", "")
+_VAPID_EMAIL = os.getenv("VAPID_CLAIMS_EMAIL", "")
+
+
+class _PushSubscription(BaseModel):
+    endpoint: str
+    p256dh: str
+    auth: str
+    device_id: str = ""
+
+
+class _BroadcastBody(BaseModel):
+    title: str
+    body: str = ""
+    url: str = "/"
+    tag: str = "piyou"
+
+
+@router.get("/push/vapid-key", summary="取得 VAPID 公鑰 / Get VAPID Public Key")
+async def get_vapid_key() -> dict:
+    """回傳 VAPID 公鑰供前端訂閱使用 / Return VAPID public key for frontend subscription."""
+    if not _VAPID_PUBLIC_KEY:
+        raise HTTPException(status_code=503, detail="Push notifications not configured")
+    return {"vapid_public_key": _VAPID_PUBLIC_KEY}
+
+
+@router.post("/push/subscribe", status_code=201, summary="訂閱推播 / Subscribe to Push")
+async def push_subscribe(body: _PushSubscription, request: Request) -> dict:
+    """儲存 push subscription 至 Sheets / Save push subscription to Sheets."""
+    device_id = body.device_id or request.headers.get("X-Device-Id", "unknown")
+    try:
+        await sheets_push.save_subscription(
+            device_id=device_id,
+            endpoint=body.endpoint,
+            p256dh=body.p256dh,
+            auth=body.auth,
+        )
+    except RuntimeError as exc:
+        logger.warning(f"push/subscribe: Sheets unavailable: {exc}")
+        raise HTTPException(status_code=503, detail="儲存服務暫時無法使用")
+    logger.info(f"push/subscribe: saved subscription for device={device_id[:8]}…")
+    return {"ok": True}
+
+
+@router.delete("/push/subscribe", status_code=200, summary="取消訂閱推播 / Unsubscribe from Push")
+async def push_unsubscribe(body: _PushSubscription) -> dict:
+    """移除 push subscription / Remove push subscription."""
+    try:
+        await sheets_push.remove_subscription(endpoint=body.endpoint)
+    except RuntimeError as exc:
+        logger.warning(f"push/unsubscribe: Sheets unavailable: {exc}")
+    return {"ok": True}
+
+
+@router.post("/admin/push/broadcast", summary="管理員廣播推播 / Admin Broadcast Push")
+async def admin_push_broadcast(
+    body: _BroadcastBody,
+    x_admin_token: Optional[str] = Header(None, alias="X-Admin-Token"),
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(_bearer_scheme),
+) -> dict:
+    """
+    向所有訂閱者發送推播通知 / Send push notification to all subscribers.
+    需要管理員身份 / Requires admin auth.
+    """
+    _check_admin(x_admin_token, credentials)
+
+    if not _VAPID_PRIVATE_KEY or not _VAPID_PUBLIC_KEY or not _VAPID_EMAIL:
+        raise HTTPException(status_code=503, detail="VAPID keys not configured")
+
+    try:
+        from pywebpush import webpush, WebPushException
+    except ImportError:
+        raise HTTPException(status_code=503, detail="pywebpush not installed")
+
+    subscriptions = await sheets_push.get_all_subscriptions()
+    if not subscriptions:
+        return {"ok": True, "sent": 0, "failed": 0}
+
+    import json as _json
+    payload = _json.dumps({"title": body.title, "body": body.body, "url": body.url, "tag": body.tag})
+    sent, failed, stale = 0, 0, []
+
+    for sub in subscriptions:
+        try:
+            webpush(
+                subscription_info={
+                    "endpoint": sub["endpoint"],
+                    "keys": {"p256dh": sub["p256dh"], "auth": sub["auth"]},
+                },
+                data=payload,
+                vapid_private_key=_VAPID_PRIVATE_KEY,
+                vapid_claims={"sub": f"mailto:{_VAPID_EMAIL}"},
+            )
+            sent += 1
+        except WebPushException as e:
+            status = e.response.status_code if e.response else 0
+            if status in (404, 410):
+                stale.append(sub["endpoint"])  # 失效訂閱 / Stale subscription
+            else:
+                failed += 1
+                logger.warning(f"push broadcast failed for endpoint: {status}")
+        except Exception as e:
+            failed += 1
+            logger.warning(f"push broadcast error: {e}")
+
+    # 清理失效訂閱 / Clean up stale subscriptions
+    for endpoint in stale:
+        try:
+            await sheets_push.remove_subscription(endpoint)
+        except Exception:
+            pass
+
+    logger.info(f"push/broadcast: sent={sent} failed={failed} stale={len(stale)}")
+    return {"ok": True, "sent": sent, "failed": failed, "stale_removed": len(stale)}

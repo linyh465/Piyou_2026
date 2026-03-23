@@ -15,6 +15,11 @@ export default defineConfig({
     react(),
     tailwindcss(),
     VitePWA({
+      // injectManifest：使用自訂 SW（src/sw.js），支援 Push 事件處理
+      // injectManifest: uses custom SW (src/sw.js) for Push event handling
+      strategies: 'injectManifest',
+      srcDir: 'src',
+      filename: 'sw.js',
       registerType: 'autoUpdate',
       includeAssets: [
         'pwa-192x192.svg',
@@ -46,40 +51,9 @@ export default defineConfig({
           },
         ],
       },
-      workbox: {
-        // 預緩存所有靜態資源 / Precache all static assets
+      injectManifest: {
+        // 預快取所有靜態資源 / Precache all static assets
         globPatterns: ['**/*.{js,css,html,svg,wasm,json}'],
-        // 運行時快取策略 / Runtime caching strategies
-        runtimeCaching: [
-          {
-            // API 快取策略：NetworkFirst，離線時回傳快取
-            urlPattern: /\/api\/v1\/.*/i,
-            handler: 'NetworkFirst',
-            options: {
-              cacheName: 'api-cache',
-              expiration: {
-                maxEntries: 50,
-                maxAgeSeconds: 60 * 30, // 30 分鐘
-              },
-              cacheableResponse: {
-                statuses: [0, 200],
-              },
-              networkTimeoutSeconds: 5,
-            },
-          },
-          {
-            // 字型與圖片快取 / Font & image caching
-            urlPattern: /\.(?:png|gif|jpg|jpeg|svg|woff2?)$/i,
-            handler: 'CacheFirst',
-            options: {
-              cacheName: 'assets-cache',
-              expiration: {
-                maxEntries: 100,
-                maxAgeSeconds: 60 * 60 * 24 * 30, // 30 天
-              },
-            },
-          },
-        ],
       },
     }),
   ],

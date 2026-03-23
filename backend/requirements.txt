@@ -13,6 +13,9 @@ pydantic>=2.10.0
 google-api-python-client>=2.100.0
 google-auth>=2.23.0
 
+# PWA 推播通知 / PWA Push Notifications
+pywebpush>=2.0.0
+
 # 測試依賴 / Test Dependencies
 pytest>=8.0.0
 httpx>=0.27.0
