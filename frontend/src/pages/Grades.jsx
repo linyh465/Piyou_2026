@@ -9,10 +9,9 @@ import { IconChartBar, IconRefresh, IconBook, IconTrash, IconUser, IconDotsVerti
 import SyncLoginModal from '../components/SyncLoginModal';
 import { scoreToGPA } from '../utils/scoreToGPA';
 
-/** 科目詳細 Modal / Course detail bottom sheet */
+/** 科目詳細 Modal / Course detail centered dialog */
 function CourseDetailModal({ course, onClose }) {
     if (!course) return null;
-    // Portal to document.body to escape will-change:transform stacking context
     const gpa = isNumericCourse(course) ? scoreToGPA(course.score) : null;
     const rows = [
         course.score != null && { label: '分數', value: displayScore(course), highlight: true },
@@ -23,19 +22,31 @@ function CourseDetailModal({ course, onClose }) {
     ].filter(Boolean);
     return createPortal(
         <>
-            <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 900, backdropFilter: 'blur(2px)' }} />
+            {/* 背景遮罩 */}
+            <div onClick={onClose} style={{
+                position: 'fixed', inset: 0, zIndex: 900,
+                background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)',
+            }} />
+            {/* 置中卡片 */}
             <div style={{
-                position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 901,
-                background: 'var(--bg-card)', borderRadius: '20px 20px 0 0',
-                padding: '20px 20px calc(env(safe-area-inset-bottom,0px) + 24px)',
-                boxShadow: '0 -8px 40px rgba(0,0,0,0.3)',
+                position: 'fixed',
+                top: '50%', left: '50%',
+                transform: 'translate(-50%, -50%)',
+                zIndex: 901,
+                width: 'min(360px, calc(100vw - 32px))',
+                background: 'var(--bg-card)',
+                borderRadius: '20px',
+                padding: '24px',
+                boxShadow: '0 20px 60px rgba(0,0,0,0.35)',
                 maxHeight: '80vh', overflowY: 'auto',
+                animation: 'gradeModalIn 0.22s cubic-bezier(0.34,1.56,0.64,1)',
             }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
+                {/* 標題列 */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
                     <div style={{ flex: 1, marginRight: '12px' }}>
-                        <h3 style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text)', lineHeight: 1.4 }}>{course.name}</h3>
+                        <h3 style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text)', lineHeight: 1.4, margin: 0 }}>{course.name}</h3>
                         {course.course_type && (
-                            <span className={`grade-type-badge ${course.course_type === '必修' ? 'required' : ''}`} style={{ marginTop: '6px', display: 'inline-block' }}>
+                            <span className={`grade-type-badge ${course.course_type === '必修' ? 'required' : ''}`} style={{ marginTop: '8px', display: 'inline-block' }}>
                                 {course.course_type}
                             </span>
                         )}
@@ -44,15 +55,30 @@ function CourseDetailModal({ course, onClose }) {
                         <IconXCircle size={22} />
                     </button>
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {/* 資料列 */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                     {rows.map(({ label, value, highlight }) => (
-                        <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div key={label} style={{
+                            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                            paddingBottom: '14px', borderBottom: '1px solid var(--border-light)',
+                        }}>
                             <span style={{ fontSize: '14px', color: 'var(--text-muted)' }}>{label}</span>
-                            <span style={{ fontSize: highlight ? '1.5rem' : '14px', fontWeight: highlight ? 700 : 500, color: highlight ? scoreColor(course) : 'var(--text)' }}>{value}</span>
+                            <span style={{
+                                fontSize: highlight ? '2rem' : '15px',
+                                fontWeight: highlight ? 800 : 600,
+                                color: highlight ? scoreColor(course) : 'var(--text)',
+                                letterSpacing: highlight ? '-0.02em' : 0,
+                            }}>{value}</span>
                         </div>
                     ))}
                 </div>
             </div>
+            <style>{`
+                @keyframes gradeModalIn {
+                    from { opacity: 0; transform: translate(-50%, calc(-50% + 16px)) scale(0.95); }
+                    to   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+                }
+            `}</style>
         </>,
         document.body
     );
