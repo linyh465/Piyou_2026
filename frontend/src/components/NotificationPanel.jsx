@@ -9,6 +9,7 @@
 import { useState, useRef, useEffect } from 'react';
 import useNotifyStore from '../stores/notifyStore';
 import { IconBell } from './Icons';
+import { trackEvent } from '../services/analytics';
 
 const TYPE_DOT_COLOR = {
     urgent: 'var(--color-danger)',
@@ -48,6 +49,8 @@ export default function NotificationPanel({ onOpenFeedback }) {
     };
 
     const handleItemClick = (id) => {
+        const ann = announcements.find((a) => a.id === id);
+        trackEvent('notify_open', { type: ann?.type || 'info' });
         openAnnouncement(id);
         setOpen(false);
     };
@@ -137,7 +140,7 @@ export default function NotificationPanel({ onOpenFeedback }) {
                         </span>
                         {unreadCount > 0 && (
                             <button
-                                onClick={markAllRead}
+                                onClick={() => { markAllRead(); trackEvent('button_click', { action: 'notify_mark_all_read' }); }}
                                 style={{
                                     fontSize: '12px',
                                     color: 'var(--text-muted)',

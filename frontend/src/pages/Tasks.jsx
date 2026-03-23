@@ -4,6 +4,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import useTaskStore from '../stores/taskStore';
+import { trackEvent } from '../services/analytics';
 import {
     IconCheckSquare, IconPlus, IconEdit, IconTrash,
     IconCheck, IconDownload, IconStar,
@@ -33,8 +34,8 @@ function TaskForm({ editTask, onClose }) {
         e.preventDefault();
         if (!title.trim()) return;
         const data = { title, description, category, priority, due_date: dueDate || null };
-        if (editTask) { await updateTask(editTask.id, data); }
-        else { await addTask(data); }
+        if (editTask) { await updateTask(editTask.id, data); trackEvent('button_click', { action: 'task_edit' }, '/tasks'); }
+        else { await addTask(data); trackEvent('button_click', { action: 'task_add' }, '/tasks'); }
         onClose();
     };
 
@@ -100,6 +101,8 @@ function TaskItem({ task, onEdit }) {
     const { t } = useTranslation('tasks');
     const toggleTask = useTaskStore((s) => s.toggleTask);
     const deleteTask = useTaskStore((s) => s.deleteTask);
+    const handleToggle = (id, completed) => { toggleTask(id); trackEvent('button_click', { action: completed ? 'task_uncomplete' : 'task_complete' }, '/tasks'); };
+    const handleDelete = (id) => { deleteTask(id); trackEvent('button_click', { action: 'task_delete' }, '/tasks'); };
     const CatIcon = categoryIcons[task.category] || IconFolder;
 
     return (
@@ -108,7 +111,7 @@ function TaskItem({ task, onEdit }) {
             style={{ display: 'flex', alignItems: 'flex-start', gap: '14px', opacity: task.completed ? 0.5 : 1 }}
         >
             <button
-                onClick={() => toggleTask(task.id)}
+                onClick={() => handleToggle(task.id, task.completed)}
                 aria-label={task.completed ? t('cancelDone') : t('markDone')}
                 style={{
                     width: '22px', height: '22px', marginTop: '2px', borderRadius: '7px',
@@ -157,7 +160,7 @@ function TaskItem({ task, onEdit }) {
                     style={{ width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '8px', border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--text-muted)' }}>
                     <IconEdit size={14} />
                 </button>
-                <button onClick={() => deleteTask(task.id)}
+                <button onClick={() => handleDelete(task.id)}
                     aria-label="delete"
                     style={{ width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '8px', border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--text-muted)' }}>
                     <IconTrash size={14} />

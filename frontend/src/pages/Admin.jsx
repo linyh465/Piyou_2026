@@ -583,6 +583,40 @@ export default function Admin() {
                                 </div>
                             )}
 
+                            {/* 公車取得統計 */}
+                            {(analytics.bus_fetch_total ?? 0) > 0 && (
+                                <div style={{ ...card }}>
+                                    <p style={{ fontWeight: 600, fontSize: '14px', color: 'var(--text)', margin: '0 0 8px' }}>公車資料取得</p>
+                                    <div style={{ display: 'flex', gap: '16px' }}>
+                                        <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>自動 {analytics.bus_fetch_auto ?? 0}</span>
+                                        <span style={{ fontSize: '13px', color: 'var(--color-brand)' }}>手動 {analytics.bus_fetch_manual ?? 0}</span>
+                                        <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>總計 {analytics.bus_fetch_total}</span>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* 通知彈窗統計 */}
+                            {(analytics.notify_popup_total ?? 0) > 0 && (
+                                <div style={{ ...card }}>
+                                    <p style={{ fontWeight: 600, fontSize: '14px', color: 'var(--text)', margin: '0 0 4px' }}>通知彈窗</p>
+                                    <span style={{ fontSize: '22px', fontWeight: 700, color: 'var(--color-brand)' }}>{analytics.notify_popup_total}</span>
+                                    <span style={{ fontSize: '12px', color: 'var(--text-muted)', marginLeft: '8px' }}>次</span>
+                                </div>
+                            )}
+
+                            {/* 按鈕點擊明細 */}
+                            {analytics.button_clicks?.length > 0 && (
+                                <div style={{ ...card }}>
+                                    <p style={{ fontWeight: 600, fontSize: '14px', color: 'var(--text)', margin: '0 0 8px' }}>按鈕點擊明細</p>
+                                    {analytics.button_clicks.map((bc) => (
+                                        <div key={bc.action} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', padding: '4px 0', borderBottom: '1px solid var(--border-subtle)' }}>
+                                            <span style={{ color: 'var(--text-secondary)', fontFamily: 'monospace' }}>{bc.action}</span>
+                                            <span style={{ fontWeight: 600, color: 'var(--text)' }}>{bc.count}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+
                             {/* 頁面瀏覽排行 */}
                             {analytics.page_views.length > 0 && (
                                 <div style={{ ...card }}>

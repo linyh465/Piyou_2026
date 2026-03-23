@@ -603,6 +603,7 @@ export default function Settings() {
                             onClick={async () => {
                                 if (updateStatus === 'checking') return;
                                 setUpdateStatus('checking');
+                                trackEvent('button_click', { action: 'check_update' }, '/settings');
                                 const result = await checkForUpdate();
                                 // 'updated' → SW 正在重載，不需再顯示任何狀態
                                 // 'latest'  → 已是最新

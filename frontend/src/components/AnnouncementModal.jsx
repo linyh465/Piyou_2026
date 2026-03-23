@@ -9,6 +9,7 @@
 import { useState, useEffect, startTransition } from 'react';
 import { createPortal } from 'react-dom';
 import useNotifyStore from '../stores/notifyStore';
+import { trackEvent } from '../services/analytics';
 
 const SESSION_KEY = 'piyou_announce_shown';
 
@@ -43,6 +44,7 @@ export default function AnnouncementModal() {
         if (unreadIds.length > 0) {
             sessionStorage.setItem(SESSION_KEY, '1');
             startTransition(() => setAutoVisible(true));
+            trackEvent('notify_popup', { count: unreadIds.length });
         }
     }, [unreadIds]);
 
@@ -79,7 +81,7 @@ export default function AnnouncementModal() {
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', padding: '0 20px 20px', gap: '8px' }}>
                         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
-                            <button onClick={() => { markRead(manualAnn.id); closeOpenedAnn(); }} style={secondaryBtnStyle}>不再顯示</button>
+                            <button onClick={() => { markRead(manualAnn.id); closeOpenedAnn(); trackEvent('button_click', { action: 'notify_dismiss' }); }} style={secondaryBtnStyle}>不再顯示</button>
                             <button onClick={closeOpenedAnn} style={primaryBtnStyle}>我知道了</button>
                         </div>
                     </div>
@@ -101,7 +103,7 @@ export default function AnnouncementModal() {
 
     // 「我知道了」只關閉 session，不永久標已讀 / "Got it" only closes, not permanently marked
     const handleGotIt = () => setAutoVisible(false);
-    const handleDismiss = () => { markRead(current.id); setAutoVisible(false); };
+    const handleDismiss = () => { markRead(current.id); setAutoVisible(false); trackEvent('button_click', { action: 'notify_dismiss' }); };
 
     const handlePrev = () => setIndex((i) => Math.max(0, i - 1));
     const handleNext = () => {

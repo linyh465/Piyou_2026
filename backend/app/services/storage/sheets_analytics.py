@@ -41,6 +41,10 @@ EVENT_LABELS: dict[str, str] = {
     "share_subscribe": "訂閱分享",
     "feedback_submit": "意見回饋",
     "error":           "前端錯誤",
+    "bus_fetch":       "公車資料取得",
+    "notify_popup":    "通知彈窗",
+    "notify_open":     "開啟公告",
+    "button_click":    "按鈕點擊",
 }
 
 
@@ -137,6 +141,10 @@ def _get_stats_sync() -> dict:
     event_counts: dict[str, int] = defaultdict(int)
     sync_success = 0
     sync_fail = 0
+    bus_fetch_auto = 0
+    bus_fetch_manual = 0
+    notify_popup_total = 0
+    button_clicks: dict[str, int] = defaultdict(int)
     recent_errors: list[dict] = []
     recent_events: list[dict] = []
     week_daily: dict[str, int] = defaultdict(int)
@@ -196,6 +204,16 @@ def _get_stats_sync() -> dict:
                 sync_success += 1
             else:
                 sync_fail += 1
+        elif event_type == "bus_fetch":
+            if extra_parsed.get("trigger") == "manual":
+                bus_fetch_manual += 1
+            else:
+                bus_fetch_auto += 1
+        elif event_type == "notify_popup":
+            notify_popup_total += 1
+        elif event_type == "button_click":
+            action = str(extra_parsed.get("action", "unknown"))[:40]
+            button_clicks[action] += 1
         elif event_type == "error":
             recent_errors.append({
                 "ts": ts_str,
@@ -229,6 +247,12 @@ def _get_stats_sync() -> dict:
         for d in sorted(week_daily.keys())
     ]
 
+    # Button click breakdown sorted by count
+    button_click_list = [
+        {"action": k, "count": v}
+        for k, v in sorted(button_clicks.items(), key=lambda x: x[1], reverse=True)
+    ]
+
     return {
         "total_events": total_events,
         "today_events": today_events,
@@ -240,6 +264,11 @@ def _get_stats_sync() -> dict:
         "sync_success": sync_success,
         "sync_fail": sync_fail,
         "sync_total": sync_success + sync_fail,
+        "bus_fetch_auto": bus_fetch_auto,
+        "bus_fetch_manual": bus_fetch_manual,
+        "bus_fetch_total": bus_fetch_auto + bus_fetch_manual,
+        "notify_popup_total": notify_popup_total,
+        "button_clicks": button_click_list,
         "page_views": page_view_list,
         "event_counts": event_list,
         "recent_errors": recent_errors,
