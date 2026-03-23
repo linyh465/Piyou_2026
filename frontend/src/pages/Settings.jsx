@@ -6,7 +6,8 @@
  * 排版間距與字體大小統一與首頁 Dashboard 一致
  * Layout spacing and font sizes unified with Dashboard.
  */
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import useThemeStore from '../stores/themeStore';
 import { COLOR_THEMES } from '../stores/themeStore';
@@ -94,6 +95,7 @@ function SectionHeader({ title, titleEn }) {
 }
 
 export default function Settings() {
+    const navigate = useNavigate();
     const { theme, setTheme, colorTheme, setColorTheme } = useThemeStore();
     const { user, isAuthenticated, login, logout, error, clearError } = useAuthStore();
     const { fetchTimetable, fetchGrades, canSync, recordSyncSuccess, recordSyncError, hasCachedData, lastSyncTime, clearSchoolData, serverCooldown } = useTimetableStore();
@@ -235,6 +237,20 @@ export default function Settings() {
         // 注意：不再清除冷卻相關 localStorage，冷卻由伺服器端 IP 追蹤強制執行
         // Note: cooldown localStorage is NOT cleared; enforced server-side via IP tracking
         window.location.reload();
+    };
+
+    // ── 隱藏管理員入口：連點版本號 7 次 / Hidden admin entry: tap version 7 times ──
+    const versionTapCount = useRef(0);
+    const versionTapTimer = useRef(null);
+    const handleVersionTap = () => {
+        versionTapCount.current += 1;
+        clearTimeout(versionTapTimer.current);
+        if (versionTapCount.current >= 7) {
+            versionTapCount.current = 0;
+            navigate('/admin');
+            return;
+        }
+        versionTapTimer.current = setTimeout(() => { versionTapCount.current = 0; }, 2000);
     };
 
     const themeOptions = [
@@ -552,10 +568,13 @@ export default function Settings() {
             <div className="card-stack">
                 <SectionHeader title="關於" titleEn="About" />
                 <div className="card">
-                    <div style={{
-                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                        padding: '12px 8px',
-                    }}>
+                    <div
+                        onClick={handleVersionTap}
+                        style={{
+                            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                            padding: '12px 8px', cursor: 'default', userSelect: 'none',
+                        }}
+                    >
                         <span style={{ color: 'var(--text)', fontSize: '15px', fontWeight: 500 }}>版本 / Version</span>
                         <span style={{
                             fontFamily: 'monospace', padding: '4px 10px', borderRadius: '6px',

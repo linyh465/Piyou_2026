@@ -9,6 +9,7 @@ import { api } from '../services/apiClient';
 const ANNOUNCE_CACHE_KEY = 'piyou_announce_cache';
 const READ_VERSIONS_KEY = 'piyou_read_announce_versions'; // {id: version}
 const CACHE_TTL = 5 * 60 * 1000; // 5 分鐘 / 5 minutes
+const SESSION_FETCHED_KEY = 'piyou_ann_session_fetched'; // sessionStorage — 每次 session 首次強制抓新版本
 
 /**
  * 從 localStorage 讀取已讀版本 map。
@@ -77,21 +78,28 @@ const useNotifyStore = create((set, get) => ({
      * Fetch announcements with 5-minute TTL cache.
      */
     fetchAnnouncements: async () => {
-        // 檢查本地快取 / Check local cache
-        try {
-            const cached = JSON.parse(localStorage.getItem(ANNOUNCE_CACHE_KEY) || 'null');
-            if (cached && Date.now() - cached.fetchedAt < CACHE_TTL) {
-                const readVersions = loadReadVersions();
-                const unreadIds = cached.announcements
-                    .filter((a) => isUnread(a, readVersions))
-                    .map((a) => a.id);
-                set({ announcements: cached.announcements, unreadIds });
-                return;
+        // 每次 session 的首次請求強制跳過快取，確保 republish 版本號立即生效
+        // Force skip cache on first fetch per session so republished version bumps take effect immediately
+        const alreadyFetchedThisSession = sessionStorage.getItem(SESSION_FETCHED_KEY);
+
+        // 檢查本地快取 / Check local cache (only after first session fetch)
+        if (alreadyFetchedThisSession) {
+            try {
+                const cached = JSON.parse(localStorage.getItem(ANNOUNCE_CACHE_KEY) || 'null');
+                if (cached && Date.now() - cached.fetchedAt < CACHE_TTL) {
+                    const readVersions = loadReadVersions();
+                    const unreadIds = cached.announcements
+                        .filter((a) => isUnread(a, readVersions))
+                        .map((a) => a.id);
+                    set({ announcements: cached.announcements, unreadIds });
+                    return;
+                }
+            } catch {
+                // 快取損壞就重抓 / Corrupted cache, refetch
             }
-        } catch {
-            // 快取損壞就重抓 / Corrupted cache, refetch
         }
 
+        sessionStorage.setItem(SESSION_FETCHED_KEY, '1');
         set({ isLoading: true, lastError: null });
         try {
             const res = await api.get('/notify/announcements');
@@ -206,7 +214,9 @@ const useNotifyStore = create((set, get) => ({
      * @returns {{ ok: boolean, id: string, error?: string }}
      */
     submitFeedback: async (data) => {
-        const id = crypto.randomUUID();
+        // 優先使用自訂 ID；若未提供則自動產生 UUID
+        // Use custom ID if provided; otherwise auto-generate UUID
+        const id = (data.customId || '').trim() || crypto.randomUUID();
         try {
             await api.post('/notify/feedback', {
                 id,

@@ -26,6 +26,7 @@ export default function FeedbackModal({ show, onClose }) {
     const [category, setCategory] = useState('bug');
     const [content, setContent] = useState('');
     const [contact, setContact] = useState('');
+    const [customId, setCustomId] = useState('');
     const [submitting, setSubmitting] = useState(false);
     const [submitted, setSubmitted] = useState(false);
     const [submittedId, setSubmittedId] = useState('');
@@ -44,7 +45,7 @@ export default function FeedbackModal({ show, onClose }) {
         if (submitting || content.trim().length < 10) return;
         setSubmitting(true);
         setSubmitError('');
-        const result = await submitFeedback({ category, content: content.trim(), contact: contact.trim() });
+        const result = await submitFeedback({ category, content: content.trim(), contact: contact.trim(), customId: customId.trim() });
         setSubmitting(false);
         if (result.ok) {
             setSubmitted(true);
@@ -76,6 +77,7 @@ export default function FeedbackModal({ show, onClose }) {
         setCategory('bug');
         setContent('');
         setContact('');
+        setCustomId('');
         setSubmitting(false);
         setSubmitted(false);
         setSubmittedId('');
@@ -217,6 +219,23 @@ export default function FeedbackModal({ show, onClose }) {
                                 value={contact}
                                 onChange={(e) => setContact(e.target.value.slice(0, 100))}
                                 placeholder="e-mail 或其他聯絡方式"
+                                style={inputStyle}
+                            />
+                        </div>
+
+                        {/* 自訂查詢 ID（選填） */}
+                        <div style={{ marginBottom: '16px' }}>
+                            <label style={{ display: 'block', fontSize: '12px', fontWeight: 500, color: 'var(--text-muted)', marginBottom: '4px' }}>
+                                自訂查詢 ID（選填）
+                            </label>
+                            <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '8px', opacity: 0.7 }}>
+                                設定易記的 ID 方便日後查詢；留空則自動產生隨機 ID
+                            </p>
+                            <input
+                                type="text"
+                                value={customId}
+                                onChange={(e) => setCustomId(e.target.value.replace(/[^A-Za-z0-9_\-]/g, '').slice(0, 40))}
+                                placeholder="例如：yhlin-bug-0323"
                                 style={inputStyle}
                             />
                         </div>
