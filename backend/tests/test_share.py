@@ -82,9 +82,11 @@ async def test_get_share_no_sheets(client):
 @pytest.mark.anyio
 async def test_delete_share_no_sheets(client):
     """Sheets 未設定時 DELETE /share/{code} 應回傳 200（delete 容錯處理）"""
+    import json as _json
     resp = await client.delete(
         "/api/v1/share/mygroup-2026",
-        json={"device_id": "test-device-001"},
+        content=_json.dumps({"device_id": "test-device-001"}),
+        headers={"Content-Type": "application/json"},
     )
     # delete 端點有 try/except，Sheets 失敗時不拋錯
     assert resp.status_code in (200, 403, 503)

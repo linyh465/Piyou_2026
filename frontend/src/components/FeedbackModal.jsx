@@ -234,7 +234,7 @@ export default function FeedbackModal({ show, onClose }) {
                             <input
                                 type="text"
                                 value={customId}
-                                onChange={(e) => setCustomId(e.target.value.replace(/[^A-Za-z0-9_\-]/g, '').slice(0, 40))}
+                                onChange={(e) => setCustomId(e.target.value.replace(/[^A-Za-z0-9_-]/g, '').slice(0, 40))}
                                 placeholder="例如：yhlin-bug-0323"
                                 style={inputStyle}
                             />
