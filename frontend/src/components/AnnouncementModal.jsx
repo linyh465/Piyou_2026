@@ -28,8 +28,8 @@ const TYPE_CONFIG = {
 };
 
 export default function AnnouncementModal() {
-    const { announcements, unreadIds, markRead, markAllRead, fetchAnnouncements } = useNotifyStore();
-    const [visible, setVisible] = useState(false);
+    const { announcements, unreadIds, markRead, markAllRead, fetchAnnouncements, openedAnnId, closeOpenedAnn } = useNotifyStore();
+    const [autoVisible, setAutoVisible] = useState(false);
     const [index, setIndex] = useState(0);
 
     // 啟動時抓公告 / Fetch announcements on mount
@@ -37,16 +37,60 @@ export default function AnnouncementModal() {
         fetchAnnouncements();
     }, [fetchAnnouncements]);
 
-    // 公告抓回後判斷是否要彈 / After fetch, decide whether to show
+    // 公告抓回後判斷是否要自動彈 / After fetch, decide whether to auto-show
     useEffect(() => {
         if (sessionStorage.getItem(SESSION_KEY)) return;
         if (unreadIds.length > 0) {
             sessionStorage.setItem(SESSION_KEY, '1');
-            startTransition(() => setVisible(true));
+            startTransition(() => setAutoVisible(true));
         }
     }, [unreadIds]);
 
-    if (!visible || announcements.length === 0) return null;
+    // ── 手動模式（從通知面板點擊）/ Manual mode (clicked from notification panel) ──
+    const isManual = !!openedAnnId;
+    const manualAnn = isManual ? announcements.find((a) => a.id === openedAnnId) : null;
+
+    if (isManual && manualAnn) {
+        const config = TYPE_CONFIG[manualAnn.type] || TYPE_CONFIG.info;
+        return createPortal(
+            <div
+                style={{
+                    position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', zIndex: 200,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    padding: '16px', background: 'rgba(0,0,0,0.5)',
+                }}
+                className="animate-fade-in"
+                onClick={closeOpenedAnn}
+            >
+                <div style={{ width: '100%', maxWidth: '420px', borderRadius: 'var(--radius-card, 16px)', overflow: 'hidden', background: 'var(--bg-card)', boxShadow: '0 8px 30px rgba(0,0,0,0.15)' }} onClick={(e) => e.stopPropagation()}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 20px', background: config.bg, color: 'white' }}>
+                        <span style={{ fontSize: '12px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', opacity: 0.85 }}>{config.label}</span>
+                        <button onClick={closeOpenedAnn} style={{ color: 'rgba(255,255,255,0.7)', background: 'none', border: 'none', cursor: 'pointer', fontSize: '18px', lineHeight: 1, padding: '4px' }} aria-label="關閉">✕</button>
+                    </div>
+                    <div style={{ padding: '20px' }}>
+                        <h3 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text)', marginBottom: '8px' }}>{manualAnn.title}</h3>
+                        <p style={{ fontSize: '14px', color: 'var(--text-secondary)', whiteSpace: 'pre-line', lineHeight: 1.6 }}>{manualAnn.body}</p>
+                        {manualAnn.link_url && (
+                            <a href={manualAnn.link_url} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-block', marginTop: '12px', fontSize: '14px', fontWeight: 500, color: 'var(--color-brand)', textDecoration: 'underline' }}>
+                                {manualAnn.link_label || '了解更多'}
+                            </a>
+                        )}
+                        <p style={{ marginTop: '12px', fontSize: '12px', color: 'var(--text-muted)' }}>{new Date(manualAnn.published_at).toLocaleDateString('zh-TW')}</p>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', padding: '0 20px 20px', gap: '8px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+                            <button onClick={() => { markRead(manualAnn.id); closeOpenedAnn(); }} style={secondaryBtnStyle}>不再顯示</button>
+                            <button onClick={closeOpenedAnn} style={primaryBtnStyle}>我知道了</button>
+                        </div>
+                    </div>
+                </div>
+            </div>,
+            document.body
+        );
+    }
+
+    // ── 自動彈出模式 / Auto-popup mode ──
+    if (!autoVisible || announcements.length === 0) return null;
 
     const unread = announcements.filter((a) => unreadIds.includes(a.id));
     if (unread.length === 0) return null;
@@ -55,41 +99,27 @@ export default function AnnouncementModal() {
     const total = unread.length;
     const config = TYPE_CONFIG[current?.type] || TYPE_CONFIG.info;
 
-    const handleClose = () => {
-        markAllRead();
-        setVisible(false);
-    };
+    // 「我知道了」只關閉 session，不永久標已讀 / "Got it" only closes, not permanently marked
+    const handleGotIt = () => setAutoVisible(false);
+    const handleDismiss = () => { markRead(current.id); setAutoVisible(false); };
 
     const handlePrev = () => setIndex((i) => Math.max(0, i - 1));
     const handleNext = () => {
         if (index < total - 1) {
-            markRead(current.id);
             setIndex((i) => i + 1);
         }
     };
 
     const secondaryBtnStyle = {
-        fontSize: '14px',
-        padding: '8px 16px',
-        borderRadius: '10px',
-        cursor: 'pointer',
-        transition: 'background 0.15s',
-        background: 'var(--bg-input)',
-        color: 'var(--text-secondary)',
-        border: '1px solid var(--border)',
-        fontWeight: 500,
+        fontSize: '14px', padding: '8px 16px', borderRadius: '10px', cursor: 'pointer',
+        transition: 'background 0.15s', background: 'var(--bg-input)',
+        color: 'var(--text-secondary)', border: '1px solid var(--border)', fontWeight: 500,
     };
 
     const primaryBtnStyle = {
-        fontSize: '14px',
-        padding: '8px 16px',
-        borderRadius: '10px',
-        cursor: 'pointer',
-        transition: 'opacity 0.15s',
-        background: 'var(--color-brand)',
-        color: 'white',
-        border: 'none',
-        fontWeight: 500,
+        fontSize: '14px', padding: '8px 16px', borderRadius: '10px', cursor: 'pointer',
+        transition: 'opacity 0.15s', background: 'var(--color-brand)',
+        color: 'white', border: 'none', fontWeight: 500,
     };
 
     return createPortal(
@@ -108,7 +138,7 @@ export default function AnnouncementModal() {
                 background: 'rgba(0,0,0,0.5)',
             }}
             className="animate-fade-in"
-            onClick={handleClose}
+            onClick={handleGotIt}
         >
             <div
                 style={{
@@ -147,7 +177,7 @@ export default function AnnouncementModal() {
                         )}
                     </div>
                     <button
-                        onClick={handleClose}
+                        onClick={handleGotIt}
                         style={{
                             color: 'rgba(255,255,255,0.7)',
                             background: 'none',
@@ -243,19 +273,19 @@ export default function AnnouncementModal() {
                                         下一則 →
                                     </button>
                                 ) : (
-                                    <button onClick={handleClose} style={primaryBtnStyle}>
+                                    <button onClick={handleGotIt} style={primaryBtnStyle}>
                                         我知道了
                                     </button>
                                 )}
                             </>
                         ) : (
-                            <button onClick={handleClose} style={primaryBtnStyle}>
+                            <button onClick={handleGotIt} style={primaryBtnStyle}>
                                 我知道了
                             </button>
                         )}
                     </div>
                     <button
-                        onClick={() => { markRead(current.id); setVisible(false); }}
+                        onClick={handleDismiss}
                         style={{
                             fontSize: '12px',
                             color: 'var(--text-muted)',

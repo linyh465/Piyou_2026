@@ -355,14 +355,20 @@ const EN_BLESSINGS = [
     'You\'re doing amazing 🏆',
 ];
 
-function getGreeting(hour, lang) {
+function getGreeting(hour, minute, lang) {
+    const mins = hour * 60 + minute;
+    // 早安 6:00–11:30 / 午安 11:30–13:00 / 下午好 13:00–18:00 / 晚安 其餘
     if (lang === 'en') {
-        if (hour < 12) return 'Good morning';
-        if (hour < 18) return 'Good afternoon';
+        if (mins < 360) return 'Good night';
+        if (mins < 690) return 'Good morning';
+        if (mins < 780) return 'Good afternoon';
+        if (mins < 1080) return 'Good afternoon';
         return 'Good evening';
     }
-    if (hour < 12) return '早安';
-    if (hour < 18) return '午安';
+    if (mins < 360) return '晚安';
+    if (mins < 690) return '早安';
+    if (mins < 780) return '午安';
+    if (mins < 1080) return '下午好';
     return '晚安';
 }
 
@@ -375,7 +381,7 @@ function getRandomBlessing(lang) {
 export default function Dashboard() {
     const { lang } = useLangStore();
     const now = new Date();
-    const greeting = getGreeting(now.getHours(), lang);
+    const greeting = getGreeting(now.getHours(), now.getMinutes(), lang);
     const blessing = getRandomBlessing(lang);
 
     return (

@@ -71,7 +71,18 @@ function TaskForm({ editTask, onClose }) {
                 <label style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'block', marginBottom: '6px' }}>
                     {t('dueDate')}
                 </label>
-                <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} className="input" aria-label="due date" />
+                <div style={{ position: 'relative' }}>
+                    <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} className="input" aria-label="due date" />
+                    {!dueDate && (
+                        <span style={{
+                            position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)',
+                            color: 'var(--text-muted)', opacity: 0.45, fontSize: '13px',
+                            pointerEvents: 'none', userSelect: 'none',
+                        }}>
+                            請選擇截止日期（可不填）
+                        </span>
+                    )}
+                </div>
             </div>
 
             <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', paddingTop: '4px' }}>

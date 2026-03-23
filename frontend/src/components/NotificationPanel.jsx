@@ -24,6 +24,7 @@ export default function NotificationPanel({ onOpenFeedback }) {
         markRead,
         markAllRead,
         fetchAnnouncements,
+        openAnnouncement,
     } = useNotifyStore();
 
     const [open, setOpen] = useState(false);
@@ -48,7 +49,8 @@ export default function NotificationPanel({ onOpenFeedback }) {
     };
 
     const handleItemClick = (id) => {
-        markRead(id);
+        openAnnouncement(id);
+        setOpen(false);
     };
 
     // 最新 10 則 / Latest 10

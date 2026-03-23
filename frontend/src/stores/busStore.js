@@ -13,8 +13,8 @@ import { api, apiError } from '../services/apiClient';
 
 // ── 全域節流常數（TDX 基礎會員每日請求量有限，需保守控制）──
 const MANUAL_COOLDOWN_SECONDS = 60;
-const AUTO_POLL_INTERVAL = 120_000;  // 自動輪詢 120 秒
-const MAX_CALLS_PER_MINUTE = 2;
+const AUTO_POLL_INTERVAL = 30_000;  // 自動輪詢 30 秒
+const MAX_CALLS_PER_MINUTE = 3;
 
 const useBusStore = create((set, get) => ({
     arrivals: [],

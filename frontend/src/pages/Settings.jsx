@@ -211,13 +211,8 @@ export default function Settings() {
 
             const success = await login(studentId.trim(), password);
             if (success) {
-                // 序列化執行，避免同一 session 被並行存取的競爭條件
-                await fetchTimetable();
-                await fetchGrades();
-                // 同步任務：先從伺服器下載覆蓋本地，再上傳確保伺服器有最新版
-                // Sync tasks: download from server first, then upload to ensure server has latest
-                await syncTasksFromServer();
-                await syncTasksToServer();
+                // 立即顯示成功，讓爬蟲在背景執行（樂觀 UI）
+                // Show success immediately; scraping runs in background (optimistic UI)
                 recordSyncSuccess();
                 trackEvent('sync', { status: 'success' }, '/settings');
                 setSyncSuccess(true);
@@ -226,7 +221,11 @@ export default function Settings() {
                     setPassword('');
                     setSyncSuccess(false);
                     setIsSyncing(false);
-                }, 1500);
+                }, 1200);
+                // 背景非同步執行，不阻擋 UI / Background fetch, non-blocking
+                fetchTimetable();
+                fetchGrades();
+                syncTasksFromServer().then(() => syncTasksToServer()).catch(() => {});
             } else {
                 // 登入失敗計入同步錯誤，並解鎖讓使用者可重試
                 // Login failure counts as sync error; unlock so user can retry

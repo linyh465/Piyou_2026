@@ -252,7 +252,10 @@ export default function Grades() {
     return (
         <div className="section-stack animate-fade-in">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <h1 className="dash-hero-title" style={{ paddingBottom: 0 }}>{t('title')}</h1>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <IconChartBar size={22} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+                    <h1 className="dash-hero-title" style={{ paddingBottom: 0 }}>{t('title')}</h1>
+                </div>
                 <div className="page-menu-wrapper" style={{ paddingTop: '6px' }} ref={menuRef}>
                     <div className="page-header-actions">
                         <button onClick={() => setShowSyncModal(true)} className="btn btn-soft" style={{ fontSize: '13px', display: 'flex', alignItems: 'center', gap: '4px' }}>

@@ -58,6 +58,15 @@ const useNotifyStore = create((set, get) => ({
     isLoading: false,
     lastError: null,
 
+    // 從通知面板點擊手動開啟的公告 ID / Announcement opened manually from panel
+    openedAnnId: null,
+
+    /** 從通知面板點擊開啟特定公告（不立即標已讀）/ Open specific announcement from panel */
+    openAnnouncement: (id) => set({ openedAnnId: id }),
+
+    /** 關閉手動開啟的公告 Modal / Close manually opened announcement modal */
+    closeOpenedAnn: () => set({ openedAnnId: null }),
+
     // ── Computed Helpers ──
 
     /** 未讀公告數量 / Unread announcement count */
