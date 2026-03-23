@@ -62,22 +62,16 @@ apiClient.interceptors.response.use(
 );
 
 /**
- * 將 API 錯誤轉換為對使用者安全的訊息，避免洩漏後端細節。
- * Converts API errors to user-safe messages — never leaks backend internals or 5xx details.
+ * 將 API 錯誤轉換為顯示訊息。
+ * Converts API errors to display messages.
  * @param {Error} err - Axios error object
- * @param {string} fallback - Default message if no specific mapping applies
+ * @param {string} fallback - Default message if no detail available
  * @returns {string}
  */
 export function apiError(err, fallback = '發生錯誤，請稍後再試') {
-    const status = err?.response?.status;
-    if (!status) return '網路連線失敗，請確認網路後再試';
-    if (status === 429) return '操作過於頻繁，請稍後再試';
-    if (status === 401) return '請重新登入';
-    if (status === 403) return '您沒有執行此操作的權限';
-    if (status === 404) return '找不到相關資料';
-    if (status >= 500) return '伺服器暫時無法使用，請稍後再試';
+    if (!err?.response) return '網路連線失敗，請確認網路後再試';
     const detail = err?.response?.data?.detail;
-    if (typeof detail === 'string' && detail.length <= 120) return detail;
+    if (typeof detail === 'string' && detail.length > 0) return detail;
     return fallback;
 }
 
