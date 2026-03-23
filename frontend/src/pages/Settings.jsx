@@ -23,6 +23,7 @@ import {
     IconLogOut, IconChevronRight, IconBook, IconCheckCircle, IconXCircle
 } from '../components/Icons';
 import FeedbackModal from '../components/FeedbackModal';
+import PolicyModal from '../components/PolicyModal';
 
 // ── 設定項目元件 / Setting Item Component ──
 function SettingItem({ icon: Icon, label, labelEn, children, onClick }) {
@@ -115,6 +116,7 @@ export default function Settings() {
         try { return JSON.parse(localStorage.getItem('piyou_announceNotify') ?? 'true'); } catch { return true; }
     });
     const [showFeedback, setShowFeedback] = useState(false);
+    const [showPolicy, setShowPolicy] = useState(null); // 'privacy' | 'terms' | null
 
     // ── PWA 推播通知 / PWA Push Notifications ──
     // 'unsupported' | 'denied' | 'subscribed' | 'unsubscribed' | 'loading'
@@ -586,10 +588,13 @@ export default function Settings() {
                         }}>1.0.0-beta</span>
                     </div>
                     <SettingItem icon={IconBell} label="意見回饋" labelEn="Feedback" onClick={() => setShowFeedback(true)} />
+                    <SettingItem icon={IconBook} label="隱私權政策" labelEn="Privacy Policy" onClick={() => setShowPolicy('privacy')} />
+                    <SettingItem icon={IconBook} label="服務條款" labelEn="Terms of Service" onClick={() => setShowPolicy('terms')} />
                 </div>
             </div>
 
             <FeedbackModal show={showFeedback} onClose={() => setShowFeedback(false)} />
+            {showPolicy && <PolicyModal type={showPolicy} onClose={() => setShowPolicy(null)} />}
         </div>
     );
 }
