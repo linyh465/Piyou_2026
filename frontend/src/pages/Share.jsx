@@ -56,7 +56,7 @@ async function apiFetch(path, opts = {}) {
 
 // ── Sub-components ──
 
-function ShareCard({ entry, deviceId, onRefresh, onRemove }) {
+function ShareCard({ entry, deviceId, onRemove }) {
     const [deleting, setDeleting] = useState(false);
 
     const handleDelete = async () => {
@@ -325,30 +325,34 @@ export default function Share() {
 
     const refreshAll = useCallback(async () => {
         const list = loadShares();
-        if (!list.length) return;
+        if (!list.length) { setRefreshing(false); return; }
         setRefreshing(true);
         const updated = await Promise.all(
             list.map(async (s) => {
                 try {
-                    const data = await apiFetch(`/${s.code}`);
-                    return { ...s, ...data };
+                    const fresh = await apiFetch(`/${s.code}`);
+                    return { ...s, ...fresh };
                 } catch {
                     return s; // 保持舊狀態
                 }
             })
         );
         updated.forEach(upsertShare);
-        setShares(loadShares());
         setRefreshing(false);
+        setShares(loadShares());
     }, []);
 
-    useEffect(() => { refreshAll(); }, [refreshAll]);
+    useEffect(() => {
+        let active = true;
+        refreshAll().then(() => { if (!active) setRefreshing(false); });
+        return () => { active = false; };
+    }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-    const handleSubscribed = (data) => {
+    const handleSubscribed = () => {
         setShares(loadShares());
     };
 
-    const handleCreated = (data) => {
+    const handleCreated = () => {
         setShares(loadShares());
     };
 
@@ -409,7 +413,6 @@ export default function Share() {
                             key={entry.code}
                             entry={entry}
                             deviceId={deviceId}
-                            onRefresh={refreshAll}
                             onRemove={handleRemove}
                         />
                     ))}
