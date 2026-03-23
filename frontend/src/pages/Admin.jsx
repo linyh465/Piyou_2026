@@ -220,7 +220,7 @@ function AnnouncementForm({ initial, onSave, onCancel }) {
 export default function Admin() {
     const [token, setToken] = useState(getStoredToken);
     const [adminName, setAdminName] = useState('');
-    const [tab, setTab] = useState('announcements'); // 'announcements' | 'feedback' | 'shares' | 'analytics'
+    const [tab, setTab] = useState('announcements'); // 'announcements' | 'feedback' | 'shares' | 'analytics' | 'config'
     const [announcements, setAnnouncements] = useState([]);
     const [feedback, setFeedback] = useState([]);
     const [shares, setShares] = useState([]);
@@ -264,6 +264,8 @@ export default function Admin() {
     }, [token]);
 
     const [shareStats, setShareStats] = useState(null);
+    const [appConfig, setAppConfig] = useState(null);
+    const [configSaving, setConfigSaving] = useState(false);
 
     const loadShares = useCallback(async () => {
         if (!token) return;
@@ -272,6 +274,19 @@ export default function Admin() {
             const res = await api.get('/notify/admin/shares', adminHeaders(token));
             setShares(res.data.shares || []);
             setShareStats({ total: res.data.total, active: res.data.active, password_protected: res.data.password_protected });
+        } catch (err) {
+            if (err.response?.status === 403) handleLogout();
+        } finally {
+            setLoading(false);
+        }
+    }, [token]);
+
+    const loadConfig = useCallback(async () => {
+        if (!token) return;
+        setLoading(true);
+        try {
+            const res = await api.get('/notify/admin/config', adminHeaders(token));
+            setAppConfig(res.data.config || {});
         } catch (err) {
             if (err.response?.status === 403) handleLogout();
         } finally {
@@ -298,8 +313,9 @@ export default function Admin() {
             else if (tab === 'feedback') loadFeedback();
             else if (tab === 'shares') loadShares();
             else if (tab === 'analytics') loadAnalytics();
+            else if (tab === 'config') loadConfig();
         }
-    }, [token, tab, loadAnnouncements, loadFeedback, loadShares, loadAnalytics]);
+    }, [token, tab, loadAnnouncements, loadFeedback, loadShares, loadAnalytics, loadConfig]);
 
     const handleCreate = async (data) => {
         await api.post('/notify/admin/announcements', data, adminHeaders(token));
@@ -355,14 +371,14 @@ export default function Admin() {
 
             {/* Tabs */}
             <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', flexWrap: 'wrap' }}>
-                {['announcements', 'feedback', 'shares', 'analytics'].map((t) => (
+                {['announcements', 'feedback', 'shares', 'analytics', 'config'].map((t) => (
                     <button key={t} onClick={() => setTab(t)} style={{
                         padding: '8px 16px', borderRadius: '10px', border: 'none', cursor: 'pointer',
                         background: tab === t ? 'var(--color-brand)' : 'var(--bg-input)',
                         color: tab === t ? 'white' : 'var(--text-secondary)',
                         fontWeight: tab === t ? 600 : 400, fontSize: '14px',
                     }}>
-                        {t === 'announcements' ? '公告管理' : t === 'feedback' ? '意見回饋' : t === 'shares' ? '共享平台' : '使用統計'}
+                        {t === 'announcements' ? '公告管理' : t === 'feedback' ? '意見回饋' : t === 'shares' ? '共享平台' : t === 'analytics' ? '使用統計' : '系統設定'}
                     </button>
                 ))}
             </div>
@@ -675,6 +691,55 @@ export default function Admin() {
                     )}
                     {!loading && !analytics && (
                         <p style={{ color: 'var(--text-muted)', fontSize: '14px', textAlign: 'center', marginTop: '40px' }}>尚無統計資料</p>
+                    )}
+                </>
+            )}
+
+            {/* Config Tab */}
+            {tab === 'config' && (
+                <>
+                    <button onClick={loadConfig} style={{ ...btnGhost, marginBottom: '12px' }}>重新整理</button>
+                    {loading && <p style={{ color: 'var(--text-muted)', fontSize: '14px' }}>載入中…</p>}
+                    {!loading && appConfig && (
+                        <div style={card}>
+                            <p style={{ fontWeight: 600, fontSize: '14px', color: 'var(--text)', margin: '0 0 16px' }}>應用程式設定</p>
+                            {[
+                                { key: 'version', label: '版本號', placeholder: '例：1.0.0-beta' },
+                            ].map(({ key, label, placeholder }) => (
+                                <div key={key} style={{ marginBottom: '16px' }}>
+                                    <label style={{ fontSize: '13px', color: 'var(--text-muted)', display: 'block', marginBottom: '6px' }}>{label}</label>
+                                    <div style={{ display: 'flex', gap: '8px' }}>
+                                        <input
+                                            style={{ ...inputStyle, flex: 1, marginBottom: 0 }}
+                                            value={appConfig[key] ?? ''}
+                                            placeholder={placeholder}
+                                            maxLength={100}
+                                            onChange={(e) => setAppConfig((c) => ({ ...c, [key]: e.target.value }))}
+                                        />
+                                        <button
+                                            disabled={configSaving}
+                                            style={{ ...btnPrimary, width: 'auto', padding: '10px 20px', opacity: configSaving ? 0.6 : 1 }}
+                                            onClick={async () => {
+                                                setConfigSaving(true);
+                                                try {
+                                                    await api.put('/notify/admin/config', { key, value: appConfig[key] ?? '' }, adminHeaders(token));
+                                                    showMsg(`${label}已更新`);
+                                                } catch (err) {
+                                                    showMsg(err.response?.data?.detail || '更新失敗');
+                                                } finally {
+                                                    setConfigSaving(false);
+                                                }
+                                            }}
+                                        >
+                                            {configSaving ? '儲存中…' : '儲存'}
+                                        </button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                    {!loading && !appConfig && (
+                        <p style={{ color: 'var(--text-muted)', fontSize: '14px', textAlign: 'center', marginTop: '40px' }}>無法載入設定</p>
                     )}
                 </>
             )}

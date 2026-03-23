@@ -43,6 +43,9 @@ REQUIRED_SHEETS: dict[str, list[str]] = {
     "user_sync": [
         "student_id_hash", "tasks_json", "shares_json", "updated_at",
     ],
+    "app_config": [
+        "key", "value",
+    ],
 }
 
 

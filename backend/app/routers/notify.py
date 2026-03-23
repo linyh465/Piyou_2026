@@ -53,6 +53,7 @@ from app.services.storage.sheets_notify import (
 from app.services.storage import sheets_push
 from app.services.storage import sheets_share
 from app.services.storage import sheets_analytics
+from app.services.storage import sheets_config
 
 router = APIRouter(prefix="/notify", tags=["通知 / Notify"])
 logger = logging.getLogger(__name__)
@@ -438,6 +439,52 @@ async def admin_list_shares(
         "active": len(active),
         "password_protected": len(pw_protected),
     }
+
+
+# ══════════════════════════════════════════
+#  應用程式設定 / App Config
+# ══════════════════════════════════════════
+
+@router.get("/config", summary="取得應用程式設定 / Get App Config (public)")
+async def get_app_config() -> dict:
+    """回傳公開設定（版本號等）/ Return public config (version etc.)."""
+    config = await sheets_config.get_all_config()
+    return {"version": config.get("version", "1.0.0-beta")}
+
+
+@router.get("/admin/config", summary="管理員取得完整設定 / Admin Get All Config")
+async def admin_get_config(
+    x_admin_token: Optional[str] = Header(None, alias="X-Admin-Token"),
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(_bearer_scheme),
+) -> dict:
+    """取得所有設定值 / Get all config values."""
+    _check_admin(x_admin_token, credentials)
+    config = await sheets_config.get_all_config()
+    return {"config": config}
+
+
+class _ConfigUpdate(BaseModel):
+    key: str
+    value: str
+
+
+@router.put("/admin/config", summary="管理員更新設定 / Admin Update Config")
+async def admin_update_config(
+    payload: _ConfigUpdate,
+    x_admin_token: Optional[str] = Header(None, alias="X-Admin-Token"),
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(_bearer_scheme),
+) -> dict:
+    """更新單一設定值 / Update a single config value."""
+    _check_admin(x_admin_token, credentials)
+    if not payload.key.strip():
+        raise HTTPException(status_code=400, detail="key 不可為空 / key cannot be empty")
+    if len(payload.value) > 100:
+        raise HTTPException(status_code=400, detail="value 過長（最多 100 字元）/ value too long (max 100 chars)")
+    try:
+        await sheets_config.set_config(payload.key.strip(), payload.value.strip())
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc))
+    return {"key": payload.key.strip(), "value": payload.value.strip()}
 
 
 # ══════════════════════════════════════════

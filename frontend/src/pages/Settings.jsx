@@ -19,6 +19,7 @@ import useNotifyStore from '../stores/notifyStore';
 import { getPushStatus, subscribePush, unsubscribePush } from '../services/pushService';
 import { trackEvent } from '../services/analytics';
 import { checkForUpdate } from '../services/pwaUpdate';
+import { api } from '../services/apiClient';
 import {
     IconUser, IconSun, IconMoon, IconBell, IconSettings,
     IconLogOut, IconChevronRight, IconBook, IconCheckCircle, IconXCircle, IconRefresh
@@ -119,6 +120,13 @@ export default function Settings() {
     const [showFeedback, setShowFeedback] = useState(false);
     const [showPolicy, setShowPolicy] = useState(null); // 'privacy' | 'terms' | null
     const [updateStatus, setUpdateStatus] = useState('idle'); // 'idle' | 'checking' | 'latest' | 'unavailable'
+    const [appVersion, setAppVersion] = useState('1.0.0-beta');
+
+    useEffect(() => {
+        api.get('/notify/config').then((res) => {
+            if (res.data?.version) setAppVersion(res.data.version);
+        }).catch(() => {});
+    }, []);
 
     // ── PWA 推播通知 / PWA Push Notifications ──
     // 'unsupported' | 'denied' | 'subscribed' | 'unsubscribed' | 'loading'
@@ -587,7 +595,7 @@ export default function Settings() {
                         <span style={{
                             fontFamily: 'monospace', padding: '4px 10px', borderRadius: '6px',
                             background: 'var(--bg-secondary)', color: 'var(--text-muted)', fontSize: '14px',
-                        }}>1.0.0-beta</span>
+                        }}>{appVersion}</span>
                     </div>
 
                     {/* 檢查更新按鈕 / Check for update button */}
