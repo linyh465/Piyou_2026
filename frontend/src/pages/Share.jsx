@@ -84,7 +84,7 @@ function ShareCard({ entry, deviceId, onRemove }) {
     return (
         <div style={{
             background: 'var(--bg-card)', borderRadius: '14px', padding: '16px 18px',
-            border: '1px solid var(--border-subtle)', position: 'relative',
+            border: '1px solid var(--border-subtle)', position: 'relative', overflow: 'hidden',
         }}>
             {/* 分享碼標籤 */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
@@ -120,9 +120,13 @@ function ShareCard({ entry, deviceId, onRemove }) {
                             href={entry.link_url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            style={{ fontSize: '13px', color: 'var(--color-brand)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                            style={{
+                                fontSize: '13px', color: 'var(--color-brand)',
+                                display: 'inline-flex', alignItems: 'flex-start', gap: '4px',
+                                wordBreak: 'break-all', overflow: 'hidden',
+                            }}
                         >
-                            <IconLink2 size={14} /> {entry.link_url}
+                            <IconLink2 size={14} style={{ flexShrink: 0, marginTop: '2px' }} /> {entry.link_url}
                         </a>
                     )}
                 </>
@@ -183,7 +187,7 @@ function SubscribeForm({ onSubscribed }) {
                     onChange={(e) => setCode(e.target.value)}
                     placeholder="輸入分享碼…"
                     style={{
-                        flex: 1, padding: '10px 14px', borderRadius: '10px', fontSize: '14px',
+                        flex: 1, minWidth: 0, padding: '10px 14px', borderRadius: '10px', fontSize: '14px',
                         border: '1.5px solid var(--border-subtle)', background: 'var(--bg-input)',
                         color: 'var(--text-primary)', outline: 'none',
                     }}
@@ -271,6 +275,7 @@ function CreateForm({ deviceId, onCreated }) {
         <form onSubmit={handleSubmit} style={{
             background: 'var(--bg-card)', borderRadius: '14px', padding: '18px',
             border: '1px solid var(--border-subtle)', display: 'flex', flexDirection: 'column', gap: '14px',
+            width: '100%', boxSizing: 'border-box',
         }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ fontWeight: 600, fontSize: '15px' }}>建立新分享</span>
@@ -362,10 +367,10 @@ export default function Share() {
     };
 
     return (
-        <div style={{ padding: '20px 16px', maxWidth: '600px', margin: '0 auto' }}>
+        <div className="section-stack animate-fade-in" style={{ maxWidth: '600px' }}>
 
             {/* 頁首 */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <IconLink2 size={22} style={{ color: 'var(--color-brand)' }} />
                 <h1 style={{ fontSize: '20px', fontWeight: 700, margin: 0 }}>共享平台</h1>
                 <button
