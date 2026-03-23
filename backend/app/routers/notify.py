@@ -57,6 +57,10 @@ logger = logging.getLogger(__name__)
 
 # JWT 設定（重用 auth.py 中的 JWT_SECRET）/ JWT config (reuse JWT_SECRET from auth.py)
 _JWT_SECRET = os.getenv("JWT_SECRET", "")
+if not _JWT_SECRET:
+    raise ValueError(
+        "JWT_SECRET is missing. Please set it in the environment. / 請在環境變數中設定 JWT_SECRET"
+    )
 _JWT_ALGORITHM = "HS256"
 _ADMIN_JWT_EXPIRE_HOURS = 24
 
