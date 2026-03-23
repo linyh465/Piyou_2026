@@ -9,6 +9,7 @@ vi.mock('../services/apiClient', () => ({
   api: {
     get: vi.fn(),
   },
+  apiError: (err, fallback) => fallback,
 }));
 
 let useTimetableStore;
@@ -22,7 +23,7 @@ beforeEach(async () => {
   vi.doMock('../services/apiClient', () => {
     const mockGet = vi.fn();
     mockApi = mockGet;
-    return { api: { get: mockGet } };
+    return { api: { get: mockGet }, apiError: (err, fallback) => fallback };
   });
 
   const mod = await import('../stores/timetableStore');
@@ -72,7 +73,8 @@ describe('timetableStore', () => {
 
     const state = useTimetableStore.getState();
     expect(state.isLoadingTimetable).toBe(false);
-    expect(state.timetableError).toBe('伺服器錯誤');
+    // apiError 對 5xx 回傳 fallback（mock 行為），不直接傳遞 detail
+    expect(state.timetableError).toBe('載入課表失敗');
   });
 
   it('fetchTimetable clears error on 401 (auth expired)', async () => {
@@ -111,7 +113,8 @@ describe('timetableStore', () => {
     await useTimetableStore.getState().fetchGrades();
 
     const state = useTimetableStore.getState();
-    expect(state.gradesError).toBe('成績查詢失敗');
+    // apiError 對 5xx 回傳 fallback（mock 行為），不直接傳遞 detail
+    expect(state.gradesError).toBe('載入成績失敗');
   });
 
   it('getNextClass returns null when timetable is empty', () => {
