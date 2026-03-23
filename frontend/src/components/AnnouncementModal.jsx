@@ -48,6 +48,18 @@ export default function AnnouncementModal() {
         }
     }, [unreadIds]);
 
+    const secondaryBtnStyle = {
+        fontSize: '14px', padding: '8px 16px', borderRadius: '10px', cursor: 'pointer',
+        transition: 'background 0.15s', background: 'var(--bg-input)',
+        color: 'var(--text-secondary)', border: '1px solid var(--border)', fontWeight: 500,
+    };
+
+    const primaryBtnStyle = {
+        fontSize: '14px', padding: '8px 16px', borderRadius: '10px', cursor: 'pointer',
+        transition: 'opacity 0.15s', background: 'var(--color-brand)',
+        color: 'white', border: 'none', fontWeight: 500,
+    };
+
     // ── 手動模式（從通知面板點擊）/ Manual mode (clicked from notification panel) ──
     const isManual = !!openedAnnId;
     const manualAnn = isManual ? announcements.find((a) => a.id === openedAnnId) : null;
@@ -110,18 +122,6 @@ export default function AnnouncementModal() {
         if (index < total - 1) {
             setIndex((i) => i + 1);
         }
-    };
-
-    const secondaryBtnStyle = {
-        fontSize: '14px', padding: '8px 16px', borderRadius: '10px', cursor: 'pointer',
-        transition: 'background 0.15s', background: 'var(--bg-input)',
-        color: 'var(--text-secondary)', border: '1px solid var(--border)', fontWeight: 500,
-    };
-
-    const primaryBtnStyle = {
-        fontSize: '14px', padding: '8px 16px', borderRadius: '10px', cursor: 'pointer',
-        transition: 'opacity 0.15s', background: 'var(--color-brand)',
-        color: 'white', border: 'none', fontWeight: 500,
     };
 
     return createPortal(
