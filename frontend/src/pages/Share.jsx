@@ -254,7 +254,7 @@ function ShareCard({ entry, deviceId, onRemove, onUpdated }) {
                     <div>
                         <label style={labelStyle}>分享碼</label>
                         <input value={editForm.code}
-                            onChange={(e) => setEditForm((f) => ({ ...f, code: e.target.value.replace(/[^A-Za-z0-9_\-]/g, '').slice(0, 30) }))}
+                            onChange={(e) => setEditForm((f) => ({ ...f, code: e.target.value.replace(/[^A-Za-z0-9_-]/g, '').slice(0, 30) }))}
                             style={inputStyle} placeholder="share-code" required maxLength={30} />
                     </div>
                     <div>
