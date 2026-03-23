@@ -93,7 +93,7 @@ async def get_share(
     if result is None:
         raise HTTPException(status_code=404, detail="找不到此分享碼 / Share code not found")
 
-    return _build_response(result, device_id=x_device_id, include_content=False)
+    return _build_response(result, device_id=x_device_id, include_content=True)
 
 
 @router.post("/{code}/view", response_model=ShareResponse)

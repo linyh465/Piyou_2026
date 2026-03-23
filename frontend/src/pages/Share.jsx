@@ -426,12 +426,12 @@ function SubscribeForm({ onSubscribed }) {
         setError('');
         try {
             const data = await apiFetch(`/${trimmed}`);
-            upsertShare({ ...data, is_owner: false });
+            upsertShare(data);  // is_owner is computed server-side from X-Device-Id
             onSubscribed(data);
             trackEvent('share_subscribe', {}, '/share');
             setCode('');
         } catch (e) {
-            setError(e.message.includes('404') ? '找不到此分享碼' : '訂閱失敗，請稍後再試');
+            setError(e.message || '訂閱失敗，請稍後再試');
         } finally {
             setLoading(false);
         }
