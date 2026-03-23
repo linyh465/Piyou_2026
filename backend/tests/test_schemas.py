@@ -50,3 +50,57 @@ def test_course_with_all_fields():
     )
     assert course.name_en == "Calculus"
     assert course.credits == 3
+
+
+# ── 共享平台模型 / Share Platform Models ──
+
+def test_share_create_valid():
+    """合法的 ShareCreate 應成功建立"""
+    from app.models.schemas import ShareCreate
+    req = ShareCreate(
+        code="mygroup-2026",
+        title="小組期末報告",
+        body="請大家查看附件",
+        link_url=None,
+        device_id="device-abc-123",
+    )
+    assert req.code == "mygroup-2026"
+    assert req.title == "小組期末報告"
+    assert req.link_url is None
+
+
+def test_share_create_invalid_code_too_short():
+    """code 少於 3 字元應拋出 ValidationError"""
+    from pydantic import ValidationError
+    from app.models.schemas import ShareCreate
+    with pytest.raises(ValidationError):
+        ShareCreate(code="ab", title="標題", device_id="dev-001")
+
+
+def test_share_create_invalid_code_pattern():
+    """code 含非法字元應拋出 ValidationError"""
+    from pydantic import ValidationError
+    from app.models.schemas import ShareCreate
+    with pytest.raises(ValidationError):
+        ShareCreate(code="my group!", title="標題", device_id="dev-001")
+
+
+def test_share_create_title_too_long():
+    """title 超過 60 字元應拋出 ValidationError"""
+    from pydantic import ValidationError
+    from app.models.schemas import ShareCreate
+    with pytest.raises(ValidationError):
+        ShareCreate(code="validcode", title="a" * 61, device_id="dev-001")
+
+
+def test_share_response_defaults():
+    """ShareResponse 預設 deleted=False"""
+    from app.models.schemas import ShareResponse
+    resp = ShareResponse(
+        code="testcode",
+        title="測試分享",
+        created_at="2026-03-23T00:00:00+00:00",
+    )
+    assert resp.deleted is False
+    assert resp.body is None
+    assert resp.link_url is None

@@ -14,7 +14,7 @@ import NotificationPanel from './NotificationPanel';
 import FeedbackModal from './FeedbackModal';
 
 // ── 學校相關路徑 / School-related paths ──
-const schoolPaths = ['/timetable', '/grades', '/library', '/transport'];
+const schoolPaths = ['/timetable', '/grades', '/library', '/share'];
 
 // 上次瀏覽的學校子頁面（預設課表）/ Last visited school sub-page (default: timetable)
 // 模組層級變數，僅在事件處理器中更新 / Module-level variable, updated only in event handlers
@@ -35,6 +35,7 @@ const menuGroups = [
         items: [
             { to: '/timetable', icon: IconCalendar, label: '課表' },
             { to: '/grades', icon: IconChartBar, label: '成績' },
+            { to: '/share', icon: IconLink2, label: '共享' },
         ],
     },
     {
@@ -42,7 +43,6 @@ const menuGroups = [
         items: [
             { to: '/transport', icon: IconBus, label: '交通' },
             { to: '/library', icon: IconLibrary, label: '圖書館' },
-            { to: '/share', icon: IconLink2, label: '共享' },
         ],
     },
 ];
@@ -52,7 +52,7 @@ const mobileMainItems = [
     { to: '/settings', icon: IconSettings, label: '設定' },
     { to: '/tasks', icon: IconCheckSquare, label: '任務' },
     { to: '/', icon: IconHome, label: '首頁', end: true },
-    { to: '/share', icon: IconLink2, label: '共享' },
+    { to: '/transport', icon: IconBus, label: '交通' },
     { key: 'school', icon: IconSchool, label: '學校', isCategory: true },
 ];
 
@@ -60,7 +60,7 @@ const mobileMainItems = [
 const mobileSchoolItems = [
     { to: '/grades', icon: IconChartBar, label: '成績' },
     { to: '/timetable', icon: IconCalendar, label: '課表' },
-    { to: '/transport', icon: IconBus, label: '交通' },
+    { to: '/share', icon: IconLink2, label: '共享' },
     { to: '/library', icon: IconLibrary, label: '圖書館' },
     { key: 'back', icon: IconArrowLeft, label: '上一頁', isBack: true },
 ];

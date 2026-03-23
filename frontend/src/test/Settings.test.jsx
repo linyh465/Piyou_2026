@@ -6,6 +6,13 @@ import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 
 // Mock stores
+// Mock pushService — jsdom 沒有 serviceWorker，避免非同步副作用
+vi.mock('../services/pushService', () => ({
+  getPushStatus: vi.fn(async () => 'unsupported'),
+  subscribePush: vi.fn(async () => true),
+  unsubscribePush: vi.fn(async () => true),
+}));
+
 vi.mock('../stores/themeStore', () => {
   const store = { theme: 'system', resolvedTheme: 'light', setTheme: vi.fn(), toggle: vi.fn(), colorTheme: 'default', setColorTheme: vi.fn() };
   return {
@@ -18,6 +25,7 @@ vi.mock('../stores/themeStore', () => {
       { id: 'crimson', label: '緋紅', labelEn: 'Crimson', description: '丹霞映雪', color: '#DC2626' },
       { id: 'emerald', label: '翠柏', labelEn: 'Emerald', description: '蒼松斂翠', color: '#059669' },
       { id: 'rose', label: '薔薇', labelEn: 'Rose', description: '春庭薔薇', color: '#E11D48' },
+      { id: 'wisteria', label: '紫藤', labelEn: 'Wisteria', description: '幽夢花期', color: '#C026D3' },
     ],
     default: Object.assign(vi.fn((selector) => (selector ? selector(store) : store)), {
       getState: () => store,
