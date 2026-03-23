@@ -30,12 +30,20 @@ export function setUpdateServiceWorker(fn) {
 /**
  * 啟動等待中的 SW（若有），否則重新整理頁面。
  * Activate the waiting SW (if any), or reload the page.
+ *
+ * 直接對 reg.waiting 發送 SKIP_WAITING 並監聽 controllerchange 後 reload，
+ * 比透過 vite-pwa 的 updateServiceWorker 更可靠（後者可能找不到 waiting SW）。
  */
 function _activateWaiting(reg) {
-    if (_updateServiceWorker) {
+    const waiting = reg.waiting;
+    if (waiting) {
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+            window.location.reload();
+        }, { once: true });
+        waiting.postMessage({ type: 'SKIP_WAITING' });
+    } else if (_updateServiceWorker) {
         _updateServiceWorker(true);
-    } else if (reg.waiting) {
-        reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+    } else {
         window.location.reload();
     }
 }
@@ -64,6 +72,41 @@ export async function checkForUpdate() {
         return 'updated';
     }
 
+    // 等待單一 SW（安裝中或新找到的）的輔助函式
+    // Helper: wait for a single SW to reach installed/redundant state
+    function waitForInstall(sw, timeoutMs) {
+        return new Promise((resolve) => {
+            const timer = setTimeout(() => {
+                sw.removeEventListener('statechange', onStateChange);
+                resolve('latest');
+            }, timeoutMs);
+
+            function onStateChange() {
+                if (sw.state === 'installed' && navigator.serviceWorker.controller) {
+                    clearTimeout(timer);
+                    sw.removeEventListener('statechange', onStateChange);
+                    resolve('installed');
+                } else if (sw.state === 'redundant') {
+                    clearTimeout(timer);
+                    sw.removeEventListener('statechange', onStateChange);
+                    resolve('redundant');
+                }
+            }
+
+            sw.addEventListener('statechange', onStateChange);
+        });
+    }
+
+    // 若已有正在安裝中的 SW（例如背景自動更新進行到一半），直接等候完成
+    if (reg.installing) {
+        const outcome = await waitForInstall(reg.installing, 15000);
+        if (outcome === 'installed') {
+            _activateWaiting(reg);
+            return 'updated';
+        }
+        return 'latest';
+    }
+
     return new Promise((resolve) => {
         // 10 秒後若無新版，視為已是最新
         const timer = setTimeout(() => {
@@ -75,21 +118,16 @@ export async function checkForUpdate() {
             const sw = reg.installing;
             if (!sw) return;
 
-            function onStateChange() {
-                // installed = SW 已安裝完成進入 waiting 狀態
-                if (sw.state === 'installed' && navigator.serviceWorker.controller) {
-                    clearTimeout(timer);
-                    reg.removeEventListener('updatefound', onUpdateFound);
-                    sw.removeEventListener('statechange', onStateChange);
+            waitForInstall(sw, 15000).then((outcome) => {
+                clearTimeout(timer);
+                reg.removeEventListener('updatefound', onUpdateFound);
+                if (outcome === 'installed') {
                     _activateWaiting(reg);
                     resolve('updated');
-                } else if (sw.state === 'redundant') {
-                    // 安裝失敗，不算有新版
-                    sw.removeEventListener('statechange', onStateChange);
+                } else {
+                    resolve('latest');
                 }
-            }
-
-            sw.addEventListener('statechange', onStateChange);
+            });
         }
 
         reg.addEventListener('updatefound', onUpdateFound);
