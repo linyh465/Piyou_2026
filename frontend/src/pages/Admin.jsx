@@ -220,9 +220,10 @@ function AnnouncementForm({ initial, onSave, onCancel }) {
 export default function Admin() {
     const [token, setToken] = useState(getStoredToken);
     const [adminName, setAdminName] = useState('');
-    const [tab, setTab] = useState('announcements'); // 'announcements' | 'feedback'
+    const [tab, setTab] = useState('announcements'); // 'announcements' | 'feedback' | 'shares'
     const [announcements, setAnnouncements] = useState([]);
     const [feedback, setFeedback] = useState([]);
+    const [shares, setShares] = useState([]);
     const [loading, setLoading] = useState(false);
     const [showCreateForm, setShowCreateForm] = useState(false);
     const [editingId, setEditingId] = useState(null);
@@ -261,12 +262,26 @@ export default function Admin() {
         }
     }, [token]);
 
+    const loadShares = useCallback(async () => {
+        if (!token) return;
+        setLoading(true);
+        try {
+            const res = await api.get('/notify/admin/shares', adminHeaders(token));
+            setShares(res.data.shares || []);
+        } catch (err) {
+            if (err.response?.status === 403) handleLogout();
+        } finally {
+            setLoading(false);
+        }
+    }, [token]);
+
     useEffect(() => {
         if (token) {
             if (tab === 'announcements') loadAnnouncements();
-            else loadFeedback();
+            else if (tab === 'feedback') loadFeedback();
+            else if (tab === 'shares') loadShares();
         }
-    }, [token, tab, loadAnnouncements, loadFeedback]);
+    }, [token, tab, loadAnnouncements, loadFeedback, loadShares]);
 
     const handleCreate = async (data) => {
         await api.post('/notify/admin/announcements', data, adminHeaders(token));
@@ -303,7 +318,7 @@ export default function Admin() {
     const editingAnn = editingId ? announcements.find((a) => a.id === editingId) : null;
 
     return (
-        <div style={{ minHeight: '100vh', background: 'var(--bg)', padding: '16px', paddingTop: 'calc(env(safe-area-inset-top, 0px) + 16px)' }}>
+        <div style={{ height: '100vh', overflowY: 'auto', background: 'var(--bg)', padding: '16px', paddingTop: 'calc(env(safe-area-inset-top, 0px) + 16px)', boxSizing: 'border-box' }}>
             {/* Header */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
                 <div>
@@ -321,15 +336,15 @@ export default function Admin() {
             )}
 
             {/* Tabs */}
-            <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
-                {['announcements', 'feedback'].map((t) => (
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', flexWrap: 'wrap' }}>
+                {['announcements', 'feedback', 'shares'].map((t) => (
                     <button key={t} onClick={() => setTab(t)} style={{
                         padding: '8px 16px', borderRadius: '10px', border: 'none', cursor: 'pointer',
                         background: tab === t ? 'var(--color-brand)' : 'var(--bg-input)',
                         color: tab === t ? 'white' : 'var(--text-secondary)',
                         fontWeight: tab === t ? 600 : 400, fontSize: '14px',
                     }}>
-                        {t === 'announcements' ? '公告管理' : '意見回饋'}
+                        {t === 'announcements' ? '公告管理' : t === 'feedback' ? '意見回饋' : '共享平台'}
                     </button>
                 ))}
             </div>
@@ -428,6 +443,35 @@ export default function Admin() {
                     ))}
                     {!loading && feedback.length === 0 && (
                         <p style={{ color: 'var(--text-muted)', fontSize: '14px', textAlign: 'center', marginTop: '40px' }}>目前沒有回饋</p>
+                    )}
+                </>
+            )}
+
+            {/* Shares Tab */}
+            {tab === 'shares' && (
+                <>
+                    <button onClick={loadShares} style={{ ...btnGhost, marginBottom: '12px' }}>重新整理</button>
+                    {loading && <p style={{ color: 'var(--text-muted)', fontSize: '14px' }}>載入中…</p>}
+                    {!loading && shares.map((s) => (
+                        <div key={s.code} style={{ ...card, borderLeft: `4px solid ${s.deleted ? 'var(--color-danger)' : 'var(--color-brand)'}` }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                                <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', fontFamily: 'monospace' }}>{s.code}</span>
+                                <span style={{ fontSize: '11px', fontWeight: 600, color: s.deleted ? 'var(--color-danger)' : 'var(--color-success)' }}>
+                                    {s.deleted ? '已刪除' : '有效'}
+                                </span>
+                            </div>
+                            <p style={{ fontWeight: 600, color: 'var(--text)', fontSize: '14px', margin: '0 0 4px' }}>{s.title}</p>
+                            {s.body && <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: '0 0 4px', whiteSpace: 'pre-line' }}>{s.body}</p>}
+                            {s.link_url && (
+                                <p style={{ fontSize: '12px', color: 'var(--color-brand)', margin: '0 0 4px', wordBreak: 'break-all' }}>{s.link_url}</p>
+                            )}
+                            <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: 0 }}>
+                                裝置：{s.device_id_hash} · {s.created_at ? new Date(s.created_at).toLocaleString('zh-TW') : ''}
+                            </p>
+                        </div>
+                    ))}
+                    {!loading && shares.length === 0 && (
+                        <p style={{ color: 'var(--text-muted)', fontSize: '14px', textAlign: 'center', marginTop: '40px' }}>目前沒有共享資料</p>
                     )}
                 </>
             )}

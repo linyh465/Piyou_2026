@@ -7,6 +7,7 @@ shared_items 欄位 / shared_items columns:
   A=code  B=title  C=body  D=link_url  E=device_id_hash  F=created_at  G=is_deleted
 """
 import os
+import json
 import hashlib
 import logging
 import asyncio
@@ -55,6 +56,24 @@ def _hash_device_id(device_id: str) -> str:
 #  CRUD 同步函式 / CRUD Sync Functions
 # ══════════════════════════════════════════
 
+def _parse_link_urls(raw: str) -> list:
+    """
+    解析連結欄位（向後相容）/ Parse link_urls field (backward compat).
+    舊資料為單一 URL 字串，新資料為 JSON 陣列字串。
+    Old data: plain URL string; new data: JSON array string.
+    """
+    if not raw:
+        return []
+    stripped = raw.strip()
+    if stripped.startswith("["):
+        try:
+            urls = json.loads(stripped)
+            return [u for u in urls if isinstance(u, str) and u]
+        except json.JSONDecodeError:
+            pass
+    return [stripped]
+
+
 def _row_to_dict(row: list) -> dict:
     """將工作表列轉為字典 / Convert sheet row to dict."""
     def get(i): return row[i] if i < len(row) else ""
@@ -62,7 +81,7 @@ def _row_to_dict(row: list) -> dict:
         "code": get(0),
         "title": get(1),
         "body": get(2) or None,
-        "link_url": get(3) or None,
+        "link_urls": _parse_link_urls(get(3)),
         "device_id_hash": get(4),
         "created_at": get(5),
         "deleted": get(6).upper() == "TRUE",
@@ -85,7 +104,7 @@ def _get_share_sync(code: str) -> Optional[dict]:
 
 
 def _create_share_sync(code: str, title: str, body: Optional[str],
-                       link_url: Optional[str], device_id: str) -> dict:
+                       link_urls: list, device_id: str) -> dict:
     """同步建立分享項 / Sync create share item."""
     service = _build_service()
     sheets_id = _get_sheets_id()
@@ -97,7 +116,8 @@ def _create_share_sync(code: str, title: str, body: Optional[str],
 
     now = datetime.now(timezone.utc).isoformat()
     device_id_hash = _hash_device_id(device_id)
-    row = [code, title, body or "", link_url or "", device_id_hash, now, "FALSE"]
+    link_urls_str = json.dumps(link_urls, ensure_ascii=False) if link_urls else ""
+    row = [code, title, body or "", link_urls_str, device_id_hash, now, "FALSE"]
 
     service.spreadsheets().values().append(
         spreadsheetId=sheets_id,
@@ -111,7 +131,7 @@ def _create_share_sync(code: str, title: str, body: Optional[str],
         "code": code,
         "title": title,
         "body": body or None,
-        "link_url": link_url or None,
+        "link_urls": link_urls,
         "created_at": now,
         "deleted": False,
     }
@@ -162,11 +182,28 @@ async def get_share(code: str) -> Optional[dict]:
 
 
 async def create_share(code: str, title: str, body: Optional[str],
-                       link_url: Optional[str], device_id: str) -> dict:
+                       link_urls: list, device_id: str) -> dict:
     """建立分享項（非同步）/ Create share item (async)."""
-    return await asyncio.to_thread(_create_share_sync, code, title, body, link_url, device_id)
+    return await asyncio.to_thread(_create_share_sync, code, title, body, link_urls, device_id)
 
 
 async def delete_share(code: str, device_id: str) -> bool:
     """刪除分享項（非同步）/ Delete share item (async)."""
     return await asyncio.to_thread(_delete_share_sync, code, device_id)
+
+
+def _list_all_shares_sync() -> list:
+    """同步列出所有分享項（含已刪除）/ Sync list all share items (including deleted)."""
+    service = _build_service()
+    sheets_id = _get_sheets_id()
+    result = service.spreadsheets().values().get(
+        spreadsheetId=sheets_id,
+        range="shared_items!A2:G",
+    ).execute()
+    rows = result.get("values", [])
+    return [_row_to_dict(row) for row in rows if row]
+
+
+async def list_all_shares() -> list:
+    """列出所有分享項（非同步，管理員用）/ List all share items (async, admin only)."""
+    return await asyncio.to_thread(_list_all_shares_sync)

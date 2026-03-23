@@ -49,6 +49,7 @@ from app.services.storage.sheets_notify import (
     list_feedback,
 )
 from app.services.storage import sheets_push
+from app.services.storage import sheets_share
 
 router = APIRouter(prefix="/notify", tags=["通知 / Notify"])
 logger = logging.getLogger(__name__)
@@ -356,6 +357,20 @@ async def admin_reply_feedback(
         return {"ok": True}
     except RuntimeError as exc:
         raise HTTPException(status_code=503, detail=str(exc))
+
+
+@router.get("/admin/shares", summary="管理員列出共享平台資料 / Admin List Shares")
+async def admin_list_shares(
+    x_admin_token: Optional[str] = Header(None, alias="X-Admin-Token"),
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(_bearer_scheme),
+) -> dict:
+    """列出所有共享貼文（含已刪除）/ List all share items including deleted."""
+    _check_admin(x_admin_token, credentials)
+    try:
+        items = await sheets_share.list_all_shares()
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc))
+    return {"shares": items, "total": len(items)}
 
 
 # ══════════════════════════════════════════

@@ -257,7 +257,8 @@ class ShareCreate(BaseModel):
                       description="自訂分享碼（英數字、-、_）/ Custom share code")
     title: str = Field(..., min_length=1, max_length=60, description="標題 / Title")
     body: Optional[str] = Field(None, max_length=2000, description="內文 / Body")
-    link_url: Optional[str] = Field(None, max_length=500, description="連結 / Link URL")
+    link_urls: list[str] = Field(default_factory=list, max_length=10,
+                                 description="連結清單（最多 10 個）/ Link URLs (max 10)")
     device_id: str = Field(..., min_length=1, max_length=64, description="裝置 ID / Device ID")
 
 
@@ -266,6 +267,6 @@ class ShareResponse(BaseModel):
     code: str = Field(..., description="分享碼 / Share code")
     title: str = Field(..., description="標題 / Title")
     body: Optional[str] = Field(None, description="內文 / Body")
-    link_url: Optional[str] = Field(None, description="連結 / Link URL")
+    link_urls: list[str] = Field(default_factory=list, description="連結清單 / Link URLs")
     created_at: str = Field(..., description="建立時間 / Created at")
     deleted: bool = Field(False, description="是否已被刪除 / Is deleted by owner")

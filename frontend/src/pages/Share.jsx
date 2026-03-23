@@ -4,7 +4,7 @@
  * Share text & links via custom codes; subscribe by entering a code.
  */
 import { useState, useEffect, useCallback } from 'react';
-import { IconLink2, IconPlus, IconTrash, IconRefresh, IconXCircle, IconCheck } from '../components/Icons';
+import { IconLink2, IconPlus, IconTrash, IconRefresh, IconXCircle, IconCheck, IconMinus } from '../components/Icons';
 
 function getDeviceId() {
     let id = localStorage.getItem('piyou_device_id');
@@ -16,7 +16,7 @@ function getDeviceId() {
 }
 
 const API = import.meta.env.VITE_API_URL || '';
-const LS_KEY = 'piyou_shares'; // [{code, title, body, link_url, created_at, deleted, is_owner}]
+const LS_KEY = 'piyou_shares'; // [{code, title, body, link_urls, created_at, deleted, is_owner}]
 
 // ── localStorage helpers ──
 
@@ -115,19 +115,24 @@ function ShareCard({ entry, deviceId, onRemove }) {
                             {entry.body}
                         </div>
                     )}
-                    {entry.link_url && (
-                        <a
-                            href={entry.link_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            style={{
-                                fontSize: '13px', color: 'var(--color-brand)',
-                                display: 'inline-flex', alignItems: 'flex-start', gap: '4px',
-                                wordBreak: 'break-all', overflow: 'hidden',
-                            }}
-                        >
-                            <IconLink2 size={14} style={{ flexShrink: 0, marginTop: '2px' }} /> {entry.link_url}
-                        </a>
+                    {entry.link_urls?.length > 0 && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                            {entry.link_urls.map((url, i) => (
+                                <a
+                                    key={i}
+                                    href={url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    style={{
+                                        fontSize: '13px', color: 'var(--color-brand)',
+                                        display: 'inline-flex', alignItems: 'flex-start', gap: '4px',
+                                        wordBreak: 'break-all', overflow: 'hidden',
+                                    }}
+                                >
+                                    <IconLink2 size={14} style={{ flexShrink: 0, marginTop: '2px' }} /> {url}
+                                </a>
+                            ))}
+                        </div>
                     )}
                 </>
             )}
@@ -215,31 +220,38 @@ function SubscribeForm({ onSubscribed }) {
 
 function CreateForm({ deviceId, onCreated }) {
     const [open, setOpen] = useState(false);
-    const [form, setForm] = useState({ code: '', title: '', body: '', link_url: '' });
+    const [form, setForm] = useState({ code: '', title: '', body: '' });
+    const [linkUrls, setLinkUrls] = useState(['']);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState(false);
 
     const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }));
 
+    const setLinkUrl = (i, val) => setLinkUrls((prev) => prev.map((u, idx) => idx === i ? val : u));
+    const addLinkUrl = () => { if (linkUrls.length < 10) setLinkUrls((prev) => [...prev, '']); };
+    const removeLinkUrl = (i) => setLinkUrls((prev) => prev.filter((_, idx) => idx !== i));
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         setLoading(true);
         setError('');
         try {
+            const validUrls = linkUrls.map((u) => u.trim()).filter(Boolean);
             const data = await apiFetch('', {
                 method: 'POST',
                 body: JSON.stringify({
                     code: form.code.trim(),
                     title: form.title.trim(),
                     body: form.body.trim() || null,
-                    link_url: form.link_url.trim() || null,
+                    link_urls: validUrls,
                     device_id: deviceId,
                 }),
             });
             upsertShare({ ...data, is_owner: true });
             onCreated(data);
-            setForm({ code: '', title: '', body: '', link_url: '' });
+            setForm({ code: '', title: '', body: '' });
+            setLinkUrls(['']);
             setSuccess(true);
             setTimeout(() => { setSuccess(false); setOpen(false); }, 1500);
         } catch (e) {
@@ -301,9 +313,28 @@ function CreateForm({ deviceId, onCreated }) {
                     placeholder="分享內容…" maxLength={2000} />
             </div>
             <div>
-                <label style={labelStyle}>連結（選填）</label>
-                <input value={form.link_url} onChange={set('link_url')} style={inputStyle}
-                    placeholder="https://…" maxLength={500} type="url" />
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                    <label style={{ ...labelStyle, marginBottom: 0 }}>連結（選填，最多 10 個）</label>
+                    {linkUrls.length < 10 && (
+                        <button type="button" onClick={addLinkUrl}
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-brand)', display: 'flex', alignItems: 'center', gap: '2px', fontSize: '13px' }}>
+                            <IconPlus size={14} /> 新增連結
+                        </button>
+                    )}
+                </div>
+                {linkUrls.map((url, i) => (
+                    <div key={i} style={{ display: 'flex', gap: '6px', marginBottom: '6px' }}>
+                        <input value={url} onChange={(e) => setLinkUrl(i, e.target.value)}
+                            style={{ ...inputStyle, flex: 1, marginBottom: 0 }}
+                            placeholder="https://…" maxLength={500} type="url" />
+                        {linkUrls.length > 1 && (
+                            <button type="button" onClick={() => removeLinkUrl(i)}
+                                style={{ background: 'none', border: '1px solid var(--border-subtle)', borderRadius: '8px', cursor: 'pointer', color: 'var(--text-muted)', padding: '0 8px' }}>
+                                <IconMinus size={14} />
+                            </button>
+                        )}
+                    </div>
+                ))}
             </div>
 
             {error && <div style={{ color: 'var(--color-danger)', fontSize: '13px' }}>{error}</div>}
@@ -385,6 +416,16 @@ export default function Share() {
                 >
                     <IconRefresh size={18} style={{ opacity: refreshing ? 0.4 : 1 }} />
                 </button>
+            </div>
+
+            {/* 免責聲明 / Disclaimer */}
+            <div style={{
+                background: 'rgba(234,179,8,0.08)', borderRadius: '12px', padding: '12px 16px',
+                border: '1px solid rgba(234,179,8,0.25)', fontSize: '12px', color: 'var(--text-secondary)',
+                lineHeight: '1.7',
+            }}>
+                <strong style={{ color: 'var(--color-warning)', display: 'block', marginBottom: '4px' }}>資安提醒</strong>
+                點擊他人分享的連結前請先確認來源可信，勿輕易輸入個人資料或帳號密碼。本平台不對第三方連結的安全性負責，分享內容由使用者自行負責。
             </div>
 
             {/* 訂閱分享碼 */}

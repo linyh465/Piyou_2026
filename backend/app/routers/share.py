@@ -30,7 +30,7 @@ async def create_share(payload: ShareCreate):
             code=payload.code,
             title=payload.title,
             body=payload.body,
-            link_url=payload.link_url,
+            link_urls=payload.link_urls,
             device_id=payload.device_id,
         )
     except ValueError as e:

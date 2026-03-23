@@ -304,3 +304,7 @@ export const IconLink2 = icon(
         <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
     </>
 );
+
+export const IconMinus = icon(
+    <line x1="5" y1="12" x2="19" y2="12" />
+);
