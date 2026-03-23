@@ -83,7 +83,8 @@ async def test_get_share_no_sheets(client):
 async def test_delete_share_no_sheets(client):
     """Sheets 未設定時 DELETE /share/{code} 應回傳 200（delete 容錯處理）"""
     import json as _json
-    resp = await client.delete(
+    resp = await client.request(
+        "DELETE",
         "/api/v1/share/mygroup-2026",
         content=_json.dumps({"device_id": "test-device-001"}),
         headers={"Content-Type": "application/json"},

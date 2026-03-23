@@ -55,6 +55,8 @@ beforeEach(() => {
     });
     // 清除 localStorage / Clear localStorage
     localStorage.clear();
+    // 清除 sessionStorage（確保 session-fetch 標記重置）/ Clear sessionStorage
+    sessionStorage.clear();
     // 重置 vi mocks / Reset vi mocks
     vi.clearAllMocks();
 });
@@ -143,6 +145,9 @@ describe('getHasUrgent()', () => {
 
 describe('fetchAnnouncements() 快取邏輯 / cache logic', () => {
     it('命中有效快取時不呼叫 API / uses cache when valid, no API call', async () => {
+        // 模擬本 session 已完成首次請求，後續應走快取
+        // Simulate first fetch already done this session, subsequent calls use cache
+        sessionStorage.setItem('piyou_ann_session_fetched', '1');
         // 預先填入快取 / Pre-fill cache
         const cachedData = {
             announcements: SAMPLE_ANNOUNCEMENTS,
