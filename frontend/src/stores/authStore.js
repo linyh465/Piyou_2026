@@ -4,7 +4,7 @@
  * Handles login, logout, token management, and secure credential storage flow.
  */
 import { create } from 'zustand';
-import { api } from '../services/apiClient';
+import { api, apiError } from '../services/apiClient';
 import secureStorage from '../services/secureStorage';
 import i18n from '../i18n/index';
 
@@ -70,7 +70,7 @@ const useAuthStore = create((set, get) => ({
 
             return true;
         } catch (err) {
-            const message = err.response?.data?.detail || i18n.t('common:loginFailed');
+            const message = apiError(err, i18n.t('common:loginFailed'));
             const isCooldown = err.response?.status === 429;
             set((state) => ({
                 isLoading: false,

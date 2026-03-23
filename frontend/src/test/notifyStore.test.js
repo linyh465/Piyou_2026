@@ -12,7 +12,9 @@ vi.mock('../services/apiClient', () => ({
     api: {
         get: vi.fn(),
         post: vi.fn(),
+        patch: vi.fn(),
     },
+    apiError: (err, fallback) => fallback,
 }));
 
 import { api } from '../services/apiClient';

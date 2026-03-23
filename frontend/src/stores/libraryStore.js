@@ -7,7 +7,7 @@
  * Security: library data is cached locally only.
  */
 import { create } from 'zustand';
-import { api } from '../services/apiClient';
+import { api, apiError } from '../services/apiClient';
 
 const REQUEST_TIMEOUT = 25000;
 
@@ -52,7 +52,7 @@ const useLibraryStore = create((set, get) => ({
                 isLoading: false,
             });
         } catch (err) {
-            const msg = err.response?.data?.detail || err.message || '取得圖書館資料失敗';
+            const msg = apiError(err, '取得圖書館資料失敗');
             set({ isLoading: false, error: msg });
         }
     },

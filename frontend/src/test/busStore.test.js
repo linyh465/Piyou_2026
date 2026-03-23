@@ -9,6 +9,7 @@ vi.mock('../services/apiClient', () => ({
   api: {
     get: vi.fn(),
   },
+  apiError: (err, fallback) => fallback,
 }));
 
 // Mock localDb

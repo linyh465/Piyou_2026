@@ -56,7 +56,7 @@ export default class ErrorBoundary extends Component {
                         發生了非預期的錯誤 😵
                     </h2>
                     <p style={{ color: '#666', fontSize: '0.875rem', marginBottom: '24px' }}>
-                        {this.state.error?.message || '未知錯誤'}
+                        請嘗試重新整理頁面，或回到首頁。
                     </p>
                     <button
                         onClick={this.handleReset}

@@ -4,7 +4,7 @@
  * Manages announcements, unread tracking, PWA local notifications, and feedback.
  */
 import { create } from 'zustand';
-import { api } from '../services/apiClient';
+import { api, apiError } from '../services/apiClient';
 
 const ANNOUNCE_CACHE_KEY = 'piyou_announce_cache';
 const READ_VERSIONS_KEY = 'piyou_read_announce_versions'; // {id: version}
@@ -226,7 +226,7 @@ const useNotifyStore = create((set, get) => ({
             });
             return { ok: true, id };
         } catch (err) {
-            const msg = err.response?.data?.detail || '送出失敗 / Submission failed';
+            const msg = apiError(err, '送出失敗，請稍後再試');
             return { ok: false, id, error: msg };
         }
     },
@@ -257,7 +257,7 @@ const useNotifyStore = create((set, get) => ({
             await api.patch(`/notify/feedback/${feedbackId}/contact`, { contact });
             return { ok: true };
         } catch (err) {
-            const msg = err.response?.data?.detail || '更新失敗，請稍後再試';
+            const msg = apiError(err, '更新失敗，請稍後再試');
             return { ok: false, error: msg };
         }
     },

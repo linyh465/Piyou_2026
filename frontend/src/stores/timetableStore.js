@@ -10,7 +10,7 @@
  * Sync cooldown: server-side per-device cooldown via X-Device-Id; frontend is display-only.
  */
 import { create } from 'zustand';
-import { api } from '../services/apiClient';
+import { api, apiError } from '../services/apiClient';
 
 // 請求超時時間 / Request timeout duration
 const REQUEST_TIMEOUT = 25000;
@@ -153,7 +153,7 @@ const useTimetableStore = create((set, get) => ({
             } else {
                 set({
                     isLoadingTimetable: false,
-                    timetableError: err.response?.data?.detail || '載入課表失敗 / Failed to load timetable',
+                    timetableError: apiError(err, '載入課表失敗'),
                 });
             }
         }
@@ -187,7 +187,7 @@ const useTimetableStore = create((set, get) => ({
             } else {
                 set({
                     isLoadingGrades: false,
-                    gradesError: err.response?.data?.detail || '載入成績失敗 / Failed to load grades',
+                    gradesError: apiError(err, '載入成績失敗'),
                 });
             }
         }

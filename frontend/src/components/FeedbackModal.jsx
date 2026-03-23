@@ -67,12 +67,10 @@ export default function FeedbackModal({ show, onClose }) {
     const handleQuery = async () => {
         if (querying || !queryId.trim()) return;
         const trimmedId = queryId.trim();
-
-        if (trimmedId === lastQueriedId) {
-            setQueryError('此 ID 已查詢過，重新整理中…');
-        }
+        const isRepeat = trimmedId === lastQueriedId;
 
         setQuerying(true);
+        setQueryError('');
         setQueryResult(null);
         setEditingContact(false);
         setContactSaveMsg('');
@@ -82,7 +80,9 @@ export default function FeedbackModal({ show, onClose }) {
                 setQueryResult(result);
                 setLastQueriedId(trimmedId);
                 setContactDraft(result.contact || '');
-                setQueryError('');
+                if (isRepeat) {
+                    setQueryError('⚠ 此 ID 已查詢過，以下為最新資料');
+                }
             } else {
                 setQueryError('找不到此回饋 ID，請確認是否正確');
             }
@@ -368,8 +368,12 @@ export default function FeedbackModal({ show, onClose }) {
                             padding: '10px',
                             borderRadius: '10px',
                             marginTop: '8px',
-                            background: 'rgba(239, 68, 68, 0.1)',
-                            color: 'var(--color-danger)',
+                            background: queryError.startsWith('⚠')
+                                ? 'rgba(234, 179, 8, 0.1)'
+                                : 'rgba(239, 68, 68, 0.1)',
+                            color: queryError.startsWith('⚠')
+                                ? 'var(--color-warning, #ca8a04)'
+                                : 'var(--color-danger)',
                             fontSize: '12px',
                         }}>
                             {queryError}

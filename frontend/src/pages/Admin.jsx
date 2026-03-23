@@ -9,7 +9,7 @@
  * - 意見回饋列表與回覆
  */
 import { useState, useEffect, useCallback } from 'react';
-import { api } from '../services/apiClient';
+import { api, apiError } from '../services/apiClient';
 
 const ADMIN_TOKEN_KEY = 'piyou_admin_token';
 
@@ -109,7 +109,7 @@ function LoginForm({ onLogin }) {
             storeToken(res.data.token);
             onLogin(res.data.token, res.data.username);
         } catch (err) {
-            setError(err.response?.data?.detail || '登入失敗');
+            setError(apiError(err, '登入失敗'));
         } finally {
             setLoading(false);
         }
@@ -171,7 +171,7 @@ function AnnouncementForm({ initial, onSave, onCancel }) {
         try {
             await onSave(data);
         } catch (err) {
-            setError(err.response?.data?.detail || '儲存失敗');
+            setError(apiError(err, '儲存失敗'));
         } finally {
             setSaving(false);
         }
