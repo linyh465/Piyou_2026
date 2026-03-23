@@ -111,7 +111,7 @@ function ShareCard({ entry, deviceId, onRemove }) {
                         {entry.title}
                     </div>
                     {entry.body && (
-                        <div style={{ fontSize: '14px', color: 'var(--text-secondary)', whiteSpace: 'pre-wrap', marginBottom: '8px', lineHeight: '1.6' }}>
+                        <div style={{ fontSize: '14px', color: 'var(--text-secondary)', whiteSpace: 'pre-wrap', overflowWrap: 'break-word', marginBottom: '8px', lineHeight: '1.6' }}>
                             {entry.body}
                         </div>
                     )}
@@ -135,16 +135,16 @@ function ShareCard({ entry, deviceId, onRemove }) {
             {/* 操作按鈕 */}
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '10px', gap: '8px' }}>
                 {entry.deleted ? (
-                    <button className="btn-ghost btn-sm" onClick={handleDismiss} style={{ color: 'var(--color-danger)', fontSize: '13px' }}>
+                    <button className="btn btn-ghost" onClick={handleDismiss} style={{ color: 'var(--color-danger)', fontSize: '13px' }}>
                         移除此則
                     </button>
                 ) : entry.is_owner ? (
-                    <button className="btn-ghost btn-sm" onClick={handleDelete} disabled={deleting}
+                    <button className="btn btn-ghost" onClick={handleDelete} disabled={deleting}
                         style={{ color: 'var(--color-danger)', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '4px' }}>
                         <IconTrash size={14} /> {deleting ? '刪除中…' : '刪除'}
                     </button>
                 ) : (
-                    <button className="btn-ghost btn-sm" onClick={handleDismiss}
+                    <button className="btn btn-ghost" onClick={handleDismiss}
                         style={{ color: 'var(--text-muted)', fontSize: '13px' }}>
                         移除訂閱
                     </button>

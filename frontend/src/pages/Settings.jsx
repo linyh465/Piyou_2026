@@ -242,6 +242,7 @@ export default function Settings() {
     // ── 隱藏管理員入口：連點版本號 7 次 / Hidden admin entry: tap version 7 times ──
     const versionTapCount = useRef(0);
     const versionTapTimer = useRef(null);
+    useEffect(() => () => clearTimeout(versionTapTimer.current), []);
     const handleVersionTap = () => {
         versionTapCount.current += 1;
         clearTimeout(versionTapTimer.current);
