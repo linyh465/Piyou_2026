@@ -44,6 +44,9 @@ function _activateWaiting(reg) {
  * 手動觸發 Service Worker 更新檢查。
  * Manually trigger SW update check.
  *
+ * 使用事件驅動方式：監聽 updatefound → statechange(installed)，
+ * 比輪詢更可靠，不受固定逾時限制（最長等 10 秒）。
+ *
  * @returns {Promise<'updated'|'latest'|false>}
  *   'updated' — 找到新版並已觸發重載
  *   'latest'  — 已是最新版本
@@ -61,21 +64,37 @@ export async function checkForUpdate() {
         return 'updated';
     }
 
-    // 向網路請求最新 SW 檔案
-    try {
-        await reg.update();
-    } catch {
-        // update() 失敗不影響後續檢查
-    }
+    return new Promise((resolve) => {
+        // 10 秒後若無新版，視為已是最新
+        const timer = setTimeout(() => {
+            reg.removeEventListener('updatefound', onUpdateFound);
+            resolve('latest');
+        }, 10000);
 
-    // 等待最多 5 秒，看是否有新版進入 waiting 狀態
-    for (let i = 0; i < 10; i++) {
-        await new Promise(r => setTimeout(r, 500));
-        if (reg.waiting) {
-            _activateWaiting(reg);
-            return 'updated';
+        function onUpdateFound() {
+            const sw = reg.installing;
+            if (!sw) return;
+
+            function onStateChange() {
+                // installed = SW 已安裝完成進入 waiting 狀態
+                if (sw.state === 'installed' && navigator.serviceWorker.controller) {
+                    clearTimeout(timer);
+                    reg.removeEventListener('updatefound', onUpdateFound);
+                    sw.removeEventListener('statechange', onStateChange);
+                    _activateWaiting(reg);
+                    resolve('updated');
+                } else if (sw.state === 'redundant') {
+                    // 安裝失敗，不算有新版
+                    sw.removeEventListener('statechange', onStateChange);
+                }
+            }
+
+            sw.addEventListener('statechange', onStateChange);
         }
-    }
 
-    return 'latest';
+        reg.addEventListener('updatefound', onUpdateFound);
+
+        // 觸發向伺服器請求最新 SW
+        reg.update().catch(() => {});
+    });
 }
