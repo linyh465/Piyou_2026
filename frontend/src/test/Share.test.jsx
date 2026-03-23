@@ -42,7 +42,7 @@ describe('Share Page', () => {
                 <Share />
             </MemoryRouter>
         );
-        expect(screen.getByText(/輸入分享碼/)).toBeInTheDocument();
+        expect(screen.getByText(/輸入分享碼，即可訂閱/)).toBeInTheDocument();
     });
 
     it('renders subscribe input and button', () => {
@@ -95,6 +95,6 @@ describe('Share Page', () => {
                 <Share />
             </MemoryRouter>
         );
-        expect(screen.getByText('擁有者已刪除此分享')).toBeInTheDocument();
+        expect(screen.getByText(/擁有者已刪除此分享/)).toBeInTheDocument();
     });
 });
