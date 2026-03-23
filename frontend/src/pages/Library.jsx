@@ -14,7 +14,6 @@ import SyncLoginModal from '../components/SyncLoginModal';
 
 /** 書籍詳細 Modal / Book detail bottom sheet */
 function BookDetailModal({ book, onClose }) {
-    const { t } = useTranslation('library');
     if (!book) return null;
     const rows = [
         book.author && { label: '作者', value: book.author },
