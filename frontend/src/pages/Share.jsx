@@ -344,6 +344,7 @@ export default function Share() {
 
     useEffect(() => {
         let active = true;
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         refreshAll().then(() => { if (!active) setRefreshing(false); });
         return () => { active = false; };
     }, []); // eslint-disable-line react-hooks/exhaustive-deps
