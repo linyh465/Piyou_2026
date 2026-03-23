@@ -9,6 +9,7 @@
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import useNotifyStore from '../stores/notifyStore';
+import { trackEvent } from '../services/analytics';
 
 const CATEGORIES = [
     { value: 'bug', label: '回報問題' },
@@ -50,6 +51,7 @@ export default function FeedbackModal({ show, onClose }) {
         if (result.ok) {
             setSubmitted(true);
             setSubmittedId(result.id);
+            trackEvent('feedback_submit', { category });
         } else {
             setSubmitError(result.error || '送出失敗，請稍後再試');
         }
