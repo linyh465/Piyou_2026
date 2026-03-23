@@ -14,6 +14,8 @@ import {
     IconChevronRight,
 } from '../components/Icons';
 
+const DAY_NAMES_ZH = ['週日', '週一', '週二', '週三', '週四', '週五', '週六'];
+
 const PERIOD_TIMES = {
     1: '08:10-09:00', 2: '09:10-10:00', 3: '10:10-11:00', 4: '11:10-12:00',
     5: '13:10-14:00', 6: '14:10-15:00', 7: '15:10-16:00', 8: '16:10-17:00',
@@ -161,7 +163,13 @@ function CurrentClassCard() {
                             {t('nextClass')}
                         </span>
                         <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-                            {nextClass.minutesUntil != null ? t('minutesUntil', { min: nextClass.minutesUntil }) : timeStr(nextClass)}
+                            {(() => {
+                                const isToday = nextClass.isToday !== false;
+                                if (isToday) return '今天';
+                                const offset = ((nextClass.day - dayIndex) + 7) % 7;
+                                if (offset === 1) return '明天';
+                                return DAY_NAMES_ZH[nextClass.day] || '';
+                            })()}
                         </span>
                     </div>
                     <p style={{ fontSize: '15px', fontWeight: 600, color: 'var(--text)', marginTop: '6px' }}>

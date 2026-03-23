@@ -4,9 +4,55 @@
 import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import useTimetableStore from '../stores/timetableStore';
-import { IconChartBar, IconRefresh, IconBook, IconTrash, IconUser, IconDotsVertical } from '../components/Icons';
+import { IconChartBar, IconRefresh, IconBook, IconTrash, IconUser, IconDotsVertical, IconXCircle } from '../components/Icons';
 import SyncLoginModal from '../components/SyncLoginModal';
 import { scoreToGPA } from '../utils/scoreToGPA';
+
+/** 科目詳細 Modal / Course detail bottom sheet */
+function CourseDetailModal({ course, onClose }) {
+    if (!course) return null;
+    const gpa = isNumericCourse(course) ? scoreToGPA(course.score) : null;
+    const rows = [
+        course.score != null && { label: '分數', value: displayScore(course), highlight: true },
+        course.grade && { label: '等第', value: course.grade },
+        gpa != null && { label: 'GPA', value: gpa.toFixed(1) },
+        course.credits != null && { label: '學分', value: `${course.credits} 學分` },
+        course.course_type && { label: '修別', value: course.course_type },
+    ].filter(Boolean);
+    return (
+        <>
+            <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 900, backdropFilter: 'blur(2px)' }} />
+            <div style={{
+                position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 901,
+                background: 'var(--bg-card)', borderRadius: '20px 20px 0 0',
+                padding: '20px 20px calc(env(safe-area-inset-bottom,0px) + 24px)',
+                boxShadow: '0 -8px 40px rgba(0,0,0,0.3)',
+            }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
+                    <div style={{ flex: 1, marginRight: '12px' }}>
+                        <h3 style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text)', lineHeight: 1.4 }}>{course.name}</h3>
+                        {course.course_type && (
+                            <span className={`grade-type-badge ${course.course_type === '必修' ? 'required' : ''}`} style={{ marginTop: '6px', display: 'inline-block' }}>
+                                {course.course_type}
+                            </span>
+                        )}
+                    </div>
+                    <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: '2px', flexShrink: 0 }}>
+                        <IconXCircle size={22} />
+                    </button>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    {rows.map(({ label, value, highlight }) => (
+                        <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span style={{ fontSize: '14px', color: 'var(--text-muted)' }}>{label}</span>
+                            <span style={{ fontSize: highlight ? '1.5rem' : '14px', fontWeight: highlight ? 700 : 500, color: highlight ? scoreColor(course) : 'var(--text)' }}>{value}</span>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        </>
+    );
+}
 
 function isNumericCourse(course) {
     return course.score != null && course.score_text == null;
@@ -128,6 +174,7 @@ export default function Grades() {
     const [selectedSemester, setSelectedSemester] = useState(null);
     const [showSyncModal, setShowSyncModal] = useState(false);
     const [showMenu, setShowMenu] = useState(false);
+    const [selectedCourse, setSelectedCourse] = useState(null);
     const menuRef = useRef(null);
 
     useEffect(() => {
@@ -279,7 +326,8 @@ export default function Grades() {
                             <div
                                 key={ci}
                                 className="grade-course-row"
-                                style={{ borderBottom: ci < (currentSem.courses || []).length - 1 ? '1px solid var(--border-light)' : 'none' }}
+                                onClick={() => setSelectedCourse(course)}
+                                style={{ borderBottom: ci < (currentSem.courses || []).length - 1 ? '1px solid var(--border-light)' : 'none', cursor: 'pointer' }}
                             >
                                 <div style={{ flex: 1, minWidth: 0 }}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -329,6 +377,7 @@ export default function Grades() {
             </div>
 
             <SyncLoginModal show={showSyncModal} onClose={() => setShowSyncModal(false)} />
+            <CourseDetailModal course={selectedCourse} onClose={() => setSelectedCourse(null)} />
         </div>
     );
 }

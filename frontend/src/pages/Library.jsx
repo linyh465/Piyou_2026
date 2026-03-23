@@ -9,8 +9,53 @@
 import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import useLibraryStore from '../stores/libraryStore';
-import { IconBook, IconRefresh, IconTrash, IconClock, IconCheckCircle, IconStar, IconUser, IconDotsVertical } from '../components/Icons';
+import { IconBook, IconRefresh, IconTrash, IconClock, IconCheckCircle, IconStar, IconUser, IconDotsVertical, IconXCircle } from '../components/Icons';
 import SyncLoginModal from '../components/SyncLoginModal';
+
+/** 書籍詳細 Modal / Book detail bottom sheet */
+function BookDetailModal({ book, onClose }) {
+    const { t } = useTranslation('library');
+    if (!book) return null;
+    const rows = [
+        book.author && { label: '作者', value: book.author },
+        book.call_number && { label: '索書號', value: book.call_number },
+        book.barcode && { label: '館藏條碼', value: book.barcode },
+        (book.location || book.pickup_location) && { label: '館藏位置', value: book.location || book.pickup_location },
+        book.collection_type && { label: '館藏類型', value: book.collection_type },
+        book.due_date && { label: '還書期限', value: book.due_date },
+        book.borrow_date && { label: '借書日期', value: book.borrow_date },
+        book.renew_count != null && { label: '續借次數', value: `${book.renew_count} 次` },
+        book.queue_position && { label: '預約排序', value: `第 ${book.queue_position} 位` },
+        book.is_overdue && { label: '狀態', value: '逾期', warn: true },
+    ].filter(Boolean);
+    return (
+        <>
+            <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 900, backdropFilter: 'blur(2px)' }} />
+            <div style={{
+                position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 901,
+                background: 'var(--bg-card)', borderRadius: '20px 20px 0 0',
+                padding: '20px 20px calc(env(safe-area-inset-bottom,0px) + 24px)',
+                boxShadow: '0 -8px 40px rgba(0,0,0,0.3)',
+                maxHeight: '80vh', overflowY: 'auto',
+            }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '14px' }}>
+                    <h3 style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text)', flex: 1, marginRight: '12px', lineHeight: 1.4 }}>{book.title}</h3>
+                    <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: '2px', flexShrink: 0 }}>
+                        <IconXCircle size={22} />
+                    </button>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    {rows.map(({ label, value, warn }) => (
+                        <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px' }}>
+                            <span style={{ fontSize: '13px', color: 'var(--text-muted)', flexShrink: 0 }}>{label}</span>
+                            <span style={{ fontSize: '13px', fontWeight: 500, color: warn ? 'var(--color-danger)' : 'var(--text)', textAlign: 'right' }}>{value}</span>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        </>
+    );
+}
 
 /** 到期日顏色 / Due date color */
 function dueDateColor(book) {
@@ -37,13 +82,14 @@ function dueDateText(book, t) {
 }
 
 /** 借閱書籍卡片 / Loan Book Card */
-function LoanCard({ book }) {
+function LoanCard({ book, onClick }) {
     const { t } = useTranslation('library');
     return (
-        <div style={{
+        <div onClick={onClick} style={{
             display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between',
             padding: '14px 8px', gap: '12px',
             borderBottom: '1px solid var(--border-light)',
+            cursor: 'pointer',
         }}>
             <div style={{ flex: 1, minWidth: 0 }}>
                 <p style={{
@@ -78,13 +124,14 @@ function LoanCard({ book }) {
 }
 
 /** 預約書籍卡片 / Reservation Card */
-function ReserveCard({ book }) {
+function ReserveCard({ book, onClick }) {
     const { t } = useTranslation('library');
     return (
-        <div style={{
+        <div onClick={onClick} style={{
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
             padding: '14px 8px',
             borderBottom: '1px solid var(--border-light)',
+            cursor: 'pointer',
         }}>
             <div style={{ flex: 1, minWidth: 0 }}>
                 <p style={{
@@ -120,12 +167,13 @@ function ReserveCard({ book }) {
 }
 
 /** 歷史書籍卡片 / History Card */
-function HistoryCard({ book }) {
+function HistoryCard({ book, onClick }) {
     return (
-        <div style={{
+        <div onClick={onClick} style={{
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
             padding: '12px 8px',
             borderBottom: '1px solid var(--border-light)',
+            cursor: 'pointer',
         }}>
             <div style={{ flex: 1, minWidth: 0 }}>
                 <p style={{
@@ -170,6 +218,7 @@ export default function Library() {
 
     const [activeTab, setActiveTab] = useState('loans');
     const [showSyncModal, setShowSyncModal] = useState(false);
+    const [selectedBook, setSelectedBook] = useState(null);
     const [showMenu, setShowMenu] = useState(false);
     const hasFetched = useRef(false);
     const menuRef = useRef(null);
@@ -419,7 +468,7 @@ export default function Library() {
                             </div>
                             <div style={{ display: 'flex', flexDirection: 'column' }}>
                                 {loans.map((book, i) => (
-                                    <LoanCard key={i} book={book} />
+                                    <LoanCard key={i} book={book} onClick={() => setSelectedBook(book)} />
                                 ))}
                             </div>
                         </div>
@@ -447,7 +496,7 @@ export default function Library() {
                             </div>
                             <div style={{ display: 'flex', flexDirection: 'column' }}>
                                 {reserves.map((book, i) => (
-                                    <ReserveCard key={i} book={book} />
+                                    <ReserveCard key={i} book={book} onClick={() => setSelectedBook(book)} />
                                 ))}
                             </div>
                         </div>
@@ -475,7 +524,7 @@ export default function Library() {
                             </div>
                             <div style={{ display: 'flex', flexDirection: 'column' }}>
                                 {history.map((book, i) => (
-                                    <HistoryCard key={i} book={book} />
+                                    <HistoryCard key={i} book={book} onClick={() => setSelectedBook(book)} />
                                 ))}
                             </div>
                         </div>
@@ -492,6 +541,7 @@ export default function Library() {
 
             {/* 同步登入 Modal */}
             <SyncLoginModal show={showSyncModal} onClose={() => setShowSyncModal(false)} />
+            <BookDetailModal book={selectedBook} onClose={() => setSelectedBook(null)} />
         </div>
     );
 }
