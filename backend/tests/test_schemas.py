@@ -61,12 +61,12 @@ def test_share_create_valid():
         code="mygroup-2026",
         title="小組期末報告",
         body="請大家查看附件",
-        link_url=None,
+        link_urls=["https://example.com"],
         device_id="device-abc-123",
     )
     assert req.code == "mygroup-2026"
     assert req.title == "小組期末報告"
-    assert req.link_url is None
+    assert req.link_urls == ["https://example.com"]
 
 
 def test_share_create_invalid_code_too_short():
@@ -103,4 +103,4 @@ def test_share_response_defaults():
     )
     assert resp.deleted is False
     assert resp.body is None
-    assert resp.link_url is None
+    assert resp.link_urls == []

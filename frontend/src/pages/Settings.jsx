@@ -17,6 +17,7 @@ import useTaskStore from '../stores/taskStore';
 import useLibraryStore from '../stores/libraryStore';
 import useNotifyStore from '../stores/notifyStore';
 import { getPushStatus, subscribePush, unsubscribePush } from '../services/pushService';
+import { trackEvent } from '../services/analytics';
 import {
     IconUser, IconSun, IconMoon, IconBell, IconSettings,
     IconLogOut, IconChevronRight, IconBook, IconCheckCircle, IconXCircle
@@ -206,6 +207,7 @@ export default function Settings() {
                 await syncTasksFromServer();
                 await syncTasksToServer();
                 recordSyncSuccess();
+                trackEvent('sync', { status: 'success' }, '/settings');
                 setSyncSuccess(true);
                 setTimeout(() => {
                     setShowSyncModal(false);
@@ -217,6 +219,7 @@ export default function Settings() {
                 // 登入失敗計入同步錯誤，並解鎖讓使用者可重試
                 // Login failure counts as sync error; unlock so user can retry
                 recordSyncError();
+                trackEvent('sync', { status: 'fail' }, '/settings');
                 setIsSyncing(false);
             }
         } catch {

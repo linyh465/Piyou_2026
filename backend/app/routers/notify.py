@@ -50,6 +50,7 @@ from app.services.storage.sheets_notify import (
 )
 from app.services.storage import sheets_push
 from app.services.storage import sheets_share
+from app.services.storage import sheets_analytics
 
 router = APIRouter(prefix="/notify", tags=["通知 / Notify"])
 logger = logging.getLogger(__name__)
@@ -357,6 +358,20 @@ async def admin_reply_feedback(
         return {"ok": True}
     except RuntimeError as exc:
         raise HTTPException(status_code=503, detail=str(exc))
+
+
+@router.get("/admin/analytics", summary="管理員查看分析統計 / Admin View Analytics")
+async def admin_get_analytics(
+    x_admin_token: Optional[str] = Header(None, alias="X-Admin-Token"),
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(_bearer_scheme),
+) -> dict:
+    """取得使用分析統計（5 分鐘快取）/ Get usage analytics with 5-min cache."""
+    _check_admin(x_admin_token, credentials)
+    try:
+        data = await sheets_analytics.get_stats()
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc))
+    return data
 
 
 @router.get("/admin/shares", summary="管理員列出共享平台資料 / Admin List Shares")

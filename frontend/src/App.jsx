@@ -4,10 +4,11 @@
  * 登入/同步功能已移至系統設定 / Login/sync moved to Settings page.
  */
 import { lazy, Suspense, useEffect } from 'react';
-import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { HashRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import Layout from './components/Layout';
 import ErrorBoundary from './components/ErrorBoundary';
 import useAuthStore from './stores/authStore';
+import { trackEvent } from './services/analytics';
 // 提早載入主題，確保初始即套用系統/使用者偏好 / Eagerly load theme store so theme is applied on first render
 import './stores/themeStore';
 
@@ -35,6 +36,16 @@ function PageLoader() {
   );
 }
 
+// 頁面瀏覽追蹤元件（掛在 HashRouter 內才能使用 useLocation）
+// Page view tracker (must be inside HashRouter to use useLocation)
+function PageViewTracker() {
+  const location = useLocation();
+  useEffect(() => {
+    trackEvent('page_view', {}, location.pathname);
+  }, [location.pathname]);
+  return null;
+}
+
 export default function App() {
   useEffect(() => {
     useAuthStore.getState().tryAutoLogin();
@@ -42,6 +53,7 @@ export default function App() {
 
   return (
     <HashRouter>
+      <PageViewTracker />
       <ErrorBoundary>
         <Suspense fallback={<PageLoader />}>
           <Routes>

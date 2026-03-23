@@ -5,6 +5,7 @@
  */
 import { useState, useEffect, useCallback } from 'react';
 import { IconLink2, IconPlus, IconTrash, IconRefresh, IconXCircle, IconCheck, IconMinus } from '../components/Icons';
+import { trackEvent } from '../services/analytics';
 
 function getDeviceId() {
     let id = localStorage.getItem('piyou_device_id');
@@ -176,6 +177,7 @@ function SubscribeForm({ onSubscribed }) {
             const data = await apiFetch(`/${trimmed}`);
             upsertShare({ ...data, is_owner: false });
             onSubscribed(data);
+            trackEvent('share_subscribe', {}, '/share');
             setCode('');
         } catch (e) {
             setError(e.message.includes('404') ? '找不到此分享碼' : e.message);
@@ -250,6 +252,7 @@ function CreateForm({ deviceId, onCreated }) {
             });
             upsertShare({ ...data, is_owner: true });
             onCreated(data);
+            trackEvent('share_create', {}, '/share');
             setForm({ code: '', title: '', body: '' });
             setLinkUrls(['']);
             setSuccess(true);

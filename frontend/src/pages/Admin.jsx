@@ -220,10 +220,11 @@ function AnnouncementForm({ initial, onSave, onCancel }) {
 export default function Admin() {
     const [token, setToken] = useState(getStoredToken);
     const [adminName, setAdminName] = useState('');
-    const [tab, setTab] = useState('announcements'); // 'announcements' | 'feedback' | 'shares'
+    const [tab, setTab] = useState('announcements'); // 'announcements' | 'feedback' | 'shares' | 'analytics'
     const [announcements, setAnnouncements] = useState([]);
     const [feedback, setFeedback] = useState([]);
     const [shares, setShares] = useState([]);
+    const [analytics, setAnalytics] = useState(null);
     const [loading, setLoading] = useState(false);
     const [showCreateForm, setShowCreateForm] = useState(false);
     const [editingId, setEditingId] = useState(null);
@@ -275,13 +276,27 @@ export default function Admin() {
         }
     }, [token]);
 
+    const loadAnalytics = useCallback(async () => {
+        if (!token) return;
+        setLoading(true);
+        try {
+            const res = await api.get('/notify/admin/analytics', adminHeaders(token));
+            setAnalytics(res.data);
+        } catch (err) {
+            if (err.response?.status === 403) handleLogout();
+        } finally {
+            setLoading(false);
+        }
+    }, [token]);
+
     useEffect(() => {
         if (token) {
             if (tab === 'announcements') loadAnnouncements();
             else if (tab === 'feedback') loadFeedback();
             else if (tab === 'shares') loadShares();
+            else if (tab === 'analytics') loadAnalytics();
         }
-    }, [token, tab, loadAnnouncements, loadFeedback, loadShares]);
+    }, [token, tab, loadAnnouncements, loadFeedback, loadShares, loadAnalytics]);
 
     const handleCreate = async (data) => {
         await api.post('/notify/admin/announcements', data, adminHeaders(token));
@@ -337,14 +352,14 @@ export default function Admin() {
 
             {/* Tabs */}
             <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', flexWrap: 'wrap' }}>
-                {['announcements', 'feedback', 'shares'].map((t) => (
+                {['announcements', 'feedback', 'shares', 'analytics'].map((t) => (
                     <button key={t} onClick={() => setTab(t)} style={{
                         padding: '8px 16px', borderRadius: '10px', border: 'none', cursor: 'pointer',
                         background: tab === t ? 'var(--color-brand)' : 'var(--bg-input)',
                         color: tab === t ? 'white' : 'var(--text-secondary)',
                         fontWeight: tab === t ? 600 : 400, fontSize: '14px',
                     }}>
-                        {t === 'announcements' ? '公告管理' : t === 'feedback' ? '意見回饋' : '共享平台'}
+                        {t === 'announcements' ? '公告管理' : t === 'feedback' ? '意見回饋' : t === 'shares' ? '共享平台' : '使用統計'}
                     </button>
                 ))}
             </div>
@@ -472,6 +487,104 @@ export default function Admin() {
                     ))}
                     {!loading && shares.length === 0 && (
                         <p style={{ color: 'var(--text-muted)', fontSize: '14px', textAlign: 'center', marginTop: '40px' }}>目前沒有共享資料</p>
+                    )}
+                </>
+            )}
+
+            {/* Analytics Tab */}
+            {tab === 'analytics' && (
+                <>
+                    <button onClick={loadAnalytics} style={{ ...btnGhost, marginBottom: '12px' }}>重新整理（5 分鐘快取）</button>
+                    {loading && <p style={{ color: 'var(--text-muted)', fontSize: '14px' }}>載入中…</p>}
+                    {!loading && analytics && (
+                        <>
+                            {/* 摘要卡片 / Summary cards */}
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px', marginBottom: '16px' }}>
+                                {[
+                                    { label: '今日事件', value: analytics.today_events },
+                                    { label: '今日裝置', value: analytics.unique_devices_today },
+                                    { label: '累計事件', value: analytics.total_events },
+                                    { label: '累計裝置', value: analytics.unique_devices_total },
+                                ].map(({ label, value }) => (
+                                    <div key={label} style={{ ...card, marginBottom: 0, textAlign: 'center' }}>
+                                        <div style={{ fontSize: '22px', fontWeight: 700, color: 'var(--color-brand)' }}>{value}</div>
+                                        <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>{label}</div>
+                                    </div>
+                                ))}
+                            </div>
+
+                            {/* 同步統計 */}
+                            {analytics.sync_total > 0 && (
+                                <div style={{ ...card }}>
+                                    <p style={{ fontWeight: 600, fontSize: '14px', color: 'var(--text)', margin: '0 0 8px' }}>校務同步</p>
+                                    <div style={{ display: 'flex', gap: '16px' }}>
+                                        <span style={{ fontSize: '13px', color: 'var(--color-success)' }}>成功 {analytics.sync_success}</span>
+                                        <span style={{ fontSize: '13px', color: 'var(--color-danger)' }}>失敗 {analytics.sync_fail}</span>
+                                        <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
+                                            成功率 {analytics.sync_total > 0 ? Math.round(analytics.sync_success / analytics.sync_total * 100) : 0}%
+                                        </span>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* 頁面瀏覽排行 */}
+                            {analytics.page_views.length > 0 && (
+                                <div style={{ ...card }}>
+                                    <p style={{ fontWeight: 600, fontSize: '14px', color: 'var(--text)', margin: '0 0 10px' }}>頁面瀏覽排行</p>
+                                    {analytics.page_views.map((pv) => {
+                                        const max = analytics.page_views[0]?.count || 1;
+                                        return (
+                                            <div key={pv.page} style={{ marginBottom: '8px' }}>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', marginBottom: '3px' }}>
+                                                    <span style={{ color: 'var(--text-secondary)' }}>{pv.label}</span>
+                                                    <span style={{ color: 'var(--text)', fontWeight: 600 }}>{pv.count}</span>
+                                                </div>
+                                                <div style={{ height: '6px', borderRadius: '3px', background: 'var(--bg-input)', overflow: 'hidden' }}>
+                                                    <div style={{ height: '100%', borderRadius: '3px', background: 'var(--color-brand)', width: `${Math.round(pv.count / max * 100)}%` }} />
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+
+                            {/* 功能使用次數 */}
+                            {analytics.event_counts.length > 0 && (
+                                <div style={{ ...card }}>
+                                    <p style={{ fontWeight: 600, fontSize: '14px', color: 'var(--text)', margin: '0 0 8px' }}>功能使用次數</p>
+                                    {analytics.event_counts.map((ev) => (
+                                        <div key={ev.event} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', padding: '4px 0', borderBottom: '1px solid var(--border-subtle)' }}>
+                                            <span style={{ color: 'var(--text-secondary)' }}>{ev.label}</span>
+                                            <span style={{ fontWeight: 600, color: 'var(--text)' }}>{ev.count}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+
+                            {/* 近期錯誤 */}
+                            {analytics.recent_errors.length > 0 && (
+                                <div style={{ ...card }}>
+                                    <p style={{ fontWeight: 600, fontSize: '14px', color: 'var(--text)', margin: '0 0 8px' }}>
+                                        近期前端錯誤（最新 {analytics.recent_errors.length} 筆）
+                                    </p>
+                                    {analytics.recent_errors.map((err, i) => (
+                                        <div key={i} style={{ borderBottom: '1px solid var(--border-subtle)', paddingBottom: '8px', marginBottom: '8px' }}>
+                                            <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '2px' }}>
+                                                {err.ts ? new Date(err.ts).toLocaleString('zh-TW') : ''} · {err.page}
+                                            </div>
+                                            <div style={{ fontSize: '12px', color: 'var(--color-danger)', wordBreak: 'break-all' }}>{err.message || '（無訊息）'}</div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+
+                            <p style={{ fontSize: '11px', color: 'var(--text-muted)', textAlign: 'center', marginTop: '8px' }}>
+                                資料更新時間：{analytics.generated_at ? new Date(analytics.generated_at).toLocaleString('zh-TW') : '—'}
+                            </p>
+                        </>
+                    )}
+                    {!loading && !analytics && (
+                        <p style={{ color: 'var(--text-muted)', fontSize: '14px', textAlign: 'center', marginTop: '40px' }}>尚無統計資料</p>
                     )}
                 </>
             )}
