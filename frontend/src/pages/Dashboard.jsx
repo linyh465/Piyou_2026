@@ -375,7 +375,7 @@ export default function Dashboard() {
             <div>
                 <h1 className="dash-hero-title">{greeting}</h1>
                 <p className="dash-hero-date">{formatDate(now, lang)}</p>
-                <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '4px' }}>{blessing}</p>
+                <p style={{ fontSize: '15px', color: 'var(--text-secondary)', marginTop: '6px' }}>{blessing}</p>
             </div>
             <CurrentClassCard />
             <TaskSection />

@@ -69,7 +69,7 @@ function LoanCard({ book }) {
                 }}>
                     {dueDateText(book, t)}
                 </p>
-                <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>
                     {book.due_date || ''}
                 </p>
             </div>

@@ -98,46 +98,76 @@ class HTTPSRedirectMiddleware(BaseHTTPMiddleware):
 
 class RateLimitMiddleware(BaseHTTPMiddleware):
     """
-    基於 IP 的速率限制。每 60 秒最多允許 60 次請求。
-    IP-based rate limiter. Allows max 60 requests per 60 seconds.
+    基於 IP 的速率限制 / IP-based rate limiter.
+    - 全局：60 req / 60s per IP
+    - 敏感端點（登入、同步）：10 req / 60s per IP（防暴力攻擊）
+    - 返回 Retry-After header 告知客戶端等待時間
+    Global: 60 req/60s per IP.
+    Sensitive endpoints (login, sync): 10 req/60s per IP (anti-brute-force).
+    Returns Retry-After header.
     """
+
+    # 敏感端點（較嚴格的速率限制）/ Sensitive paths with stricter limit
+    _STRICT_PATHS = frozenset({
+        "/api/v1/auth/login",
+        "/api/v1/notify/admin/login",
+    })
+    _STRICT_MAX = 10   # 敏感端點：每分鐘 10 次 / 10 req/min for sensitive
+    _STRICT_WINDOW = 60
 
     def __init__(self, app, max_requests: int = 60, window_seconds: int = 60):
         super().__init__(app)
         self.max_requests = max_requests
         self.window_seconds = window_seconds
+        # 兩套計數器：全局 + 嚴格 / Two counters: global + strict
         self.requests: dict[str, list[float]] = defaultdict(list)
+        self.strict_requests: dict[str, list[float]] = defaultdict(list)
         self._last_gc = time.time()
         self._gc_interval = 300  # 每 5 分鐘全面清理一次 / Full GC every 5 min
 
     def _gc_stale_ips(self, now: float):
         """回收已無任何記錄的 IP / Reclaim IPs with no remaining records."""
-        stale = [ip for ip, ts in self.requests.items()
-                 if not ts or now - ts[-1] >= self.window_seconds]
-        for ip in stale:
-            del self.requests[ip]
+        for store, window in ((self.requests, self.window_seconds), (self.strict_requests, self._STRICT_WINDOW)):
+            stale = [ip for ip, ts in store.items() if not ts or now - ts[-1] >= window]
+            for ip in stale:
+                del store[ip]
         self._last_gc = now
 
     async def dispatch(self, request, call_next):
         client_ip = request.client.host if request.client else "unknown"
         now = time.time()
+        path = request.url.path
 
         # 定期全面清理 / Periodic full GC
         if now - self._last_gc >= self._gc_interval:
             self._gc_stale_ips(now)
 
-        # 清除過期記錄 / Clean expired records
+        # ── 嚴格端點限制 / Strict endpoint limit ──
+        if path in self._STRICT_PATHS:
+            self.strict_requests[client_ip] = [
+                t for t in self.strict_requests[client_ip]
+                if now - t < self._STRICT_WINDOW
+            ]
+            if len(self.strict_requests[client_ip]) >= self._STRICT_MAX:
+                retry_after = int(self._STRICT_WINDOW - (now - self.strict_requests[client_ip][0]))
+                return JSONResponse(
+                    status_code=429,
+                    headers={"Retry-After": str(max(retry_after, 1))},
+                    content={"detail": "登入嘗試過於頻繁，請稍後再試 / Too many login attempts, please try again later"},
+                )
+            self.strict_requests[client_ip].append(now)
+
+        # ── 全局限制 / Global limit ──
         self.requests[client_ip] = [
             t for t in self.requests[client_ip]
             if now - t < self.window_seconds
         ]
-
         if len(self.requests[client_ip]) >= self.max_requests:
+            retry_after = int(self.window_seconds - (now - self.requests[client_ip][0]))
             return JSONResponse(
                 status_code=429,
-                content={
-                    "detail": "請求過於頻繁，請稍後再試 / Too many requests, please try again later"
-                },
+                headers={"Retry-After": str(max(retry_after, 1))},
+                content={"detail": "請求過於頻繁，請稍後再試 / Too many requests, please try again later"},
             )
 
         self.requests[client_ip].append(now)
