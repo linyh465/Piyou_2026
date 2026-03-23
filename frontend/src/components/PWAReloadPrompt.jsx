@@ -6,6 +6,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useRegisterSW } from 'virtual:pwa-register/react';
+import { setSwRegistration } from '../services/pwaUpdate';
 
 const AUTO_UPDATE_SECONDS = 10;
 const CHECK_INTERVAL_MS = 5 * 60 * 1000; // 每 5 分鐘檢查一次
@@ -21,6 +22,7 @@ export default function PWAReloadPrompt() {
     } = useRegisterSW({
         onRegisteredSW(swUrl, r) {
             if (r) {
+                setSwRegistration(r);
                 setInterval(() => r.update(), CHECK_INTERVAL_MS);
             }
         },

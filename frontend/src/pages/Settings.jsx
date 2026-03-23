@@ -18,9 +18,10 @@ import useLibraryStore from '../stores/libraryStore';
 import useNotifyStore from '../stores/notifyStore';
 import { getPushStatus, subscribePush, unsubscribePush } from '../services/pushService';
 import { trackEvent } from '../services/analytics';
+import { checkForUpdate } from '../services/pwaUpdate';
 import {
     IconUser, IconSun, IconMoon, IconBell, IconSettings,
-    IconLogOut, IconChevronRight, IconBook, IconCheckCircle, IconXCircle
+    IconLogOut, IconChevronRight, IconBook, IconCheckCircle, IconXCircle, IconRefresh
 } from '../components/Icons';
 import FeedbackModal from '../components/FeedbackModal';
 import PolicyModal from '../components/PolicyModal';
@@ -117,6 +118,7 @@ export default function Settings() {
     });
     const [showFeedback, setShowFeedback] = useState(false);
     const [showPolicy, setShowPolicy] = useState(null); // 'privacy' | 'terms' | null
+    const [updateStatus, setUpdateStatus] = useState('idle'); // 'idle' | 'checking' | 'latest'
 
     // ── PWA 推播通知 / PWA Push Notifications ──
     // 'unsupported' | 'denied' | 'subscribed' | 'unsubscribed' | 'loading'
@@ -587,6 +589,39 @@ export default function Settings() {
                             background: 'var(--bg-secondary)', color: 'var(--text-muted)', fontSize: '14px',
                         }}>1.0.0-beta</span>
                     </div>
+
+                    {/* 檢查更新按鈕 / Check for update button */}
+                    <div style={{ padding: '4px 8px 12px' }}>
+                        <button
+                            onClick={async () => {
+                                if (updateStatus === 'checking') return;
+                                setUpdateStatus('checking');
+                                const triggered = await checkForUpdate();
+                                // 等 2 秒讓 SW 有時間回應；若有新版 PWAReloadPrompt 會自動彈出
+                                await new Promise(r => setTimeout(r, 2000));
+                                setUpdateStatus(triggered ? 'latest' : 'idle');
+                                setTimeout(() => setUpdateStatus('idle'), 3000);
+                            }}
+                            disabled={updateStatus === 'checking'}
+                            style={{
+                                width: '100%', padding: '10px', borderRadius: '10px',
+                                border: '1px solid var(--border-subtle)',
+                                background: updateStatus === 'latest' ? 'rgba(34,197,94,0.1)' : 'var(--bg-input)',
+                                color: updateStatus === 'latest' ? 'var(--color-success)' : 'var(--color-brand)',
+                                fontSize: '14px', fontWeight: 600, cursor: updateStatus === 'checking' ? 'not-allowed' : 'pointer',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+                                opacity: updateStatus === 'checking' ? 0.6 : 1,
+                                transition: 'background 0.3s, color 0.3s',
+                            }}
+                        >
+                            <IconRefresh size={15} />
+                            {updateStatus === 'checking' ? '檢查中…' : updateStatus === 'latest' ? '已是最新版本' : '檢查更新'}
+                        </button>
+                        <p style={{ fontSize: '11px', color: 'var(--text-muted)', textAlign: 'center', margin: '6px 0 0' }}>
+                            若有新版本，畫面會自動彈出更新通知
+                        </p>
+                    </div>
+
                     <SettingItem icon={IconBell} label="意見回饋" labelEn="Feedback" onClick={() => setShowFeedback(true)} />
                     <SettingItem icon={IconBook} label="隱私權政策" labelEn="Privacy Policy" onClick={() => setShowPolicy('privacy')} />
                     <SettingItem icon={IconBook} label="服務條款" labelEn="Terms of Service" onClick={() => setShowPolicy('terms')} />
