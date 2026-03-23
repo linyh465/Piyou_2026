@@ -308,3 +308,10 @@ export const IconLink2 = icon(
 export const IconMinus = icon(
     <line x1="5" y1="12" x2="19" y2="12" />
 );
+
+export const IconLock = icon(
+    <>
+        <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+        <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+    </>
+);
