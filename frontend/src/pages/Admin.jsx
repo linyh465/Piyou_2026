@@ -520,13 +520,31 @@ export default function Admin() {
                     {loading && <p style={{ color: 'var(--text-muted)', fontSize: '14px' }}>載入中…</p>}
                     {!loading && analytics && (
                         <>
+                            {/* 活躍人數 / Active users by time period */}
+                            <div style={{ ...card, marginBottom: '12px' }}>
+                                <p style={{ fontWeight: 600, fontSize: '14px', color: 'var(--text)', margin: '0 0 10px' }}>活躍裝置數</p>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px' }}>
+                                    {[
+                                        { label: '近 1 小時', value: analytics.unique_devices_hour ?? '—' },
+                                        { label: '今日', value: analytics.unique_devices_today },
+                                        { label: '近 7 天', value: analytics.unique_devices_week ?? '—' },
+                                        { label: '近 30 天', value: analytics.unique_devices_month ?? '—' },
+                                    ].map(({ label, value }) => (
+                                        <div key={label} style={{ textAlign: 'center', padding: '10px 4px', borderRadius: '10px', background: 'var(--bg-input)' }}>
+                                            <div style={{ fontSize: '20px', fontWeight: 700, color: 'var(--color-brand)' }}>{value}</div>
+                                            <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>{label}</div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
                             {/* 摘要卡片 / Summary cards */}
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px', marginBottom: '16px' }}>
                                 {[
                                     { label: '今日事件', value: analytics.today_events },
-                                    { label: '今日裝置', value: analytics.unique_devices_today },
-                                    { label: '累計事件', value: analytics.total_events },
                                     { label: '累計裝置', value: analytics.unique_devices_total },
+                                    { label: '累計事件', value: analytics.total_events },
+                                    { label: '跨裝置帳號', value: analytics.usersync_accounts ?? '—' },
                                 ].map(({ label, value }) => (
                                     <div key={label} style={{ ...card, marginBottom: 0, textAlign: 'center' }}>
                                         <div style={{ fontSize: '22px', fontWeight: 700, color: 'var(--color-brand)' }}>{value}</div>
@@ -597,6 +615,56 @@ export default function Admin() {
                                             <div style={{ fontSize: '12px', color: 'var(--color-danger)', wordBreak: 'break-all' }}>{err.message || '（無訊息）'}</div>
                                         </div>
                                     ))}
+                                </div>
+                            )}
+
+                            {/* 詳細活動紀錄 / Detailed activity log */}
+                            {analytics.recent_events?.length > 0 && (
+                                <div style={{ ...card }}>
+                                    <p style={{ fontWeight: 600, fontSize: '14px', color: 'var(--text)', margin: '0 0 8px' }}>
+                                        詳細活動紀錄（最新 {analytics.recent_events.length} 筆）
+                                    </p>
+                                    <div style={{ maxHeight: '360px', overflowY: 'auto' }}>
+                                        {analytics.recent_events.map((ev, i) => (
+                                            <div key={i} style={{
+                                                display: 'flex', alignItems: 'flex-start', gap: '8px',
+                                                padding: '6px 0', borderBottom: '1px solid var(--border-subtle)',
+                                                fontSize: '12px',
+                                            }}>
+                                                <span style={{ color: 'var(--text-muted)', flexShrink: 0, lineHeight: '1.4' }}>
+                                                    {ev.ts ? new Date(ev.ts).toLocaleString('zh-TW', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '—'}
+                                                </span>
+                                                <span style={{
+                                                    flexShrink: 0, padding: '1px 6px', borderRadius: '4px', fontWeight: 600,
+                                                    fontSize: '11px', lineHeight: '1.4',
+                                                    background: ev.event_type === 'error' ? 'rgba(239,68,68,0.12)' :
+                                                        ev.event_type === 'sync' ? 'rgba(16,185,129,0.12)' :
+                                                        'rgba(99,102,241,0.1)',
+                                                    color: ev.event_type === 'error' ? 'var(--color-danger)' :
+                                                        ev.event_type === 'sync' ? 'var(--color-success)' :
+                                                        'var(--color-brand)',
+                                                }}>
+                                                    {ev.event_label || ev.event_type}
+                                                </span>
+                                                <span style={{ color: 'var(--text-secondary)', flex: 1, lineHeight: '1.4' }}>
+                                                    {ev.page_label || ev.page || '—'}
+                                                    {ev.event_type === 'sync' && ev.extra?.status && (
+                                                        <span style={{ color: ev.extra.status === 'success' ? 'var(--color-success)' : 'var(--color-danger)', marginLeft: '4px' }}>
+                                                            {ev.extra.status === 'success' ? '✓' : '✗'}
+                                                        </span>
+                                                    )}
+                                                    {ev.event_type === 'error' && ev.extra?.message && (
+                                                        <span style={{ color: 'var(--color-danger)', marginLeft: '4px', wordBreak: 'break-all' }}>
+                                                            {String(ev.extra.message).slice(0, 80)}
+                                                        </span>
+                                                    )}
+                                                </span>
+                                                <span style={{ color: 'var(--text-muted)', fontFamily: 'monospace', fontSize: '10px', flexShrink: 0 }}>
+                                                    {ev.device?.slice(0, 8)}
+                                                </span>
+                                            </div>
+                                        ))}
+                                    </div>
                                 </div>
                             )}
 

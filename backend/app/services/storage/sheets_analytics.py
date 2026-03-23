@@ -122,17 +122,23 @@ def _get_stats_sync() -> dict:
 
     now_utc = datetime.now(timezone.utc)
     today_str = now_utc.date().isoformat()
+    hour_ago = now_utc - timedelta(hours=1)
     week_ago = now_utc - timedelta(days=7)
+    month_ago = now_utc - timedelta(days=30)
 
     total_events = 0
     today_events = 0
+    unique_devices_hour: set[str] = set()
     unique_devices_today: set[str] = set()
+    unique_devices_week: set[str] = set()
+    unique_devices_month: set[str] = set()
     unique_devices_total: set[str] = set()
     page_views: dict[str, int] = defaultdict(int)
     event_counts: dict[str, int] = defaultdict(int)
     sync_success = 0
     sync_fail = 0
     recent_errors: list[dict] = []
+    recent_events: list[dict] = []
     week_daily: dict[str, int] = defaultdict(int)
 
     for row in rows:
@@ -155,32 +161,46 @@ def _get_stats_sync() -> dict:
 
         if ts:
             day_str = ts.date().isoformat()
+            if ts >= hour_ago:
+                unique_devices_hour.add(device_hash)
             if day_str == today_str:
                 today_events += 1
                 unique_devices_today.add(device_hash)
             if ts >= week_ago:
+                unique_devices_week.add(device_hash)
                 week_daily[day_str] += 1
+            if ts >= month_ago:
+                unique_devices_month.add(device_hash)
+
+        # 詳細活動紀錄（最新 100 筆）/ Detailed activity log (latest 100)
+        extra_parsed: dict = {}
+        if extra_str:
+            try:
+                extra_parsed = json.loads(extra_str)
+            except Exception:
+                pass
+        recent_events.append({
+            "ts": ts_str,
+            "device": device_hash,
+            "event_type": event_type,
+            "event_label": EVENT_LABELS.get(event_type, event_type),
+            "page": page,
+            "page_label": PAGE_LABELS.get(page, page) if page else "",
+            "extra": extra_parsed,
+        })
 
         if event_type == "page_view" and page:
             page_views[page] += 1
         elif event_type == "sync":
-            try:
-                extra = json.loads(extra_str) if extra_str else {}
-            except Exception:
-                extra = {}
-            if extra.get("status") == "success":
+            if extra_parsed.get("status") == "success":
                 sync_success += 1
             else:
                 sync_fail += 1
         elif event_type == "error":
-            try:
-                extra = json.loads(extra_str) if extra_str else {}
-            except Exception:
-                extra = {}
             recent_errors.append({
                 "ts": ts_str,
                 "device": device_hash,
-                "message": str(extra.get("message", ""))[:200],
+                "message": str(extra_parsed.get("message", ""))[:200],
                 "page": page,
             })
 
@@ -200,6 +220,9 @@ def _get_stats_sync() -> dict:
     # Recent errors (last 30, newest first)
     recent_errors = sorted(recent_errors, key=lambda x: x["ts"], reverse=True)[:30]
 
+    # Recent events (last 100, newest first)
+    recent_events = sorted(recent_events, key=lambda x: x["ts"], reverse=True)[:100]
+
     # Week trend (last 7 days, sorted)
     week_trend = [
         {"date": d, "count": week_daily.get(d, 0)}
@@ -209,7 +232,10 @@ def _get_stats_sync() -> dict:
     return {
         "total_events": total_events,
         "today_events": today_events,
+        "unique_devices_hour": len(unique_devices_hour),
         "unique_devices_today": len(unique_devices_today),
+        "unique_devices_week": len(unique_devices_week),
+        "unique_devices_month": len(unique_devices_month),
         "unique_devices_total": len(unique_devices_total),
         "sync_success": sync_success,
         "sync_fail": sync_fail,
@@ -217,6 +243,7 @@ def _get_stats_sync() -> dict:
         "page_views": page_view_list,
         "event_counts": event_list,
         "recent_errors": recent_errors,
+        "recent_events": recent_events,
         "week_trend": week_trend,
         "generated_at": datetime.now(timezone.utc).isoformat(),
     }
