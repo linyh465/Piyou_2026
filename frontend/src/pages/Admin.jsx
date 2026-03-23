@@ -263,12 +263,15 @@ export default function Admin() {
         }
     }, [token]);
 
+    const [shareStats, setShareStats] = useState(null);
+
     const loadShares = useCallback(async () => {
         if (!token) return;
         setLoading(true);
         try {
             const res = await api.get('/notify/admin/shares', adminHeaders(token));
             setShares(res.data.shares || []);
+            setShareStats({ total: res.data.total, active: res.data.active, password_protected: res.data.password_protected });
         } catch (err) {
             if (err.response?.status === 403) handleLogout();
         } finally {
@@ -466,19 +469,38 @@ export default function Admin() {
             {tab === 'shares' && (
                 <>
                     <button onClick={loadShares} style={{ ...btnGhost, marginBottom: '12px' }}>重新整理</button>
+                    {!loading && shareStats && (
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', marginBottom: '16px' }}>
+                            {[
+                                { label: '總分享數', value: shareStats.total },
+                                { label: '有效分享', value: shareStats.active },
+                                { label: '密碼保護', value: shareStats.password_protected },
+                            ].map(({ label, value }) => (
+                                <div key={label} style={{ ...card, marginBottom: 0, textAlign: 'center' }}>
+                                    <div style={{ fontSize: '22px', fontWeight: 700, color: 'var(--color-brand)' }}>{value}</div>
+                                    <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>{label}</div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
                     {loading && <p style={{ color: 'var(--text-muted)', fontSize: '14px' }}>載入中…</p>}
                     {!loading && shares.map((s) => (
                         <div key={s.code} style={{ ...card, borderLeft: `4px solid ${s.deleted ? 'var(--color-danger)' : 'var(--color-brand)'}` }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
                                 <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', fontFamily: 'monospace' }}>{s.code}</span>
-                                <span style={{ fontSize: '11px', fontWeight: 600, color: s.deleted ? 'var(--color-danger)' : 'var(--color-success)' }}>
-                                    {s.deleted ? '已刪除' : '有效'}
-                                </span>
+                                <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                                    {s.password_protected && (
+                                        <span style={{ fontSize: '10px', fontWeight: 600, color: 'var(--color-warning, #b45309)', background: 'var(--color-warning-bg, #fef3c7)', borderRadius: '4px', padding: '1px 6px' }}>🔒 密碼</span>
+                                    )}
+                                    <span style={{ fontSize: '11px', fontWeight: 600, color: s.deleted ? 'var(--color-danger)' : 'var(--color-success)' }}>
+                                        {s.deleted ? '已刪除' : '有效'}
+                                    </span>
+                                </div>
                             </div>
                             <p style={{ fontWeight: 600, color: 'var(--text)', fontSize: '14px', margin: '0 0 4px' }}>{s.title}</p>
                             {s.body && <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: '0 0 4px', whiteSpace: 'pre-line' }}>{s.body}</p>}
-                            {s.link_url && (
-                                <p style={{ fontSize: '12px', color: 'var(--color-brand)', margin: '0 0 4px', wordBreak: 'break-all' }}>{s.link_url}</p>
+                            {s.link_urls?.length > 0 && (
+                                <p style={{ fontSize: '12px', color: 'var(--color-brand)', margin: '0 0 4px', wordBreak: 'break-all' }}>{s.link_urls.join(', ')}</p>
                             )}
                             <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: 0 }}>
                                 裝置：{s.device_id_hash} · {s.created_at ? new Date(s.created_at).toLocaleString('zh-TW') : ''}

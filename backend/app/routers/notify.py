@@ -424,7 +424,20 @@ async def admin_list_shares(
         items = await sheets_share.list_all_shares()
     except RuntimeError as exc:
         raise HTTPException(status_code=503, detail=str(exc))
-    return {"shares": items, "total": len(items)}
+    # 轉換資料：加入 password_protected，移除 password_hash / Add password_protected, remove hash
+    sanitized = []
+    for item in items:
+        entry = {k: v for k, v in item.items() if k != "password_hash"}
+        entry["password_protected"] = bool(item.get("password_hash"))
+        sanitized.append(entry)
+    active = [s for s in sanitized if not s["deleted"]]
+    pw_protected = [s for s in active if s["password_protected"]]
+    return {
+        "shares": sanitized,
+        "total": len(sanitized),
+        "active": len(active),
+        "password_protected": len(pw_protected),
+    }
 
 
 # ══════════════════════════════════════════
