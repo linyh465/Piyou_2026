@@ -4,7 +4,7 @@
  * Handles login, logout, token management, and secure credential storage flow.
  */
 import { create } from 'zustand';
-import { api } from '../services/apiClient';
+import { api, apiError } from '../services/apiClient';
 import secureStorage from '../services/secureStorage';
 
 /**
@@ -69,7 +69,7 @@ const useAuthStore = create((set, get) => ({
 
             return true;
         } catch (err) {
-            const message = err.response?.data?.detail || '登入失敗，請確認帳號密碼 / Login failed, please check credentials';
+            const message = apiError(err, '登入失敗，請確認帳號密碼');
             const isCooldown = err.response?.status === 429;
             set((state) => ({
                 isLoading: false,

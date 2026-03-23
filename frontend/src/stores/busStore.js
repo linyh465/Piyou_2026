@@ -9,7 +9,7 @@
  * - 自動輪詢每 120 秒
  */
 import { create } from 'zustand';
-import { api } from '../services/apiClient';
+import { api, apiError } from '../services/apiClient';
 
 // ── 全域節流常數（TDX 基礎會員每日請求量有限，需保守控制）──
 const MANUAL_COOLDOWN_SECONDS = 60;
@@ -129,7 +129,7 @@ const useBusStore = create((set, get) => ({
             set(prev => ({
                 isLoading: false,
                 error: prev.arrivals.length === 0
-                    ? (err.response?.data?.detail || '載入公車資訊失敗')
+                    ? apiError(err, '載入公車資訊失敗')
                     : null,
             }));
         }

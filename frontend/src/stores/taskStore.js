@@ -6,7 +6,7 @@
 import { create } from 'zustand';
 import localDb from '../services/localDb';
 import { downloadMarkdown } from '../utils/exportMarkdown';
-import { api } from '../services/apiClient';
+import { api, apiError } from '../services/apiClient';
 
 const useTaskStore = create((set, get) => ({
     // 狀態 / State
@@ -113,7 +113,7 @@ const useTaskStore = create((set, get) => ({
             await api.put('/data/tasks', { tasks }, { timeout: 15000 });
             set({ isSyncing: false });
         } catch (err) {
-            set({ isSyncing: false, syncError: err.response?.data?.detail || '任務上傳失敗 / Task upload failed' });
+            set({ isSyncing: false, syncError: apiError(err, '任務上傳失敗') });
         }
     },
 
@@ -138,7 +138,7 @@ const useTaskStore = create((set, get) => ({
                 set({ isSyncing: false, syncError: null });
                 return;
             }
-            set({ isSyncing: false, syncError: err.response?.data?.detail || '任務下載失敗 / Task download failed' });
+            set({ isSyncing: false, syncError: apiError(err, '任務下載失敗') });
         }
     },
 }));
