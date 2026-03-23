@@ -22,18 +22,20 @@ class _DeleteBody(BaseModel):
 
 
 def _build_response(data: dict, device_id: Optional[str] = None,
-                    include_content: bool = True) -> ShareResponse:
+                    include_content: bool = True,
+                    password_verified: bool = False) -> ShareResponse:
     """
     從 dict 建立 ShareResponse。
-    若 include_content=False（密碼保護且非擁有者），隱藏 body 和 link_urls。
-    Build ShareResponse from dict, optionally hiding body/links for protected shares.
+    若密碼保護且非擁有者且未通過密碼驗證，隱藏 body 和 link_urls。
+    Build ShareResponse from dict, hiding body/links for protected shares
+    unless the requester is the owner or has verified the password.
     """
     is_owner = False
     if device_id:
         is_owner = _hash_device_id(device_id) == data.get("device_id_hash", "")
 
     password_protected = bool(data.get("password_hash"))
-    show_content = include_content and (not password_protected or is_owner)
+    show_content = include_content and (not password_protected or is_owner or password_verified)
 
     return ShareResponse(
         code=data["code"],
@@ -123,7 +125,7 @@ async def view_protected_share(
     if not _check_password(body.password, pw_hash):
         raise HTTPException(status_code=403, detail="密碼錯誤 / Incorrect password")
 
-    return _build_response(result, device_id=x_device_id, include_content=True)
+    return _build_response(result, device_id=x_device_id, include_content=True, password_verified=True)
 
 
 @router.patch("/{code}", response_model=ShareResponse)
