@@ -21,7 +21,7 @@ const CATEGORIES = [
 const MAX_CONTENT = 1000;
 
 export default function FeedbackModal({ show, onClose }) {
-    const { submitFeedback, getFeedbackReply } = useNotifyStore();
+    const { submitFeedback, getFeedbackReply, updateFeedbackContact } = useNotifyStore();
 
     // 送出表單狀態
     const [category, setCategory] = useState('bug');
@@ -38,6 +38,13 @@ export default function FeedbackModal({ show, onClose }) {
     const [queryResult, setQueryResult] = useState(null);
     const [querying, setQuerying] = useState(false);
     const [queryError, setQueryError] = useState('');
+    const [lastQueriedId, setLastQueriedId] = useState('');
+
+    // 編輯聯絡方式狀態
+    const [editingContact, setEditingContact] = useState(false);
+    const [contactDraft, setContactDraft] = useState('');
+    const [savingContact, setSavingContact] = useState(false);
+    const [contactSaveMsg, setContactSaveMsg] = useState('');
 
     if (!show) return null;
 
@@ -59,13 +66,23 @@ export default function FeedbackModal({ show, onClose }) {
 
     const handleQuery = async () => {
         if (querying || !queryId.trim()) return;
+        const trimmedId = queryId.trim();
+
+        if (trimmedId === lastQueriedId) {
+            setQueryError('此 ID 已查詢過，重新整理中…');
+        }
+
         setQuerying(true);
-        setQueryError('');
         setQueryResult(null);
+        setEditingContact(false);
+        setContactSaveMsg('');
         try {
-            const result = await getFeedbackReply(queryId.trim());
+            const result = await getFeedbackReply(trimmedId);
             if (result) {
                 setQueryResult(result);
+                setLastQueriedId(trimmedId);
+                setContactDraft(result.contact || '');
+                setQueryError('');
             } else {
                 setQueryError('找不到此回饋 ID，請確認是否正確');
             }
@@ -73,6 +90,21 @@ export default function FeedbackModal({ show, onClose }) {
             setQueryError('查詢失敗，請稍後再試');
         }
         setQuerying(false);
+    };
+
+    const handleSaveContact = async () => {
+        if (savingContact || !lastQueriedId) return;
+        setSavingContact(true);
+        setContactSaveMsg('');
+        const res = await updateFeedbackContact(lastQueriedId, contactDraft.trim());
+        setSavingContact(false);
+        if (res.ok) {
+            setQueryResult(prev => ({ ...prev, contact: contactDraft.trim() || null }));
+            setEditingContact(false);
+            setContactSaveMsg('已更新');
+        } else {
+            setContactSaveMsg(res.error || '更新失敗');
+        }
     };
 
     const handleClose = () => {
@@ -88,6 +120,11 @@ export default function FeedbackModal({ show, onClose }) {
         setQueryResult(null);
         setQuerying(false);
         setQueryError('');
+        setLastQueriedId('');
+        setEditingContact(false);
+        setContactDraft('');
+        setSavingContact(false);
+        setContactSaveMsg('');
         onClose();
     };
 
@@ -345,7 +382,11 @@ export default function FeedbackModal({ show, onClose }) {
                             background: 'var(--bg-input)',
                             padding: '12px',
                             marginTop: '10px',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '8px',
                         }}>
+                            {/* 狀態 */}
                             <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
                                 狀態：
                                 <span style={{
@@ -355,9 +396,98 @@ export default function FeedbackModal({ show, onClose }) {
                                     {queryResult.status === 'replied' ? '已回覆' : '待處理'}
                                 </span>
                             </p>
+
+                            {/* 類別 */}
+                            {queryResult.category && (
+                                <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                                    類別：<span style={{ fontWeight: 500, color: 'var(--text-secondary)' }}>
+                                        {CATEGORIES.find(c => c.value === queryResult.category)?.label ?? queryResult.category}
+                                    </span>
+                                </p>
+                            )}
+
+                            {/* 原始問題 */}
+                            {queryResult.content && (
+                                <div>
+                                    <p style={{ fontSize: '12px', fontWeight: 500, color: 'var(--text-secondary)' }}>原始問題：</p>
+                                    <p style={{ fontSize: '12px', color: 'var(--text-muted)', whiteSpace: 'pre-line', marginTop: '2px' }}>
+                                        {queryResult.content}
+                                    </p>
+                                </div>
+                            )}
+
+                            {/* 聯絡方式（可編輯）*/}
+                            <div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                    <p style={{ fontSize: '12px', fontWeight: 500, color: 'var(--text-secondary)', flex: 1 }}>
+                                        聯絡方式：
+                                        {!editingContact && (
+                                            <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}>
+                                                {queryResult.contact || '（匿名）'}
+                                            </span>
+                                        )}
+                                    </p>
+                                    {!editingContact && (
+                                        <button
+                                            onClick={() => { setEditingContact(true); setContactSaveMsg(''); }}
+                                            style={{
+                                                fontSize: '11px',
+                                                padding: '2px 8px',
+                                                borderRadius: '6px',
+                                                border: '1px solid var(--border)',
+                                                background: 'none',
+                                                color: 'var(--text-muted)',
+                                                cursor: 'pointer',
+                                            }}
+                                        >
+                                            編輯
+                                        </button>
+                                    )}
+                                </div>
+                                {editingContact && (
+                                    <div style={{ display: 'flex', gap: '6px', marginTop: '4px' }}>
+                                        <input
+                                            type="text"
+                                            value={contactDraft}
+                                            onChange={(e) => setContactDraft(e.target.value.slice(0, 100))}
+                                            placeholder="e-mail 或其他聯絡方式"
+                                            style={{ ...inputStyle, flex: 1, fontSize: '12px', padding: '6px 10px' }}
+                                        />
+                                        <button
+                                            onClick={handleSaveContact}
+                                            disabled={savingContact}
+                                            className="btn btn-primary"
+                                            style={{ fontSize: '11px', padding: '6px 10px', opacity: savingContact ? 0.5 : 1 }}
+                                        >
+                                            {savingContact ? '儲存中…' : '儲存'}
+                                        </button>
+                                        <button
+                                            onClick={() => { setEditingContact(false); setContactDraft(queryResult.contact || ''); setContactSaveMsg(''); }}
+                                            style={{
+                                                fontSize: '11px',
+                                                padding: '6px 8px',
+                                                borderRadius: '8px',
+                                                border: '1px solid var(--border)',
+                                                background: 'none',
+                                                color: 'var(--text-muted)',
+                                                cursor: 'pointer',
+                                            }}
+                                        >
+                                            取消
+                                        </button>
+                                    </div>
+                                )}
+                                {contactSaveMsg && (
+                                    <p style={{ fontSize: '11px', color: contactSaveMsg === '已更新' ? 'var(--color-success)' : 'var(--color-danger)', marginTop: '4px' }}>
+                                        {contactSaveMsg}
+                                    </p>
+                                )}
+                            </div>
+
+                            {/* 管理員回覆 */}
                             {queryResult.admin_reply && (
-                                <>
-                                    <p style={{ fontSize: '12px', fontWeight: 500, color: 'var(--text-secondary)', marginTop: '8px' }}>
+                                <div>
+                                    <p style={{ fontSize: '12px', fontWeight: 500, color: 'var(--text-secondary)' }}>
                                         管理員回覆：
                                     </p>
                                     <p style={{ fontSize: '12px', color: 'var(--text-muted)', whiteSpace: 'pre-line', marginTop: '4px' }}>
@@ -368,7 +498,7 @@ export default function FeedbackModal({ show, onClose }) {
                                             {new Date(queryResult.replied_at).toLocaleDateString('zh-TW')}
                                         </p>
                                     )}
-                                </>
+                                </div>
                             )}
                         </div>
                     )}

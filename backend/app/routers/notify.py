@@ -31,6 +31,7 @@ from app.models.schemas import (
     AnnouncementsResponse,
     FeedbackRequest,
     FeedbackResponse,
+    FeedbackContactUpdate,
     AdminLoginRequest,
     AdminLoginResponse,
     AnnouncementCreate,
@@ -40,6 +41,7 @@ from app.services.storage.sheets_notify import (
     get_announcements,
     write_feedback,
     get_feedback_by_id,
+    update_feedback_contact,
     invalidate_announcements_cache,
     get_admin_account,
     create_announcement,
@@ -170,6 +172,27 @@ async def get_feedback_status(feedback_id: str) -> FeedbackResponse:
         raise HTTPException(status_code=404, detail="回饋不存在 / Feedback not found")
 
     return FeedbackResponse(**result)
+
+
+@router.patch("/feedback/{feedback_id}/contact", summary="更新回饋聯絡方式 / Update Feedback Contact")
+async def update_feedback_contact_endpoint(feedback_id: str, body: FeedbackContactUpdate) -> dict:
+    """
+    讓使用者更新回饋的聯絡方式。憑藉知悉 feedback_id 即視為本人。
+    Allows users to update contact info. Knowing the feedback ID is the authorization.
+    """
+    if not feedback_id or len(feedback_id) > 64:
+        raise HTTPException(status_code=400, detail="Invalid feedback ID")
+
+    try:
+        found = await update_feedback_contact(feedback_id, body.contact or "")
+    except RuntimeError as exc:
+        logger.warning(f"notify/feedback/{feedback_id}/contact: Sheets not available ({exc})")
+        raise HTTPException(status_code=503, detail="儲存服務暫時無法使用 / Storage temporarily unavailable")
+
+    if not found:
+        raise HTTPException(status_code=404, detail="回饋不存在 / Feedback not found")
+
+    return {"ok": True}
 
 
 # ══════════════════════════════════════════

@@ -244,8 +244,16 @@ class FeedbackResponse(BaseModel):
     """意見回饋查詢回應 / Feedback Query Response"""
     id: str = Field(..., description="回饋 ID / Feedback ID")
     status: str = Field("pending", description="狀態 pending|replied / Status")
+    category: Optional[str] = Field(None, description="類別 / Category")
+    content: Optional[str] = Field(None, description="原始內容 / Original content")
+    contact: Optional[str] = Field(None, description="聯絡方式 / Contact")
     admin_reply: Optional[str] = Field(None, description="管理員回覆 / Admin reply")
     replied_at: Optional[str] = Field(None, description="回覆時間 / Replied at")
+
+
+class FeedbackContactUpdate(BaseModel):
+    """更新聯絡方式請求 / Update contact request"""
+    contact: Optional[str] = Field(None, max_length=100, description="新聯絡方式 / New contact")
 
 
 # ── 共享平台模型 / Share Platform Models ──

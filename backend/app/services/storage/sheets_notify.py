@@ -240,6 +240,9 @@ def _read_feedback_by_id_sync(feedback_id: str) -> dict | None:
             return {
                 "id": feedback_id,
                 "status": row[6].strip() or "pending",
+                "category": row[2].strip() or None,
+                "content": row[3].strip() or None,
+                "contact": row[4].strip() or None,
                 "admin_reply": row[7].strip() or None,
                 "replied_at": row[8].strip() or None,
             }
@@ -260,6 +263,44 @@ async def get_feedback_by_id(feedback_id: str) -> dict | None:
     if result:
         _fb_cache[feedback_id] = {**result, "_cached_at": time.time()}
     return result
+
+
+def _update_contact_sync(feedback_id: str, contact: str) -> bool:
+    """
+    更新指定回饋的聯絡方式（E 欄）。
+    Update the contact field (column E) for a given feedback id.
+    Returns True if found and updated, False if not found.
+    """
+    service = _build_service()
+    sheets_id = _get_sheets_id()
+
+    result = service.spreadsheets().values().get(
+        spreadsheetId=sheets_id,
+        range="feedback!A2:I",
+    ).execute()
+    rows: list[list[str]] = result.get("values", [])
+
+    for i, row in enumerate(rows):
+        row = row + [""] * (9 - len(row))
+        if row[0].strip() == feedback_id:
+            row_num = i + 2  # 1-indexed, skip header
+            row[4] = contact
+            service.spreadsheets().values().update(
+                spreadsheetId=sheets_id,
+                range=f"feedback!A{row_num}:I{row_num}",
+                valueInputOption="RAW",
+                body={"values": [row]},
+            ).execute()
+            # 清除快取 / Clear cache so next query reflects updated contact
+            global _fb_cache
+            _fb_cache.pop(feedback_id, None)
+            return True
+    return False
+
+
+async def update_feedback_contact(feedback_id: str, contact: str) -> bool:
+    """非同步更新聯絡方式 / Async update feedback contact."""
+    return await asyncio.to_thread(_update_contact_sync, feedback_id, contact)
 
 
 # ══════════════════════════════════════════

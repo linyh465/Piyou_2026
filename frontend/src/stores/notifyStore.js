@@ -245,6 +245,22 @@ const useNotifyStore = create((set, get) => ({
             throw err;
         }
     },
+
+    /**
+     * 更新回饋聯絡方式 / Update feedback contact info
+     * @param {string} feedbackId
+     * @param {string} contact
+     * @returns {{ ok: boolean, error?: string }}
+     */
+    updateFeedbackContact: async (feedbackId, contact) => {
+        try {
+            await api.patch(`/notify/feedback/${feedbackId}/contact`, { contact });
+            return { ok: true };
+        } catch (err) {
+            const msg = err.response?.data?.detail || '更新失敗，請稍後再試';
+            return { ok: false, error: msg };
+        }
+    },
 }));
 
 export default useNotifyStore;
