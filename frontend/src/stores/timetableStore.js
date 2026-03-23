@@ -212,7 +212,7 @@ const useTimetableStore = create((set, get) => ({
             5: 790, 6: 850, 7: 910, 8: 970,
             9: 1030, 10: 1085, 11: 1140, 12: 1195, 13: 1250,
         };
-        const startOf = (c) => PERIOD_START[c.period] ?? c.startMinute ?? 0;
+        const startOf = (c) => c.startMinute ?? PERIOD_START[c.period] ?? 0;
 
         const now = new Date();
         const dayIndex = now.getDay();

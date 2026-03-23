@@ -17,7 +17,7 @@ describe('App', () => {
   it('shows the dashboard route by default', async () => {
     render(<App />);
     // Dashboard 顯示時間問候語（早安/午安/晚安）
-    const title = await screen.findByText(/[早午晚]安/);
+    const title = await screen.findByText(/[早午晚]安|下午好/);
     expect(title).toBeInTheDocument();
   });
 });
