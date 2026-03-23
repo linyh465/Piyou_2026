@@ -12,6 +12,7 @@ import localDb from './localDb';
 
 const LS_SHARES = 'piyou_shares';
 const LS_LAST_USERSYNC = 'piyou_last_usersync';
+const LS_REMOVED_CODES = 'piyou_removed_share_codes';
 const THROTTLE_MS = 10_000; // 10 秒內不重複上傳
 
 let _uploadTimer = null;
@@ -34,16 +35,32 @@ function saveShares(shares) {
     localStorage.setItem(LS_SHARES, JSON.stringify(shares));
 }
 
+function getRemovedCodes() {
+    try { return new Set(JSON.parse(localStorage.getItem(LS_REMOVED_CODES) || '[]')); } catch { return new Set(); }
+}
+
+/**
+ * 將分享碼加入本地退訂紀錄，防止跨裝置同步時被重新加入。
+ * Add share code to local removal tombstone to prevent re-sync from remote.
+ */
+export function markShareRemoved(code) {
+    const codes = getRemovedCodes();
+    codes.add(code);
+    localStorage.setItem(LS_REMOVED_CODES, JSON.stringify([...codes]));
+}
+
 // ── 合併邏輯 ──
 
 /**
- * 合併共享訂閱：以 code 為 key，取聯集（包含已刪除/退訂）。
+ * 合併共享訂閱：以 code 為 key，取聯集；已退訂的 code 不從遠端恢復。
+ * Merge share subscriptions; codes in the removal tombstone are never restored from remote.
  */
 function mergeShares(local, remote) {
+    const removed = getRemovedCodes();
     const map = new Map();
     for (const s of local) map.set(s.code, s);
     for (const s of remote) {
-        if (!map.has(s.code)) map.set(s.code, s);
+        if (!map.has(s.code) && !removed.has(s.code)) map.set(s.code, s);
     }
     return Array.from(map.values());
 }

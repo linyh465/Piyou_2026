@@ -71,6 +71,7 @@ const useTaskStore = create((set, get) => ({
         set({ tasks: optimistic });
         try {
             await localDb.toggleTask(id);
+            scheduleUpload();
         } catch {
             // Rollback: 失敗時還原
             set({ tasks });

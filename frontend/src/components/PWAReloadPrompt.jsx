@@ -16,6 +16,11 @@ export default function PWAReloadPrompt() {
     const [countdown, setCountdown] = useState(AUTO_UPDATE_SECONDS);
     const countdownRef = useRef(null);
 
+    const swIntervalRef = useRef(null);
+
+    // Cleanup SW update interval on unmount
+    useEffect(() => () => { if (swIntervalRef.current) clearInterval(swIntervalRef.current); }, []);
+
     const {
         needRefresh: [needRefresh, setNeedRefresh],
         updateServiceWorker,
@@ -23,7 +28,7 @@ export default function PWAReloadPrompt() {
         onRegisteredSW(swUrl, r) {
             if (r) {
                 setSwRegistration(r);
-                setInterval(() => r.update(), CHECK_INTERVAL_MS);
+                swIntervalRef.current = setInterval(() => r.update(), CHECK_INTERVAL_MS);
             }
         },
         onRegisterError(error) {

@@ -206,14 +206,22 @@ const useTimetableStore = create((set, get) => ({
         const { timetable } = get();
         if (!timetable.length) return null;
 
+        // 與 Dashboard.jsx 保持一致，優先用節次查表 / Keep consistent with Dashboard: prefer period lookup
+        const PERIOD_START = {
+            1: 490, 2: 550, 3: 610, 4: 670,
+            5: 790, 6: 850, 7: 910, 8: 970,
+            9: 1030, 10: 1085, 11: 1140, 12: 1195, 13: 1250,
+        };
+        const startOf = (c) => PERIOD_START[c.period] ?? c.startMinute ?? 0;
+
         const now = new Date();
         const dayIndex = now.getDay();
         const currentMinutes = now.getHours() * 60 + now.getMinutes();
 
         // 今天剩餘的課 / Remaining classes today
         const todayRemaining = timetable
-            .filter(c => c.day === dayIndex && (c.startMinute ?? 0) > currentMinutes)
-            .sort((a, b) => (a.startMinute ?? 0) - (b.startMinute ?? 0));
+            .filter(c => c.day === dayIndex && startOf(c) > currentMinutes)
+            .sort((a, b) => startOf(a) - startOf(b));
 
         if (todayRemaining.length) {
             return { ...todayRemaining[0], isToday: true };
@@ -224,7 +232,7 @@ const useTimetableStore = create((set, get) => ({
             const targetDay = (dayIndex + offset) % 7;
             const dayClasses = timetable
                 .filter(c => c.day === targetDay)
-                .sort((a, b) => (a.startMinute ?? 0) - (b.startMinute ?? 0));
+                .sort((a, b) => startOf(a) - startOf(b));
             if (dayClasses.length) {
                 return { ...dayClasses[0], isToday: false };
             }

@@ -9,6 +9,7 @@ import {
     IconCheck, IconMinus, IconEdit, IconLock, IconEye, IconEyeOff,
 } from '../components/Icons';
 import { trackEvent } from '../services/analytics';
+import { markShareRemoved } from '../services/userSyncService';
 
 // ── 響應式斷點 / Responsive breakpoint hook ──
 
@@ -166,6 +167,7 @@ function ShareCard({ entry, deviceId, onRemove, onUpdated }) {
                 method: 'DELETE',
                 body: JSON.stringify({ device_id: deviceId }),
             });
+            markShareRemoved(entry.code);
             removeShare(entry.code);
             onRemove(entry.code);
         } catch (e) {
@@ -414,7 +416,7 @@ function ShareCard({ entry, deviceId, onRemove, onUpdated }) {
                         </>
                     ) : (
                         <button className="btn btn-ghost"
-                            onClick={() => { removeShare(entry.code); onRemove(entry.code); }}
+                            onClick={() => { markShareRemoved(entry.code); removeShare(entry.code); onRemove(entry.code); }}
                             style={{ color: 'var(--text-muted)', fontSize: '13px' }}>
                             移除訂閱
                         </button>
