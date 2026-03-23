@@ -1,4 +1,4 @@
-/* global clients, self */
+/* global clients */
 /**
  * 自訂 Service Worker / Custom Service Worker
  * 使用 VitePWA injectManifest 策略，由 Vite 注入預快取清單並打包。
