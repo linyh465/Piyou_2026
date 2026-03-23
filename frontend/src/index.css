@@ -881,8 +881,8 @@ body {
   .sidebar-main {
     /* 96px nav 高度 + 12px 間距 + home indicator 安全區 */
     padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
-    /* 頂部安全區（iOS black-translucent status bar 穿透） */
-    padding-top: env(safe-area-inset-top, 0px);
+    /* 頂部安全區 + 12px 基礎間距（Android/iOS status bar 穿透）*/
+    padding-top: calc(env(safe-area-inset-top, 0px) + 12px);
   }
 
   /* ── 手機版課表橫向捲動 / Mobile Timetable Horizontal Scroll ── */

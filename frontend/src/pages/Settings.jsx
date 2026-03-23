@@ -599,15 +599,15 @@ export default function Settings() {
                                 const triggered = await checkForUpdate();
                                 // 等 2 秒讓 SW 有時間回應；若有新版 PWAReloadPrompt 會自動彈出
                                 await new Promise(r => setTimeout(r, 2000));
-                                setUpdateStatus(triggered ? 'latest' : 'idle');
+                                setUpdateStatus(triggered ? 'latest' : 'unavailable');
                                 setTimeout(() => setUpdateStatus('idle'), 3000);
                             }}
                             disabled={updateStatus === 'checking'}
                             style={{
                                 width: '100%', padding: '10px', borderRadius: '10px',
                                 border: '1px solid var(--border-subtle)',
-                                background: updateStatus === 'latest' ? 'rgba(34,197,94,0.1)' : 'var(--bg-input)',
-                                color: updateStatus === 'latest' ? 'var(--color-success)' : 'var(--color-brand)',
+                                background: updateStatus === 'latest' ? 'rgba(34,197,94,0.1)' : updateStatus === 'unavailable' ? 'rgba(239,68,68,0.08)' : 'var(--bg-input)',
+                                color: updateStatus === 'latest' ? 'var(--color-success)' : updateStatus === 'unavailable' ? 'var(--color-danger)' : 'var(--color-brand)',
                                 fontSize: '14px', fontWeight: 600, cursor: updateStatus === 'checking' ? 'not-allowed' : 'pointer',
                                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
                                 opacity: updateStatus === 'checking' ? 0.6 : 1,
@@ -615,7 +615,7 @@ export default function Settings() {
                             }}
                         >
                             <IconRefresh size={15} />
-                            {updateStatus === 'checking' ? '檢查中…' : updateStatus === 'latest' ? '已是最新版本' : '檢查更新'}
+                            {updateStatus === 'checking' ? '檢查中…' : updateStatus === 'latest' ? '已是最新版本' : updateStatus === 'unavailable' ? '更新服務未就緒' : '檢查更新'}
                         </button>
                         <p style={{ fontSize: '11px', color: 'var(--text-muted)', textAlign: 'center', margin: '6px 0 0' }}>
                             若有新版本，畫面會自動彈出更新通知

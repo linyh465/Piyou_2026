@@ -26,7 +26,10 @@ export function setSwRegistration(r) {
  * @returns {Promise<boolean>} true 若成功觸發檢查，false 若 registration 尚未就緒
  */
 export async function checkForUpdate() {
-    if (!_registration) return false;
-    await _registration.update();
+    const reg = _registration ?? (
+        'serviceWorker' in navigator ? await navigator.serviceWorker.ready.catch(() => null) : null
+    );
+    if (!reg) return false;
+    await reg.update();
     return true;
 }
