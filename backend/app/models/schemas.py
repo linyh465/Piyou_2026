@@ -268,6 +268,7 @@ class ShareCreate(BaseModel):
     link_urls: list[str] = Field(default_factory=list, max_length=10,
                                  description="連結清單（最多 10 個）/ Link URLs (max 10)")
     device_id: str = Field(..., min_length=1, max_length=64, description="裝置 ID / Device ID")
+    password: Optional[str] = Field(None, max_length=100, description="訂閱密碼（選填）/ Subscription password (optional)")
 
 
 class ShareResponse(BaseModel):
@@ -278,3 +279,23 @@ class ShareResponse(BaseModel):
     link_urls: list[str] = Field(default_factory=list, description="連結清單 / Link URLs")
     created_at: str = Field(..., description="建立時間 / Created at")
     deleted: bool = Field(False, description="是否已被刪除 / Is deleted by owner")
+    password_protected: bool = Field(False, description="是否有密碼保護 / Is password protected")
+    is_owner: bool = Field(False, description="請求者是否為擁有者 / Is the requester the owner")
+
+
+class ShareUpdate(BaseModel):
+    """更新共享貼文請求 / Update Share Request"""
+    device_id: str = Field(..., min_length=1, max_length=64, description="裝置 ID（驗證擁有者）/ Device ID (owner verification)")
+    title: Optional[str] = Field(None, min_length=1, max_length=60)
+    body: Optional[str] = Field(None, max_length=2000)
+    link_urls: Optional[list[str]] = Field(None, max_length=10)
+    new_code: Optional[str] = Field(None, min_length=3, max_length=30,
+                                    pattern=r'^[A-Za-z0-9_\-]+$',
+                                    description="新分享碼（選填，若要重命名）/ New code (optional rename)")
+    password: Optional[str] = Field(None, max_length=100, description="設定新密碼 / Set new password")
+    remove_password: bool = Field(False, description="移除密碼保護 / Remove password protection")
+
+
+class ShareViewRequest(BaseModel):
+    """輸入密碼查看受保護分享 / View password-protected share"""
+    password: str = Field(..., min_length=1, max_length=100)

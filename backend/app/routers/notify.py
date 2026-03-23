@@ -134,6 +134,18 @@ async def submit_feedback(request: Request, body: FeedbackRequest) -> dict:
     """
     device_id: str = request.headers.get("X-Device-Id", "unknown")
 
+    # 檢查 ID 是否已存在（防止自訂 ID 重複）
+    # Check for duplicate ID (prevents custom ID conflicts)
+    try:
+        existing = await get_feedback_by_id(body.id)
+        if existing is not None:
+            raise HTTPException(status_code=409, detail="此回饋 ID 已被使用，請換一個不同的 ID / This feedback ID is already taken, please choose a different one")
+    except HTTPException:
+        raise
+    except RuntimeError as exc:
+        logger.warning(f"notify/feedback: Sheets not available ({exc})")
+        raise HTTPException(status_code=503, detail="儲存服務暫時無法使用 / Storage temporarily unavailable")
+
     data = {
         "id": body.id,
         "submitted_at": datetime.now(timezone.utc).isoformat(),

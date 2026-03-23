@@ -4,11 +4,13 @@
 Provides text + link sharing keyed by user-chosen share codes.
 """
 import logging
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Header
+from typing import Optional
 from pydantic import BaseModel
 
-from app.models.schemas import ShareCreate, ShareResponse
+from app.models.schemas import ShareCreate, ShareResponse, ShareUpdate, ShareViewRequest
 from app.services.storage import sheets_share
+from app.services.storage.sheets_share import _hash_device_id, _check_password
 
 logger = logging.getLogger(__name__)
 
@@ -19,8 +21,37 @@ class _DeleteBody(BaseModel):
     device_id: str
 
 
+def _build_response(data: dict, device_id: Optional[str] = None,
+                    include_content: bool = True) -> ShareResponse:
+    """
+    從 dict 建立 ShareResponse。
+    若 include_content=False（密碼保護且非擁有者），隱藏 body 和 link_urls。
+    Build ShareResponse from dict, optionally hiding body/links for protected shares.
+    """
+    is_owner = False
+    if device_id:
+        is_owner = _hash_device_id(device_id) == data.get("device_id_hash", "")
+
+    password_protected = bool(data.get("password_hash"))
+    show_content = include_content and (not password_protected or is_owner)
+
+    return ShareResponse(
+        code=data["code"],
+        title=data["title"],
+        body=data.get("body") if show_content else None,
+        link_urls=data.get("link_urls", []) if show_content else [],
+        created_at=data["created_at"],
+        deleted=data.get("deleted", False),
+        password_protected=password_protected,
+        is_owner=is_owner,
+    )
+
+
 @router.post("", response_model=ShareResponse, status_code=201)
-async def create_share(payload: ShareCreate):
+async def create_share(
+    payload: ShareCreate,
+    x_device_id: Optional[str] = Header(None, alias="X-Device-Id"),
+):
     """
     建立新的共享貼文 / Create a new share post.
     code 須唯一（3-30 字元，英數字 / - / _）。
@@ -32,6 +63,7 @@ async def create_share(payload: ShareCreate):
             body=payload.body,
             link_urls=payload.link_urls,
             device_id=payload.device_id,
+            password=payload.password or None,
         )
     except ValueError as e:
         raise HTTPException(status_code=409, detail=str(e))
@@ -39,13 +71,17 @@ async def create_share(payload: ShareCreate):
         logger.error(f"share create error: {e}")
         raise HTTPException(status_code=503, detail="暫時無法建立分享，請稍後再試")
 
-    return ShareResponse(**result)
+    return _build_response(result, device_id=payload.device_id, include_content=True)
 
 
 @router.get("/{code}", response_model=ShareResponse)
-async def get_share(code: str):
+async def get_share(
+    code: str,
+    x_device_id: Optional[str] = Header(None, alias="X-Device-Id"),
+):
     """
     取得分享貼文 / Get a share post by code.
+    若有密碼保護且非擁有者，隱藏內文與連結（password_protected=true 提示需輸入密碼）。
     不存在時回傳 404；已刪除時 deleted=true。
     """
     try:
@@ -57,7 +93,70 @@ async def get_share(code: str):
     if result is None:
         raise HTTPException(status_code=404, detail="找不到此分享碼 / Share code not found")
 
-    return ShareResponse(**result)
+    return _build_response(result, device_id=x_device_id, include_content=False)
+
+
+@router.post("/{code}/view", response_model=ShareResponse)
+async def view_protected_share(
+    code: str,
+    body: ShareViewRequest,
+    x_device_id: Optional[str] = Header(None, alias="X-Device-Id"),
+):
+    """
+    輸入密碼後取得受保護分享的完整內容。
+    Unlock a password-protected share by providing the correct password.
+    """
+    try:
+        result = await sheets_share.get_share(code)
+    except Exception as e:
+        logger.error(f"share view error: {e}")
+        raise HTTPException(status_code=503, detail="暫時無法取得分享，請稍後再試")
+
+    if result is None:
+        raise HTTPException(status_code=404, detail="找不到此分享碼 / Share code not found")
+
+    pw_hash = result.get("password_hash") or ""
+    if not pw_hash:
+        # 無密碼保護，直接回傳
+        return _build_response(result, device_id=x_device_id, include_content=True)
+
+    if not _check_password(body.password, pw_hash):
+        raise HTTPException(status_code=403, detail="密碼錯誤 / Incorrect password")
+
+    return _build_response(result, device_id=x_device_id, include_content=True)
+
+
+@router.patch("/{code}", response_model=ShareResponse)
+async def update_share(
+    code: str,
+    payload: ShareUpdate,
+    x_device_id: Optional[str] = Header(None, alias="X-Device-Id"),
+):
+    """
+    擁有者更新共享貼文（標題、內文、連結、分享碼、密碼）。
+    Owner updates a share post (title, body, links, code, password).
+    """
+    try:
+        result = await sheets_share.update_share(
+            code=code,
+            device_id=payload.device_id,
+            title=payload.title,
+            body=payload.body,
+            link_urls=payload.link_urls,
+            new_code=payload.new_code,
+            password=payload.password,
+            remove_password=payload.remove_password,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=409, detail=str(e))
+    except Exception as e:
+        logger.error(f"share update error: {e}")
+        raise HTTPException(status_code=503, detail="暫時無法更新分享，請稍後再試")
+
+    if result is None:
+        raise HTTPException(status_code=403, detail="無權限更新此分享 / Not authorized to update")
+
+    return _build_response(result, device_id=payload.device_id, include_content=True)
 
 
 @router.delete("/{code}", status_code=200)

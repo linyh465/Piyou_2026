@@ -35,7 +35,7 @@ REQUIRED_SHEETS: dict[str, list[str]] = {
         "device_id", "endpoint", "p256dh", "auth", "subscribed_at",
     ],
     "shared_items": [
-        "code", "title", "body", "link_urls", "device_id_hash", "created_at", "is_deleted",
+        "code", "title", "body", "link_urls", "device_id_hash", "created_at", "is_deleted", "password_hash",
     ],
     "analytics_events": [
         "timestamp", "device_id_hash", "event_type", "page", "extra_json",

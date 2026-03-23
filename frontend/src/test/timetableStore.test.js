@@ -23,7 +23,7 @@ beforeEach(async () => {
   vi.doMock('../services/apiClient', () => {
     const mockGet = vi.fn();
     mockApi = mockGet;
-    return { api: { get: mockGet } };
+    return { api: { get: mockGet }, apiError: (err, fallback) => fallback };
   });
 
   const mod = await import('../stores/timetableStore');

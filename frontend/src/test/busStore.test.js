@@ -43,6 +43,7 @@ beforeEach(async () => {
         },
       })),
     },
+    apiError: (err, fallback) => fallback,
   }));
 
   const mod = await import('../stores/busStore');
