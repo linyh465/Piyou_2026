@@ -67,7 +67,9 @@ async function apiFetch(path, opts = {}) {
     });
     if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        throw new Error(err.detail || `HTTP ${res.status}`);
+        const error = new Error(err.detail || `HTTP ${res.status}`);
+        error.status = res.status;
+        throw error;
     }
     return res.json();
 }
@@ -175,7 +177,7 @@ function ShareCard({ entry, deviceId, onRemove, onUpdated }) {
             upsertShare({ ...entry, ...data, unlocked: true });
             onUpdated({ ...entry, ...data, unlocked: true });
         } catch (e) {
-            setUnlockError(e.message.includes('403') ? '密碼錯誤，請再試一次' : e.message);
+            setUnlockError(e.status === 403 ? '密碼錯誤，請再試一次' : (e.message || '解鎖失敗，請稍後再試'));
         } finally {
             setUnlocking(false);
         }
@@ -213,7 +215,7 @@ function ShareCard({ entry, deviceId, onRemove, onUpdated }) {
             onUpdated({ ...data, is_owner: true, unlocked: true, _oldCode: entry.code });
             setEditMode(false);
         } catch (e) {
-            setSaveError(e.message.includes('409') ? '此分享碼已被使用，請換一個' : e.message);
+            setSaveError(e.status === 409 ? '此分享碼已有人使用，請更換後重試' : (e.message || '儲存失敗，請稍後再試'));
         } finally {
             setSaving(false);
         }
@@ -514,7 +516,11 @@ function CreateForm({ deviceId, onCreated }) {
             setSuccess(true);
             setTimeout(() => { setSuccess(false); setOpen(false); }, 1500);
         } catch (e) {
-            setError(e.message.includes('409') ? '此分享碼已被使用，請換一個' : '建立失敗，請稍後再試');
+            if (e.status === 409) {
+                setError('此分享碼已有人使用，請更換後重試');
+            } else {
+                setError(e.message || '建立失敗，請稍後再試');
+            }
         } finally {
             setLoading(false);
         }
