@@ -229,6 +229,12 @@ async def get_stats() -> dict:
     if _STATS_CACHE["expires_at"] > now_ts:
         return _STATS_CACHE["data"]
     data = await asyncio.to_thread(_get_stats_sync)
+    # 附加跨裝置同步帳號數 / Append cross-device sync account count
+    try:
+        from app.services.storage.sheets_usersync import count_accounts
+        data["usersync_accounts"] = await count_accounts()
+    except Exception:
+        data["usersync_accounts"] = None
     _STATS_CACHE = {"expires_at": now_ts + STATS_TTL_SECONDS, "data": data}
     return data
 

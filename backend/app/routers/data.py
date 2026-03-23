@@ -648,6 +648,80 @@ async def put_tasks(request: Request, user: dict = Depends(get_current_user)):
         logger.warning(f"Task write error: {e}")
         raise HTTPException(status_code=500, detail="儲存任務失敗 / Failed to save tasks")
 
+
+# ══════════════════════════════════════════
+#  跨裝置使用者資料同步 / Cross-Device User Data Sync
+# ══════════════════════════════════════════
+
+from app.services.storage import sheets_usersync  # noqa: E402
+
+MAX_SYNC_TASKS = 500
+MAX_SYNC_SHARES = 200
+
+
+@router.put("/usersync")
+async def put_user_sync(request: Request, user: dict = Depends(get_current_user)):
+    """
+    上傳任務與共享訂閱至 Google Sheets（跨裝置同步）。
+    Upload tasks and share subscriptions to Google Sheets (cross-device sync).
+    """
+    if not os.getenv("GOOGLE_SERVICE_ACCOUNT_JSON"):
+        raise HTTPException(status_code=503, detail="雲端同步服務未啟用 / Cloud sync not configured")
+
+    student_id = user.get("sub", "")
+    if not student_id:
+        raise HTTPException(status_code=400, detail="無法取得學號 / Cannot resolve student ID")
+
+    try:
+        body = await request.json()
+    except Exception:
+        raise HTTPException(status_code=400, detail="請求格式錯誤 / Invalid request body")
+
+    tasks = body.get("tasks", [])
+    shares = body.get("shares", [])
+    if not isinstance(tasks, list) or not isinstance(shares, list):
+        raise HTTPException(status_code=400, detail="tasks 和 shares 必須為陣列")
+    if len(tasks) > MAX_SYNC_TASKS:
+        raise HTTPException(status_code=400, detail=f"任務數量超過上限 {MAX_SYNC_TASKS}")
+    if len(shares) > MAX_SYNC_SHARES:
+        raise HTTPException(status_code=400, detail=f"訂閱數量超過上限 {MAX_SYNC_SHARES}")
+
+    student_id_hash = sheets_usersync.hash_student_id(student_id)
+    try:
+        await sheets_usersync.upsert_user_sync(student_id_hash, tasks, shares)
+    except Exception as e:
+        logger.warning(f"UserSync upload error: {e}")
+        raise HTTPException(status_code=503, detail="同步上傳失敗，請稍後再試")
+
+    return {"status": "ok", "tasks": len(tasks), "shares": len(shares)}
+
+
+@router.get("/usersync")
+async def get_user_sync(user: dict = Depends(get_current_user)):
+    """
+    下載任務與共享訂閱（跨裝置同步）。
+    Download tasks and share subscriptions (cross-device sync).
+    """
+    if not os.getenv("GOOGLE_SERVICE_ACCOUNT_JSON"):
+        raise HTTPException(status_code=503, detail="雲端同步服務未啟用 / Cloud sync not configured")
+
+    student_id = user.get("sub", "")
+    if not student_id:
+        raise HTTPException(status_code=400, detail="無法取得學號 / Cannot resolve student ID")
+
+    student_id_hash = sheets_usersync.hash_student_id(student_id)
+    try:
+        data = await sheets_usersync.get_user_sync(student_id_hash)
+    except Exception as e:
+        logger.warning(f"UserSync download error: {e}")
+        raise HTTPException(status_code=503, detail="同步下載失敗，請稍後再試")
+
+    if data is None:
+        raise HTTPException(status_code=404, detail="尚無同步資料")
+
+    return data
+
+
 # ── 記憶體內 TDX 節流 / In-memory TDX throttle ──
 _bus_mem_cache: dict | None = None
 _bus_mem_cache_at: float = 0

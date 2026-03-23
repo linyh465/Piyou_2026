@@ -11,6 +11,7 @@
  */
 import { create } from 'zustand';
 import { api, apiError } from '../services/apiClient';
+import { uploadUserSync, downloadAndMergeUserSync } from '../services/userSyncService';
 
 // 請求超時時間 / Request timeout duration
 const REQUEST_TIMEOUT = 25000;
@@ -137,6 +138,9 @@ const useTimetableStore = create((set, get) => ({
                 timetableError: null,
                 isTimeout: false,
             });
+            // 課表同步成功後，下載遠端個人資料並觸發上傳
+            downloadAndMergeUserSync().then(() => uploadUserSync());
+
         } catch (err) {
             if (err.code === 'ECONNABORTED' || err.message?.includes('timeout')) {
                 set({

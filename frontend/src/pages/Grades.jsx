@@ -27,6 +27,7 @@ function CourseDetailModal({ course, onClose }) {
                 background: 'var(--bg-card)', borderRadius: '20px 20px 0 0',
                 padding: '20px 20px calc(env(safe-area-inset-bottom,0px) + 24px)',
                 boxShadow: '0 -8px 40px rgba(0,0,0,0.3)',
+                maxHeight: '80vh', overflowY: 'auto',
             }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
                     <div style={{ flex: 1, marginRight: '12px' }}>

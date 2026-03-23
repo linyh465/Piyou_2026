@@ -118,7 +118,7 @@ export default function Settings() {
     });
     const [showFeedback, setShowFeedback] = useState(false);
     const [showPolicy, setShowPolicy] = useState(null); // 'privacy' | 'terms' | null
-    const [updateStatus, setUpdateStatus] = useState('idle'); // 'idle' | 'checking' | 'latest'
+    const [updateStatus, setUpdateStatus] = useState('idle'); // 'idle' | 'checking' | 'latest' | 'unavailable'
 
     // ── PWA 推播通知 / PWA Push Notifications ──
     // 'unsupported' | 'denied' | 'subscribed' | 'unsubscribed' | 'loading'
@@ -596,10 +596,12 @@ export default function Settings() {
                             onClick={async () => {
                                 if (updateStatus === 'checking') return;
                                 setUpdateStatus('checking');
-                                const triggered = await checkForUpdate();
-                                // 等 2 秒讓 SW 有時間回應；若有新版 PWAReloadPrompt 會自動彈出
-                                await new Promise(r => setTimeout(r, 2000));
-                                setUpdateStatus(triggered ? 'latest' : 'unavailable');
+                                const result = await checkForUpdate();
+                                // 'updated' → SW 正在重載，不需再顯示任何狀態
+                                // 'latest'  → 已是最新
+                                // false     → SW 未就緒
+                                if (result === 'updated') return; // page will reload
+                                setUpdateStatus(result === 'latest' ? 'latest' : 'unavailable');
                                 setTimeout(() => setUpdateStatus('idle'), 3000);
                             }}
                             disabled={updateStatus === 'checking'}

@@ -7,6 +7,7 @@ import { create } from 'zustand';
 import localDb from '../services/localDb';
 import { downloadMarkdown } from '../utils/exportMarkdown';
 import { api, apiError } from '../services/apiClient';
+import { scheduleUpload } from '../services/userSyncService';
 
 const useTaskStore = create((set, get) => ({
     // 狀態 / State
@@ -36,6 +37,7 @@ const useTaskStore = create((set, get) => ({
     addTask: async (task) => {
         await localDb.createTask(task);
         await get().loadTasks();
+        scheduleUpload();
     },
 
     /**
@@ -44,6 +46,7 @@ const useTaskStore = create((set, get) => ({
     updateTask: async (id, updates) => {
         await localDb.updateTask(id, updates);
         await get().loadTasks();
+        scheduleUpload();
     },
 
     /**
@@ -52,6 +55,7 @@ const useTaskStore = create((set, get) => ({
     deleteTask: async (id) => {
         await localDb.deleteTask(id);
         await get().loadTasks();
+        scheduleUpload();
     },
 
     /**

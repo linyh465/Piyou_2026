@@ -40,6 +40,9 @@ REQUIRED_SHEETS: dict[str, list[str]] = {
     "analytics_events": [
         "timestamp", "device_id_hash", "event_type", "page", "extra_json",
     ],
+    "user_sync": [
+        "student_id_hash", "tasks_json", "shares_json", "updated_at",
+    ],
 }
 
 

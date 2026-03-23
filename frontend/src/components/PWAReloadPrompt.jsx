@@ -6,7 +6,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useRegisterSW } from 'virtual:pwa-register/react';
-import { setSwRegistration } from '../services/pwaUpdate';
+import { setSwRegistration, setUpdateServiceWorker } from '../services/pwaUpdate';
 
 const AUTO_UPDATE_SECONDS = 10;
 const CHECK_INTERVAL_MS = 5 * 60 * 1000; // 每 5 分鐘檢查一次
@@ -30,6 +30,12 @@ export default function PWAReloadPrompt() {
             console.warn('SW registration error:', error);
         },
     });
+
+    // 將 updateServiceWorker 函式存入單例，供手動更新按鈕使用
+    // Store updateServiceWorker in singleton for manual update button
+    useEffect(() => {
+        setUpdateServiceWorker(updateServiceWorker);
+    }, [updateServiceWorker]);
 
     // 偵測到新版本時開始倒數，歸零自動更新
     useEffect(() => {
