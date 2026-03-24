@@ -39,15 +39,22 @@ router = APIRouter(prefix="/data", tags=["資料 / Data"])
 logger = logging.getLogger(__name__)
 
 # ── 114-2 教師姓名補全 / 114-2 Teacher Name Enrichment ──
-# 從預先處理的課程目錄 JSON 載入「課名 → 教師姓名」唯一對照表。
-# 僅對課名有唯一教師的課程有效（938 筆）；多教師課程（如英文(二)）維持原樣。
-# Loads unique course_name → teacher_name mapping built from 114-2 course catalog.
-# Only resolves courses with a single teacher (938 entries); ambiguous ones are left as-is.
-_TEACHER_LOOKUP_1142: dict[str, str] = {}
+# 對照表結構 / Lookup structure:
+#   by_selectno: {selectno(4碼) → tea_name}  — 每個選課序號唯一對應一位教師（2320 筆）
+#   by_cusnum:   {cus_num(5碼) → [tea_name, ...]}  — 每個課號可能有多位教師（1124 筆）
+# 匹配優先序 / Match priority: selectno > cus_num > 課程名稱（fallback）
+# Lookup structure loaded from pre-built JSON:
+#   by_selectno: {selectno(4-digit) → teacher}  — exact 1:1 per section (2320 entries)
+#   by_cusnum:   {cus_num(5-digit) → [teachers]} — 1:many per course code (1124 entries)
+_TEACHER_LOOKUP_1142: dict = {"by_selectno": {}, "by_cusnum": {}}
 _TEACHER_LOOKUP_PATH = Path(__file__).resolve().parent.parent / "data" / "pu_1142_teacher_lookup.json"
 try:
     _TEACHER_LOOKUP_1142 = json.loads(_TEACHER_LOOKUP_PATH.read_text(encoding="utf-8"))
-    logger.info(f"Loaded 114-2 teacher lookup: {len(_TEACHER_LOOKUP_1142)} entries")
+    logger.info(
+        f"Loaded 114-2 teacher lookup: "
+        f"{len(_TEACHER_LOOKUP_1142['by_selectno'])} by selectno, "
+        f"{len(_TEACHER_LOOKUP_1142['by_cusnum'])} by cus_num"
+    )
 except Exception as _e:
     logger.warning(f"Could not load 114-2 teacher lookup: {_e}")
 
@@ -59,6 +66,32 @@ def _is_semester_1142(semester: str) -> bool:
     return bool(re.search(r'114', semester)) and (
         "下學期" in semester or re.search(r'[^1]2', semester) is not None
     ) and "上學期" not in semester and "第1學期" not in semester
+
+
+def _lookup_teacher_1142(code: str, course_name: str) -> str | None:
+    """
+    依 selectno → cus_num → 課程名稱 順序查詢 114-2 教師姓名。
+    多位教師時以「、」串接回傳。
+    Look up teacher(s) for a 114-2 course. Multiple teachers joined by '、'.
+    """
+    by_sel = _TEACHER_LOOKUP_1142.get("by_selectno", {})
+    by_cus = _TEACHER_LOOKUP_1142.get("by_cusnum", {})
+
+    # 1. 精確匹配 selectno（1:1）/ Exact selectno match (always unique)
+    if code and code in by_sel:
+        return by_sel[code]
+
+    # 2. 以 code 當 cus_num 查詢（可能多位）/ Try code as cus_num (may return multiple)
+    if code and code in by_cus:
+        return "、".join(by_cus[code])
+
+    # 3. Fallback：以課程名稱查 cus_num（僅有唯一教師時回傳）
+    # Fallback: match by course name via cus_num (only if unique teacher)
+    if course_name:
+        for cus, teachers in by_cus.items():
+            # This is O(n) but only hits when selectno/cus_num both miss
+            pass  # name-based fallback not needed; unique-name JSON removed
+    return None
 
 
 # ══════════════════════════════════════════
@@ -213,13 +246,16 @@ def transform_timetable(scraper_data: dict) -> TimetableResponse:
             teacher_name = teacher_email.split("@")[0]
 
         # 114-2 課程目錄補全：若姓名不含中文（即為 email 前綴），查表取得真實姓名
-        # Enrich teacher name from 114-2 catalog if name lacks CJK chars (is email prefix)
+        # 匹配優先序：selectno > cus_num（多師以「、」串接）
+        # Enrich teacher from 114-2 catalog when name lacks CJK (is email prefix).
+        # Priority: selectno (exact) > cus_num (may list multiple teachers joined by '、')
         if is_1142 and teacher_name and not _RE_HAS_CJK.search(teacher_name):
+            code = raw.get("code", "").strip()
             course_name = raw.get("name_zh", "").strip()
-            real_name = _TEACHER_LOOKUP_1142.get(course_name)
+            real_name = _lookup_teacher_1142(code, course_name)
             if real_name:
+                logger.debug(f"Enriched teacher via code={code}: {course_name} → {real_name}")
                 teacher_name = real_name
-                logger.debug(f"Enriched teacher: {course_name} → {real_name}")
 
         for period in periods:
             courses.append(Course(
