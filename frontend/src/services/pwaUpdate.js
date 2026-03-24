@@ -31,16 +31,18 @@ export function setUpdateServiceWorker(fn) {
  * 啟動等待中的 SW（若有），否則重新整理頁面。
  * Activate the waiting SW (if any), or reload the page.
  *
- * 直接對 reg.waiting 發送 SKIP_WAITING 並監聽 controllerchange 後 reload，
- * 比透過 vite-pwa 的 updateServiceWorker 更可靠（後者可能找不到 waiting SW）。
+ * 直接對 reg.waiting 發送 SKIP_WAITING 並監聽 controllerchange 後 reload。
+ * 加 3 秒強制 reload fallback — Android Chrome 有時不觸發 controllerchange。
  */
 function _activateWaiting(reg) {
     const waiting = reg.waiting;
     if (waiting) {
-        navigator.serviceWorker.addEventListener('controllerchange', () => {
-            window.location.reload();
-        }, { once: true });
+        let reloaded = false;
+        const doReload = () => { if (!reloaded) { reloaded = true; window.location.reload(); } };
+        navigator.serviceWorker.addEventListener('controllerchange', doReload, { once: true });
         waiting.postMessage({ type: 'SKIP_WAITING' });
+        // Fallback: Android Chrome 有時 controllerchange 不觸發，3 秒後強制 reload
+        setTimeout(doReload, 3000);
     } else if (_updateServiceWorker) {
         _updateServiceWorker(true);
     } else {
@@ -108,11 +110,11 @@ export async function checkForUpdate() {
     }
 
     return new Promise((resolve) => {
-        // 10 秒後若無新版，視為已是最新
+        // 5 秒後若無新版，視為已是最新
         const timer = setTimeout(() => {
             reg.removeEventListener('updatefound', onUpdateFound);
             resolve('latest');
-        }, 10000);
+        }, 5000);
 
         function onUpdateFound() {
             const sw = reg.installing;

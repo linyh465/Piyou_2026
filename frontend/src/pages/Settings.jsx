@@ -119,7 +119,7 @@ export default function Settings() {
     });
     const [showFeedback, setShowFeedback] = useState(false);
     const [showPolicy, setShowPolicy] = useState(null); // 'privacy' | 'terms' | null
-    const [updateStatus, setUpdateStatus] = useState('idle'); // 'idle' | 'checking' | 'latest' | 'unavailable'
+    const [updateStatus, setUpdateStatus] = useState('idle'); // 'idle' | 'checking' | 'updating' | 'latest' | 'unavailable'
     const [appVersion, setAppVersion] = useState('1.0.0-beta');
 
     useEffect(() => {
@@ -608,24 +608,27 @@ export default function Settings() {
                                 // 'updated' → SW 正在重載，不需再顯示任何狀態
                                 // 'latest'  → 已是最新
                                 // false     → SW 未就緒
-                                if (result === 'updated') return; // page will reload
+                                if (result === 'updated') {
+                                    setUpdateStatus('updating'); // 顯示"正在更新…"直到頁面重載
+                                    return;
+                                }
                                 setUpdateStatus(result === 'latest' ? 'latest' : 'unavailable');
                                 setTimeout(() => setUpdateStatus('idle'), 3000);
                             }}
-                            disabled={updateStatus === 'checking'}
+                            disabled={updateStatus === 'checking' || updateStatus === 'updating'}
                             style={{
                                 width: '100%', padding: '10px', borderRadius: '10px',
                                 border: '1px solid var(--border-subtle)',
-                                background: updateStatus === 'latest' ? 'rgba(34,197,94,0.1)' : updateStatus === 'unavailable' ? 'rgba(239,68,68,0.08)' : 'var(--bg-input)',
-                                color: updateStatus === 'latest' ? 'var(--color-success)' : updateStatus === 'unavailable' ? 'var(--color-danger)' : 'var(--color-brand)',
-                                fontSize: '14px', fontWeight: 600, cursor: updateStatus === 'checking' ? 'not-allowed' : 'pointer',
+                                background: updateStatus === 'latest' ? 'rgba(34,197,94,0.1)' : updateStatus === 'unavailable' ? 'rgba(239,68,68,0.08)' : updateStatus === 'updating' ? 'rgba(34,197,94,0.15)' : 'var(--bg-input)',
+                                color: updateStatus === 'latest' ? 'var(--color-success)' : updateStatus === 'unavailable' ? 'var(--color-danger)' : updateStatus === 'updating' ? 'var(--color-success)' : 'var(--color-brand)',
+                                fontSize: '14px', fontWeight: 600, cursor: (updateStatus === 'checking' || updateStatus === 'updating') ? 'not-allowed' : 'pointer',
                                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
-                                opacity: updateStatus === 'checking' ? 0.6 : 1,
+                                opacity: (updateStatus === 'checking' || updateStatus === 'updating') ? 0.7 : 1,
                                 transition: 'background 0.3s, color 0.3s',
                             }}
                         >
                             <IconRefresh size={15} />
-                            {updateStatus === 'checking' ? '檢查中…' : updateStatus === 'latest' ? '已是最新版本' : updateStatus === 'unavailable' ? '更新服務未就緒' : '檢查更新'}
+                            {updateStatus === 'checking' ? '檢查中…' : updateStatus === 'updating' ? '正在更新…' : updateStatus === 'latest' ? '已是最新版本' : updateStatus === 'unavailable' ? '更新服務未就緒' : '檢查更新'}
                         </button>
                         <p style={{ fontSize: '11px', color: 'var(--text-muted)', textAlign: 'center', margin: '6px 0 0' }}>
                             若有新版本，畫面會自動彈出更新通知
