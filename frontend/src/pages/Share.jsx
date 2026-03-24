@@ -9,7 +9,7 @@ import {
     IconCheck, IconMinus, IconEdit, IconLock, IconEye, IconEyeOff,
 } from '../components/Icons';
 import { trackEvent } from '../services/analytics';
-import { markShareRemoved, scheduleUpload } from '../services/userSyncService';
+import { markShareRemoved, scheduleUpload, uploadUserSync, downloadAndMergeUserSync } from '../services/userSyncService';
 
 // ── 響應式斷點 / Responsive breakpoint hook ──
 
@@ -653,24 +653,29 @@ export default function Share() {
     const containerRef = useRef(null);
 
     const refreshAll = useCallback(async () => {
-        const list = loadShares();
-        if (!list.length) { setRefreshing(false); return; }
         setRefreshing(true);
-        const updated = await Promise.all(
-            list.map(async (s) => {
-                try {
-                    const fresh = await apiFetch(`/${s.code}`);
-                    // 如果本地已解鎖，保留解鎖內容，只更新 title/deleted/password_protected
-                    if (s.unlocked && fresh.password_protected) {
-                        return { ...s, title: fresh.title, deleted: fresh.deleted, password_protected: fresh.password_protected };
+        // 先執行使用者資料同步（上傳本地 + 合併遠端）
+        await uploadUserSync(true);
+        await downloadAndMergeUserSync();
+
+        const list = loadShares();
+        if (list.length) {
+            const updated = await Promise.all(
+                list.map(async (s) => {
+                    try {
+                        const fresh = await apiFetch(`/${s.code}`);
+                        // 如果本地已解鎖，保留解鎖內容，只更新 title/deleted/password_protected
+                        if (s.unlocked && fresh.password_protected) {
+                            return { ...s, title: fresh.title, deleted: fresh.deleted, password_protected: fresh.password_protected };
+                        }
+                        return { ...s, ...fresh };
+                    } catch {
+                        return s;
                     }
-                    return { ...s, ...fresh };
-                } catch {
-                    return s;
-                }
-            })
-        );
-        updated.forEach(upsertShare);
+                })
+            );
+            updated.forEach(upsertShare);
+        }
         setRefreshing(false);
         setShares(loadShares());
     }, []);

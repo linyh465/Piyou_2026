@@ -4,10 +4,12 @@
 import { useEffect, useState, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import useTaskStore from '../stores/taskStore';
+import useAuthStore from '../stores/authStore';
 import { trackEvent } from '../services/analytics';
+import { uploadUserSync, downloadAndMergeUserSync } from '../services/userSyncService';
 import {
     IconCheckSquare, IconPlus, IconEdit, IconTrash,
-    IconCheck, IconDownload, IconStar,
+    IconCheck, IconDownload, IconStar, IconRefresh,
     IconFolder, IconBook, IconCalendar, IconUser,
     IconDotsVertical,
 } from '../components/Icons';
@@ -175,10 +177,24 @@ export default function Tasks() {
     const { t } = useTranslation('tasks');
     const { t: tCommon } = useTranslation('common');
     const { isLoading, filter, setFilter, loadTasks, getFilteredTasks, exportToMarkdown } = useTaskStore();
+    const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
     const [showForm, setShowForm] = useState(false);
     const [editTask, setEditTask] = useState(null);
     const [showMenu, setShowMenu] = useState(false);
+    const [syncing, setSyncing] = useState(false);
     const menuRef = useRef(null);
+
+    const handleSync = async () => {
+        if (syncing) return;
+        setSyncing(true);
+        try {
+            await uploadUserSync(true);
+            await downloadAndMergeUserSync();
+            await loadTasks();
+        } finally {
+            setSyncing(false);
+        }
+    };
 
     useEffect(() => { loadTasks(); }, [loadTasks]);
 
@@ -207,6 +223,11 @@ export default function Tasks() {
                     <h2 className="page-title">{t('title')}</h2>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    {isAuthenticated && (
+                        <button onClick={handleSync} disabled={syncing} className="btn btn-ghost" style={{ fontSize: '13px' }} aria-label="同步">
+                            <IconRefresh size={15} style={{ opacity: syncing ? 0.4 : 1 }} />
+                        </button>
+                    )}
                     <button onClick={() => { setEditTask(null); setShowForm(true); }} className="btn btn-primary" style={{ fontSize: '13px' }} aria-label={t('addTask')}>
                         <IconPlus size={15} /> {t('addTask')}
                     </button>
