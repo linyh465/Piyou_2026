@@ -120,7 +120,7 @@ export default function Settings() {
     const [showFeedback, setShowFeedback] = useState(false);
     const [showPolicy, setShowPolicy] = useState(null); // 'privacy' | 'terms' | null
     const [updateStatus, setUpdateStatus] = useState('idle'); // 'idle' | 'checking' | 'updating' | 'latest' | 'unavailable'
-    const [appVersion, setAppVersion] = useState('1.0.0-beta');
+    const [appVersion, setAppVersion] = useState('1.0.0');
 
     useEffect(() => {
         api.get('/notify/config').then((res) => {

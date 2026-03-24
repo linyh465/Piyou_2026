@@ -608,7 +608,7 @@ async def get_app_config() -> dict:
     """回傳公開設定（版本號、維護模式等）/ Return public config (version, maintenance mode etc.)."""
     config = await sheets_config.get_all_config()
     return {
-        "version": config.get("version", "1.0.0-beta"),
+        "version": config.get("version", "1.0.0"),
         "maintenance_mode": config.get("maintenance_mode", "false"),
         "maintenance_message": config.get("maintenance_message", ""),
     }
