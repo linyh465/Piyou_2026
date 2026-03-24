@@ -38,6 +38,28 @@ from app.services.storage.sheets_synclog import log_sync
 router = APIRouter(prefix="/data", tags=["資料 / Data"])
 logger = logging.getLogger(__name__)
 
+# ── 114-2 教師姓名補全 / 114-2 Teacher Name Enrichment ──
+# 從預先處理的課程目錄 JSON 載入「課名 → 教師姓名」唯一對照表。
+# 僅對課名有唯一教師的課程有效（938 筆）；多教師課程（如英文(二)）維持原樣。
+# Loads unique course_name → teacher_name mapping built from 114-2 course catalog.
+# Only resolves courses with a single teacher (938 entries); ambiguous ones are left as-is.
+_TEACHER_LOOKUP_1142: dict[str, str] = {}
+_TEACHER_LOOKUP_PATH = Path(__file__).resolve().parent.parent / "data" / "pu_1142_teacher_lookup.json"
+try:
+    _TEACHER_LOOKUP_1142 = json.loads(_TEACHER_LOOKUP_PATH.read_text(encoding="utf-8"))
+    logger.info(f"Loaded 114-2 teacher lookup: {len(_TEACHER_LOOKUP_1142)} entries")
+except Exception as _e:
+    logger.warning(f"Could not load 114-2 teacher lookup: {_e}")
+
+_RE_HAS_CJK = re.compile(r'[\u4e00-\u9fff]')
+
+
+def _is_semester_1142(semester: str) -> bool:
+    """判斷學期字串是否為 114-2（下學期）/ Detect if semester string is 114-2."""
+    return bool(re.search(r'114', semester)) and (
+        "下學期" in semester or re.search(r'[^1]2', semester) is not None
+    ) and "上學期" not in semester and "第1學期" not in semester
+
 
 # ══════════════════════════════════════════
 #  快取系統 / Cache System
@@ -176,6 +198,9 @@ def _translate_room(room: str) -> str:
 def transform_timetable(scraper_data: dict) -> TimetableResponse:
     """爬蟲課表 → API 格式 / Scraper timetable → API format"""
     courses = []
+    semester = scraper_data.get("semester", "")
+    is_1142 = _is_semester_1142(semester)
+
     for raw in scraper_data.get("courses", []):
         day_int = DAY_MAP.get(raw.get("day", ""), 0)
         period_str = raw.get("periods", "")
@@ -186,6 +211,15 @@ def transform_timetable(scraper_data: dict) -> TimetableResponse:
         teacher_email = raw.get("teacher_email", "") or ""
         if not teacher_name and teacher_email:
             teacher_name = teacher_email.split("@")[0]
+
+        # 114-2 課程目錄補全：若姓名不含中文（即為 email 前綴），查表取得真實姓名
+        # Enrich teacher name from 114-2 catalog if name lacks CJK chars (is email prefix)
+        if is_1142 and teacher_name and not _RE_HAS_CJK.search(teacher_name):
+            course_name = raw.get("name_zh", "").strip()
+            real_name = _TEACHER_LOOKUP_1142.get(course_name)
+            if real_name:
+                teacher_name = real_name
+                logger.debug(f"Enriched teacher: {course_name} → {real_name}")
 
         for period in periods:
             courses.append(Course(
