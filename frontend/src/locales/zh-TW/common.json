@@ -16,7 +16,7 @@
   "syncSuccess": "同步成功！",
   "unavailable": "暫不可用",
   "syncPortalTitle": "同步校園資料",
-  "syncPortalBody": "請輸入 E校園服務網（ecampus.pu.edu.tw）帳號密碼，以擷取最新課表、成績與圖書館資料至本機端。",
+  "syncPortalBody": "請輸入 E校園服務網（alcat.pu.edu.tw）帳號密碼，以擷取最新課表、成績與圖書館資料至本機端。",
   "syncSecureNote": "🔒 帳密不會被儲存，資料僅存於您的裝置。",
   "syncCooldownLocked": "🔒 同步錯誤過多，已暫時鎖定，請 {{mins}} 分鐘後重試",
   "syncCooldownWait": "⏳ 同步冷卻中，距離下次可同步還有 {{mins}} 分鐘",

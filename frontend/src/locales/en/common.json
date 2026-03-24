@@ -16,7 +16,7 @@
   "syncSuccess": "Sync successful!",
   "unavailable": "Unavailable",
   "syncPortalTitle": "Sync Portal Data",
-  "syncPortalBody": "Enter your E-Campus (ecampus.pu.edu.tw) account and password to fetch the latest timetable, grades, and library data to your device.",
+  "syncPortalBody": "Enter your E-Campus (alcat.pu.edu.tw) account and password to fetch the latest timetable, grades, and library data to your device.",
   "syncSecureNote": "🔒 Credentials are never stored. Data is kept on your device only.",
   "syncCooldownLocked": "🔒 Too many sync errors. Temporarily locked. Try again in {{mins}} min.",
   "syncCooldownWait": "⏳ Sync cooldown active. Next sync available in {{mins}} min.",
