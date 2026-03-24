@@ -51,7 +51,9 @@ from app.services.storage.sheets_notify import (
     delete_announcement,
     reply_feedback,
     list_feedback,
+    clear_all_feedback,
 )
+from app.services.storage import sheets_usersync
 from app.services.storage import sheets_push
 from app.services.storage import sheets_share
 from app.services.storage import sheets_analytics
@@ -522,14 +524,94 @@ async def admin_list_shares(
 
 
 # ══════════════════════════════════════════
+#  管理員資安面板 / Admin Security Panel
+# ══════════════════════════════════════════
+
+@router.get("/admin/security/anomalies", summary="AI 異常告警 / AI Anomaly Alerts")
+async def admin_get_anomalies(
+    x_admin_token: Optional[str] = Header(None, alias="X-Admin-Token"),
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(_bearer_scheme),
+) -> dict:
+    """取得 AI 規則式異常告警清單 / Get rule-based AI anomaly alerts."""
+    _check_admin(x_admin_token, credentials)
+    try:
+        alerts = await sheets_analytics.get_anomalies()
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail=str(exc))
+    return {"alerts": alerts, "total": len(alerts)}
+
+
+class _MaintenanceUpdate(BaseModel):
+    enabled: bool
+    message: Optional[str] = ""
+
+
+@router.post("/admin/maintenance", summary="設定維護模式 / Set Maintenance Mode")
+async def admin_set_maintenance(
+    payload: _MaintenanceUpdate,
+    x_admin_token: Optional[str] = Header(None, alias="X-Admin-Token"),
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(_bearer_scheme),
+) -> dict:
+    """
+    緊急開啟/關閉維護模式，前端將顯示維護頁面。
+    Emergency toggle maintenance mode; frontend will show maintenance screen.
+    """
+    _check_admin(x_admin_token, credentials)
+    try:
+        await sheets_config.set_config("maintenance_mode", "true" if payload.enabled else "false")
+        await sheets_config.set_config("maintenance_message", (payload.message or "").strip()[:200])
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc))
+    state = "開啟" if payload.enabled else "關閉"
+    logger.warning(f"notify/admin: maintenance_mode set to {payload.enabled}")
+    return {"ok": True, "maintenance_mode": payload.enabled, "message": f"維護模式已{state} / Maintenance mode {'enabled' if payload.enabled else 'disabled'}"}
+
+
+_VALID_DATA_TYPES = {"analytics", "shares", "usersync", "feedback"}
+
+
+@router.delete("/admin/data/{data_type}", summary="清除系統資料 / Clear System Data")
+async def admin_clear_data(
+    data_type: str,
+    x_admin_token: Optional[str] = Header(None, alias="X-Admin-Token"),
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(_bearer_scheme),
+) -> dict:
+    """
+    清除指定類型的系統資料（保留 Sheets 標題列）。
+    data_type: analytics | shares | usersync | feedback
+    Clear specified data type (keeps Sheets header row).
+    """
+    _check_admin(x_admin_token, credentials)
+    if data_type not in _VALID_DATA_TYPES:
+        raise HTTPException(status_code=400, detail=f"無效的資料類型 / Invalid data_type. Valid: {', '.join(sorted(_VALID_DATA_TYPES))}")
+    try:
+        if data_type == "analytics":
+            count = await sheets_analytics.clear_all_events()
+        elif data_type == "shares":
+            count = await sheets_share.clear_all_shares()
+        elif data_type == "usersync":
+            count = await sheets_usersync.clear_all_sync_data()
+        elif data_type == "feedback":
+            count = await clear_all_feedback()
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc))
+    logger.warning(f"notify/admin: cleared {data_type} data, {count} rows deleted")
+    return {"ok": True, "data_type": data_type, "deleted_rows": count}
+
+
+# ══════════════════════════════════════════
 #  應用程式設定 / App Config
 # ══════════════════════════════════════════
 
 @router.get("/config", summary="取得應用程式設定 / Get App Config (public)")
 async def get_app_config() -> dict:
-    """回傳公開設定（版本號等）/ Return public config (version etc.)."""
+    """回傳公開設定（版本號、維護模式等）/ Return public config (version, maintenance mode etc.)."""
     config = await sheets_config.get_all_config()
-    return {"version": config.get("version", "1.0.0-beta")}
+    return {
+        "version": config.get("version", "1.0.0-beta"),
+        "maintenance_mode": config.get("maintenance_mode", "false"),
+        "maintenance_message": config.get("maintenance_message", ""),
+    }
 
 
 @router.get("/admin/config", summary="管理員取得完整設定 / Admin Get All Config")

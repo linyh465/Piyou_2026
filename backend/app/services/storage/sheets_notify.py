@@ -564,3 +564,22 @@ async def reply_feedback(feedback_id: str, reply: str) -> bool:
 async def list_feedback() -> list[dict]:
     """非同步列出所有回饋（管理員用）/ Async list all feedback (admin)."""
     return await asyncio.to_thread(_list_feedback_sync)
+
+
+def _clear_all_feedback_sync() -> int:
+    service = _build_service()
+    sheets_id = _get_sheets_id()
+    result = service.spreadsheets().values().get(
+        spreadsheetId=sheets_id, range="feedback!A2:A"
+    ).execute()
+    count = len(result.get("values", []))
+    if count > 0:
+        service.spreadsheets().values().clear(
+            spreadsheetId=sheets_id, range="feedback!A2:I", body={}
+        ).execute()
+    return count
+
+
+async def clear_all_feedback() -> int:
+    """清除所有意見回饋（保留標題列）/ Clear all feedback (keep header)."""
+    return await asyncio.to_thread(_clear_all_feedback_sync)

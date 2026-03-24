@@ -294,3 +294,22 @@ def _list_all_shares_sync() -> list:
 async def list_all_shares() -> list:
     """列出所有分享項（非同步，管理員用）/ List all share items (async, admin only)."""
     return await asyncio.to_thread(_list_all_shares_sync)
+
+
+def _clear_all_shares_sync() -> int:
+    service = _build_service()
+    sheets_id = _get_sheets_id()
+    result = service.spreadsheets().values().get(
+        spreadsheetId=sheets_id, range="shared_items!A2:A"
+    ).execute()
+    count = len(result.get("values", []))
+    if count > 0:
+        service.spreadsheets().values().clear(
+            spreadsheetId=sheets_id, range="shared_items!A2:H", body={}
+        ).execute()
+    return count
+
+
+async def clear_all_shares() -> int:
+    """清除所有分享資料（保留標題列）/ Clear all share data (keep header)."""
+    return await asyncio.to_thread(_clear_all_shares_sync)

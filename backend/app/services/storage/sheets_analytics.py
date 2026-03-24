@@ -298,3 +298,130 @@ async def get_stats() -> dict:
 def invalidate_stats_cache() -> None:
     """強制清除統計快取 / Force-invalidate stats cache."""
     _STATS_CACHE["expires_at"] = 0.0
+
+
+# ══════════════════════════════════════════
+#  異常告警 / Anomaly Detection
+# ══════════════════════════════════════════
+
+async def get_anomalies() -> list[dict]:
+    """
+    分析近期事件，依規則回傳異常告警清單。
+    Rule-based anomaly detection using recent analytics data.
+    """
+    stats = await get_stats()
+    alerts: list[dict] = []
+
+    now_utc = datetime.now(timezone.utc)
+    hour_ago = now_utc - timedelta(hours=1)
+
+    # ── 計算最近 1 小時各類別事件數 ──
+    recent = stats.get("recent_events", [])
+    errors_1h = 0
+    syncs_1h_total = 0
+    syncs_1h_fail = 0
+    for ev in recent:
+        try:
+            ts = datetime.fromisoformat(ev["ts"].replace("Z", "+00:00"))
+        except Exception:
+            continue
+        if ts < hour_ago:
+            continue
+        if ev.get("event_type") == "error":
+            errors_1h += 1
+        elif ev.get("event_type") == "sync":
+            syncs_1h_total += 1
+            if ev.get("extra", {}).get("status") != "success":
+                syncs_1h_fail += 1
+
+    devices_hour = stats.get("unique_devices_hour", 0)
+    devices_week = stats.get("unique_devices_week", 0)
+    expected_per_hour = devices_week / (7 * 24) if devices_week > 0 else 0
+
+    # 規則 1：前端錯誤爆增
+    if errors_1h >= 5:
+        alerts.append({
+            "severity": "critical" if errors_1h >= 20 else "high" if errors_1h >= 10 else "medium",
+            "type": "error_spike",
+            "title": "前端錯誤異常增加",
+            "message": f"過去 1 小時有 {errors_1h} 筆前端錯誤",
+            "value": errors_1h,
+            "threshold": 5,
+        })
+
+    # 規則 2：同步失敗率過高
+    if syncs_1h_total >= 5 and syncs_1h_fail / syncs_1h_total > 0.5:
+        fail_pct = int(syncs_1h_fail / syncs_1h_total * 100)
+        alerts.append({
+            "severity": "high",
+            "type": "sync_failure_rate",
+            "title": "校務同步失敗率異常",
+            "message": f"過去 1 小時同步失敗率 {fail_pct}%（{syncs_1h_fail}/{syncs_1h_total}）",
+            "value": fail_pct,
+            "threshold": 50,
+        })
+
+    # 規則 3：流量爆增（裝置數/小時遠超正常值）
+    spike_threshold = max(30, int(expected_per_hour * 5))
+    if devices_hour > spike_threshold:
+        alerts.append({
+            "severity": "medium",
+            "type": "traffic_spike",
+            "title": "異常流量爆增",
+            "message": f"過去 1 小時活躍裝置數 {devices_hour}，異常偏高（正常預期 ~{int(expected_per_hour)}）",
+            "value": devices_hour,
+            "threshold": spike_threshold,
+        })
+
+    # 規則 4：錯誤率佔總事件比例過高（超過 15%）
+    total_1h = max(len([e for e in recent if _is_within_hours_str(e["ts"], 1, now_utc)]), 1)
+    if errors_1h > 0 and errors_1h / total_1h > 0.15:
+        error_pct = int(errors_1h / total_1h * 100)
+        if not any(a["type"] == "error_spike" for a in alerts):
+            alerts.append({
+                "severity": "medium",
+                "type": "high_error_ratio",
+                "title": "錯誤事件比例偏高",
+                "message": f"過去 1 小時錯誤事件佔 {error_pct}%（{errors_1h}/{total_1h}）",
+                "value": error_pct,
+                "threshold": 15,
+            })
+
+    return alerts
+
+
+def _is_within_hours_str(ts_str: str, hours: int, now_utc: datetime) -> bool:
+    try:
+        ts = datetime.fromisoformat(ts_str.replace("Z", "+00:00"))
+        return ts >= now_utc - timedelta(hours=hours)
+    except Exception:
+        return False
+
+
+# ══════════════════════════════════════════
+#  資料清除 / Data Clearing
+# ══════════════════════════════════════════
+
+def _clear_events_sync() -> int:
+    """清除所有分析事件列（保留標題列）/ Clear all event rows (keep header)."""
+    service = _build_service()
+    sheets_id = _get_sheets_id()
+    # 先計算現有列數
+    result = service.spreadsheets().values().get(
+        spreadsheetId=sheets_id,
+        range="analytics_events!A2:A",
+    ).execute()
+    count = len(result.get("values", []))
+    if count > 0:
+        service.spreadsheets().values().clear(
+            spreadsheetId=sheets_id,
+            range="analytics_events!A2:E",
+            body={},
+        ).execute()
+    invalidate_stats_cache()
+    return count
+
+
+async def clear_all_events() -> int:
+    """非同步清除所有分析事件 / Async clear all analytics events."""
+    return await asyncio.to_thread(_clear_events_sync)

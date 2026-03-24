@@ -3,13 +3,14 @@
  * 路由配置與佈局組合 / Route configuration and layout composition.
  * 登入/同步功能已移至系統設定 / Login/sync moved to Settings page.
  */
-import { lazy, Suspense, useEffect } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { HashRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import Layout from './components/Layout';
 import ErrorBoundary from './components/ErrorBoundary';
 import SyncToast from './components/SyncToast';
 import useAuthStore from './stores/authStore';
 import { trackEvent } from './services/analytics';
+import apiClient from './services/apiClient';
 // 提早載入主題，確保初始即套用系統/使用者偏好 / Eagerly load theme store so theme is applied on first render
 import './stores/themeStore';
 
@@ -47,10 +48,50 @@ function PageViewTracker() {
   return null;
 }
 
+// ── 維護頁面 / Maintenance Screen ──
+function MaintenanceScreen({ message }) {
+  return (
+    <div style={{
+      minHeight: '100vh', display: 'flex', flexDirection: 'column',
+      alignItems: 'center', justifyContent: 'center',
+      background: 'var(--bg)', padding: '32px', textAlign: 'center',
+    }}>
+      <div style={{ fontSize: '48px', marginBottom: '16px' }}>🔧</div>
+      <h1 style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text)', margin: '0 0 8px' }}>系統維護中</h1>
+      <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)', margin: '0 0 16px' }}>System Maintenance</p>
+      {message && (
+        <p style={{ fontSize: '0.9375rem', color: 'var(--text-secondary)', maxWidth: '360px', lineHeight: 1.6 }}>{message}</p>
+      )}
+      {!message && (
+        <p style={{ fontSize: '0.9375rem', color: 'var(--text-secondary)', maxWidth: '360px', lineHeight: 1.6 }}>
+          系統目前正在進行維護，請稍後再試。<br />The system is temporarily unavailable. Please try again later.
+        </p>
+      )}
+    </div>
+  );
+}
+
 export default function App() {
+  const [maintenance, setMaintenance] = useState(null); // null = loading, false = ok, {message} = in maintenance
+
   useEffect(() => {
     useAuthStore.getState().tryAutoLogin();
+    // 檢查維護模式 / Check maintenance mode
+    apiClient.get('/notify/config').then((res) => {
+      const data = res.data || {};
+      if (data.maintenance_mode === 'true') {
+        setMaintenance({ message: data.maintenance_message || '' });
+      } else {
+        setMaintenance(false);
+      }
+    }).catch(() => {
+      setMaintenance(false); // 無法取得設定時正常顯示
+    });
   }, []);
+
+  // 等待維護狀態確認（避免閃爍）/ Wait for maintenance check before rendering
+  if (maintenance === null) return <PageLoader />;
+  if (maintenance !== false) return <MaintenanceScreen message={maintenance.message} />;
 
   return (
     <HashRouter>

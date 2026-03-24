@@ -136,3 +136,22 @@ async def get_user_sync(student_id_hash: str) -> Optional[dict]:
 
 async def count_accounts() -> int:
     return await asyncio.to_thread(_count_accounts_sync)
+
+
+def _clear_all_sync_data_sync() -> int:
+    service = _build_service()
+    sheets_id = _get_sheets_id()
+    result = service.spreadsheets().values().get(
+        spreadsheetId=sheets_id, range=f"{SHEET_NAME}!A2:A"
+    ).execute()
+    count = len(result.get("values", []))
+    if count > 0:
+        service.spreadsheets().values().clear(
+            spreadsheetId=sheets_id, range=f"{SHEET_NAME}!A2:D", body={}
+        ).execute()
+    return count
+
+
+async def clear_all_sync_data() -> int:
+    """清除所有跨裝置同步資料（保留標題列）/ Clear all user sync data (keep header)."""
+    return await asyncio.to_thread(_clear_all_sync_data_sync)

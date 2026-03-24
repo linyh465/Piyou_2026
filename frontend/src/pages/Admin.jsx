@@ -215,12 +215,189 @@ function AnnouncementForm({ initial, onSave, onCancel }) {
 }
 
 // ══════════════════════════════════════
+//  資安面板 / Security Panel
+// ══════════════════════════════════════
+const SEVERITY_COLORS = {
+    critical: 'var(--color-danger)',
+    high: '#f97316',
+    medium: '#eab308',
+    low: 'var(--color-brand)',
+};
+
+function SecurityPanel({ token, showMsg }) {
+    const [alerts, setAlerts] = useState(null);
+    const [alertsLoading, setAlertsLoading] = useState(false);
+    const [maintenance, setMaintenance] = useState(null); // {enabled, message}
+    const [maintMsg, setMaintMsg] = useState('');
+    const [maintSaving, setMaintSaving] = useState(false);
+    const [clearing, setClearing] = useState(''); // which data_type is being cleared
+
+    const loadAnomalies = useCallback(async () => {
+        setAlertsLoading(true);
+        try {
+            const res = await api.get('/notify/admin/security/anomalies', adminHeaders(token));
+            setAlerts(res.data.alerts || []);
+        } catch {
+            setAlerts([]);
+        } finally {
+            setAlertsLoading(false);
+        }
+    }, [token]);
+
+    const loadMaintenanceState = useCallback(async () => {
+        try {
+            const res = await api.get('/notify/admin/config', adminHeaders(token));
+            const cfg = res.data.config || {};
+            setMaintenance({ enabled: cfg.maintenance_mode === 'true', message: cfg.maintenance_message || '' });
+            setMaintMsg(cfg.maintenance_message || '');
+        } catch { /* ignore */ }
+    }, [token]);
+
+    useEffect(() => {
+        loadAnomalies();
+        loadMaintenanceState();
+        const timer = setInterval(loadAnomalies, 60_000);
+        return () => clearInterval(timer);
+    }, [loadAnomalies, loadMaintenanceState]);
+
+    const handleToggleMaintenance = async (enable) => {
+        if (enable && !window.confirm(`確定開啟維護模式？前端所有使用者將看到維護頁面！`)) return;
+        setMaintSaving(true);
+        try {
+            await api.post('/notify/admin/maintenance', { enabled: enable, message: maintMsg }, adminHeaders(token));
+            setMaintenance({ enabled: enable, message: maintMsg });
+            showMsg(enable ? '維護模式已開啟' : '維護模式已關閉');
+        } catch (err) {
+            showMsg(err.response?.data?.detail || '操作失敗');
+        } finally {
+            setMaintSaving(false);
+        }
+    };
+
+    const handleClearData = async (dataType, label) => {
+        if (!window.confirm(`確定清除「${label}」資料？此操作無法復原！`)) return;
+        if (!window.confirm(`再次確認：清除所有${label}資料？`)) return;
+        setClearing(dataType);
+        try {
+            const res = await api.delete(`/notify/admin/data/${dataType}`, adminHeaders(token));
+            showMsg(`已清除 ${res.data.deleted_rows} 筆${label}資料`);
+        } catch (err) {
+            showMsg(err.response?.data?.detail || '清除失敗');
+        } finally {
+            setClearing('');
+        }
+    };
+
+    return (
+        <>
+            {/* AI 異常告警 */}
+            <div style={card}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                    <p style={{ fontWeight: 700, fontSize: '14px', color: 'var(--text)', margin: 0 }}>AI 異常告警</p>
+                    <button onClick={loadAnomalies} disabled={alertsLoading} style={{ ...btnGhost, fontSize: '12px', padding: '4px 10px' }}>
+                        {alertsLoading ? '偵測中…' : '重新偵測'}
+                    </button>
+                </div>
+                <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: '0 0 12px' }}>每 60 秒自動更新 · 基於最近 1 小時事件</p>
+                {alertsLoading && alerts === null && (
+                    <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>偵測中…</p>
+                )}
+                {alerts !== null && alerts.length === 0 && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px', borderRadius: '10px', background: 'rgba(16,185,129,0.08)' }}>
+                        <span style={{ fontSize: '16px' }}>✓</span>
+                        <span style={{ fontSize: '13px', color: 'var(--color-success)' }}>目前無異常，系統運作正常</span>
+                    </div>
+                )}
+                {alerts !== null && alerts.map((alert, i) => (
+                    <div key={i} style={{
+                        borderLeft: `3px solid ${SEVERITY_COLORS[alert.severity] || 'var(--border)'}`,
+                        paddingLeft: '10px', marginBottom: '10px',
+                    }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px' }}>
+                            <span style={{ fontSize: '11px', fontWeight: 700, color: SEVERITY_COLORS[alert.severity], textTransform: 'uppercase' }}>
+                                {alert.severity}
+                            </span>
+                            <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text)' }}>{alert.title}</span>
+                        </div>
+                        <p style={{ fontSize: '12px', color: 'var(--text-secondary)', margin: 0 }}>{alert.message}</p>
+                    </div>
+                ))}
+            </div>
+
+            {/* 維護模式 */}
+            <div style={{ ...card, borderLeft: maintenance?.enabled ? '4px solid var(--color-danger)' : '4px solid var(--border)' }}>
+                <p style={{ fontWeight: 700, fontSize: '14px', color: 'var(--text)', margin: '0 0 6px' }}>緊急維護模式</p>
+                <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: '0 0 12px' }}>
+                    開啟後前端所有使用者將看到維護頁面，無法使用任何功能。
+                </p>
+                {maintenance !== null && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px', padding: '10px', borderRadius: '10px', background: maintenance.enabled ? 'rgba(239,68,68,0.08)' : 'var(--bg-input)' }}>
+                        <span style={{ fontSize: '13px', fontWeight: 600, color: maintenance.enabled ? 'var(--color-danger)' : 'var(--color-success)' }}>
+                            {maintenance.enabled ? '🔴 維護模式進行中' : '🟢 系統正常運行'}
+                        </span>
+                    </div>
+                )}
+                <textarea
+                    style={{ ...inputStyle, minHeight: '56px', resize: 'vertical', fontFamily: 'inherit' }}
+                    placeholder="維護訊息（顯示給用戶，選填）"
+                    value={maintMsg}
+                    maxLength={200}
+                    onChange={(e) => setMaintMsg(e.target.value)}
+                />
+                <div style={{ display: 'flex', gap: '8px' }}>
+                    <button
+                        disabled={maintSaving || maintenance?.enabled === false}
+                        onClick={() => handleToggleMaintenance(false)}
+                        style={{ ...btnGhost, flex: 1, opacity: (maintSaving || maintenance?.enabled === false) ? 0.5 : 1 }}
+                    >
+                        {maintSaving ? '處理中…' : '關閉維護'}
+                    </button>
+                    <button
+                        disabled={maintSaving || maintenance?.enabled === true}
+                        onClick={() => handleToggleMaintenance(true)}
+                        style={{ ...btnDanger, flex: 1, padding: '10px', opacity: (maintSaving || maintenance?.enabled === true) ? 0.5 : 1 }}
+                    >
+                        {maintSaving ? '處理中…' : '緊急關閉系統'}
+                    </button>
+                </div>
+            </div>
+
+            {/* 資料清除 */}
+            <div style={card}>
+                <p style={{ fontWeight: 700, fontSize: '14px', color: 'var(--text)', margin: '0 0 6px' }}>資料清除</p>
+                <p style={{ fontSize: '12px', color: 'var(--color-danger)', margin: '0 0 12px' }}>警告：此操作不可復原，清除後資料永久刪除。</p>
+                {[
+                    { type: 'analytics', label: '分析事件', desc: '所有 analytics_events 資料列' },
+                    { type: 'shares', label: '共享平台貼文', desc: '所有 shared_items 資料列' },
+                    { type: 'usersync', label: '跨裝置同步', desc: '所有 user_sync 資料列' },
+                    { type: 'feedback', label: '意見回饋', desc: '所有 feedback 資料列' },
+                ].map(({ type, label, desc }) => (
+                    <div key={type} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid var(--border-subtle)' }}>
+                        <div>
+                            <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text)' }}>{label}</span>
+                            <span style={{ fontSize: '11px', color: 'var(--text-muted)', marginLeft: '8px' }}>{desc}</span>
+                        </div>
+                        <button
+                            disabled={!!clearing}
+                            onClick={() => handleClearData(type, label)}
+                            style={{ ...btnDanger, fontSize: '12px', padding: '6px 12px', opacity: clearing ? 0.5 : 1 }}
+                        >
+                            {clearing === type ? '清除中…' : '清除'}
+                        </button>
+                    </div>
+                ))}
+            </div>
+        </>
+    );
+}
+
+// ══════════════════════════════════════
 //  主後台 / Main Dashboard
 // ══════════════════════════════════════
 export default function Admin() {
     const [token, setToken] = useState(getStoredToken);
     const [adminName, setAdminName] = useState('');
-    const [tab, setTab] = useState('announcements'); // 'announcements' | 'feedback' | 'shares' | 'analytics' | 'config'
+    const [tab, setTab] = useState('announcements'); // 'announcements' | 'feedback' | 'shares' | 'analytics' | 'config' | 'security'
     const [announcements, setAnnouncements] = useState([]);
     const [feedback, setFeedback] = useState([]);
     const [shares, setShares] = useState([]);
@@ -371,14 +548,14 @@ export default function Admin() {
 
             {/* Tabs */}
             <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', flexWrap: 'wrap' }}>
-                {['announcements', 'feedback', 'shares', 'analytics', 'config'].map((t) => (
+                {['announcements', 'feedback', 'shares', 'analytics', 'config', 'security'].map((t) => (
                     <button key={t} onClick={() => setTab(t)} style={{
                         padding: '8px 16px', borderRadius: '10px', border: 'none', cursor: 'pointer',
-                        background: tab === t ? 'var(--color-brand)' : 'var(--bg-input)',
+                        background: tab === t ? (t === 'security' ? 'var(--color-danger)' : 'var(--color-brand)') : 'var(--bg-input)',
                         color: tab === t ? 'white' : 'var(--text-secondary)',
                         fontWeight: tab === t ? 600 : 400, fontSize: '14px',
                     }}>
-                        {t === 'announcements' ? '公告管理' : t === 'feedback' ? '意見回饋' : t === 'shares' ? '共享平台' : t === 'analytics' ? '使用統計' : '系統設定'}
+                        {t === 'announcements' ? '公告管理' : t === 'feedback' ? '意見回饋' : t === 'shares' ? '共享平台' : t === 'analytics' ? '使用統計' : t === 'config' ? '系統設定' : '資安面板'}
                     </button>
                 ))}
             </div>
@@ -727,6 +904,11 @@ export default function Admin() {
                         <p style={{ color: 'var(--text-muted)', fontSize: '14px', textAlign: 'center', marginTop: '40px' }}>尚無統計資料</p>
                     )}
                 </>
+            )}
+
+            {/* Security Tab */}
+            {tab === 'security' && (
+                <SecurityPanel token={token} showMsg={showMsg} />
             )}
 
             {/* Config Tab */}
