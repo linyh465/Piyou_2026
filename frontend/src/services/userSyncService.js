@@ -17,6 +17,14 @@ const UPLOAD_DEBOUNCE_MS = 2_000;  // 2 秒 debounce，讓快速連續操作合�
 const THROTTLE_MS = 10_000;        // 非即時上傳的間隔限制
 
 let _uploadTimer = null;
+let _uploadInProgress = false; // 防止並發上傳 / Prevent concurrent uploads
+
+// 頁面卸載時取消待執行的 debounce timer，避免在 unload 後多送一次請求
+if (typeof window !== 'undefined') {
+    window.addEventListener('beforeunload', () => {
+        if (_uploadTimer) { clearTimeout(_uploadTimer); _uploadTimer = null; }
+    });
+}
 
 // ── 本地資料讀取 ──
 
@@ -80,6 +88,9 @@ export async function uploadUserSync(immediate = false) {
     const token = sessionStorage.getItem('piyou_token');
     if (!token) return;
 
+    // 防止並發上傳（race condition guard）
+    if (_uploadInProgress) return;
+
     if (!immediate) {
         const last = parseInt(localStorage.getItem(LS_LAST_USERSYNC) || '0', 10);
         if (Date.now() - last < THROTTLE_MS) return;
@@ -87,6 +98,7 @@ export async function uploadUserSync(immediate = false) {
 
     if (_uploadTimer) { clearTimeout(_uploadTimer); _uploadTimer = null; }
 
+    _uploadInProgress = true;
     const tasks = readTasks();
     const shares = readShares();
     try {
@@ -98,10 +110,13 @@ export async function uploadUserSync(immediate = false) {
             useSyncToastStore.getState().showToast('同步完成');
         } catch { /* toast 失敗不影響同步 */ }
     } catch (err) {
-        // 503 = not configured (local dev), 404 already handled - silently ignore
-        if (err?.response?.status !== 503) {
+        if (err?.response?.status === 503) {
+            // 503 = 後端未設定（本地開發），靜默忽略
+        } else {
             console.warn('[UserSync] upload failed:', err?.response?.data?.detail || err.message);
         }
+    } finally {
+        _uploadInProgress = false;
     }
 }
 

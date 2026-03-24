@@ -17,6 +17,7 @@
   Auth: Bearer JWT from POST /admin/login, or legacy X-Admin-Token header.
 """
 import os
+import re
 import jwt
 import bcrypt
 import logging
@@ -58,6 +59,39 @@ from app.services.storage import sheets_config
 
 router = APIRouter(prefix="/notify", tags=["通知 / Notify"])
 logger = logging.getLogger(__name__)
+
+# ── 管理員登入暴力破解防護 / Admin login brute-force protection ──
+import time as _time
+_admin_login_failures: dict[str, dict] = {}  # username -> {count, locked_until}
+_ADMIN_MAX_FAILURES = 3       # 連續失敗次數上限
+_ADMIN_LOCKOUT_SECONDS = 900  # 鎖定 15 分鐘
+
+
+def _check_admin_lockout(username: str) -> None:
+    """失敗次數過多時拋出 429 / Raise 429 when too many failures."""
+    entry = _admin_login_failures.get(username)
+    if not entry:
+        return
+    if entry.get("locked_until", 0) > _time.time():
+        remaining = int(entry["locked_until"] - _time.time())
+        raise HTTPException(
+            status_code=429,
+            detail=f"帳號已暫時鎖定，請 {remaining // 60 + 1} 分鐘後再試 / Account locked, retry in {remaining // 60 + 1} min",
+        )
+
+
+def _record_admin_failure(username: str) -> None:
+    """記錄失敗，超過上限則鎖定 / Record failure, lock if over limit."""
+    entry = _admin_login_failures.setdefault(username, {"count": 0, "locked_until": 0})
+    entry["count"] += 1
+    if entry["count"] >= _ADMIN_MAX_FAILURES:
+        entry["locked_until"] = _time.time() + _ADMIN_LOCKOUT_SECONDS
+        logger.warning(f"Admin account '{username}' locked after {entry['count']} failures")
+
+
+def _clear_admin_failures(username: str) -> None:
+    """登入成功後清除失敗紀錄 / Clear failure record on success."""
+    _admin_login_failures.pop(username, None)
 
 # JWT 設定（重用 auth.py 中的 JWT_SECRET）/ JWT config (reuse JWT_SECRET from auth.py)
 _JWT_SECRET = os.getenv("JWT_SECRET", "")
@@ -176,7 +210,7 @@ async def get_feedback_status(feedback_id: str) -> FeedbackResponse:
     Query feedback status. If a contact is set, returns contact_required=True
     and hides details; use POST /feedback/{id}/verify to unlock.
     """
-    if not feedback_id or len(feedback_id) > 64:
+    if not feedback_id or len(feedback_id) > 64 or not re.match(r'^[A-Za-z0-9_-]+$', feedback_id):
         raise HTTPException(status_code=400, detail="Invalid feedback ID")
 
     try:
@@ -205,7 +239,7 @@ async def verify_feedback_contact(feedback_id: str, body: FeedbackVerifyRequest)
     以聯絡方式驗證身分，驗證通過後回傳完整回饋資料（含管理員回覆）。
     Verify contact info to unlock full feedback details including admin reply.
     """
-    if not feedback_id or len(feedback_id) > 64:
+    if not feedback_id or len(feedback_id) > 64 or not re.match(r'^[A-Za-z0-9_-]+$', feedback_id):
         raise HTTPException(status_code=400, detail="Invalid feedback ID")
 
     try:
@@ -234,7 +268,7 @@ async def update_feedback_contact_endpoint(feedback_id: str, body: FeedbackConta
     讓使用者更新回饋的聯絡方式。憑藉知悉 feedback_id 即視為本人。
     Allows users to update contact info. Knowing the feedback ID is the authorization.
     """
-    if not feedback_id or len(feedback_id) > 64:
+    if not feedback_id or len(feedback_id) > 64 or not re.match(r'^[A-Za-z0-9_-]+$', feedback_id):
         raise HTTPException(status_code=400, detail="Invalid feedback ID")
 
     try:
@@ -283,6 +317,9 @@ async def admin_login(body: AdminLoginRequest) -> AdminLoginResponse:
     if not _JWT_SECRET:
         raise HTTPException(status_code=503, detail="JWT_SECRET not configured")
 
+    # 暴力破解防護 / Brute-force protection
+    _check_admin_lockout(body.username)
+
     try:
         account = await get_admin_account(body.username)
     except RuntimeError as exc:
@@ -290,8 +327,8 @@ async def admin_login(body: AdminLoginRequest) -> AdminLoginResponse:
         raise HTTPException(status_code=503, detail="驗證服務暫時無法使用 / Auth service unavailable")
 
     if not account:
-        # 固定延遲防止計時攻擊 / Constant-time response to prevent timing attacks
         bcrypt.checkpw(b"dummy", bcrypt.hashpw(b"dummy", bcrypt.gensalt(4)))
+        _record_admin_failure(body.username)
         raise HTTPException(status_code=401, detail="帳號或密碼錯誤 / Invalid credentials")
 
     password_ok = bcrypt.checkpw(
@@ -299,8 +336,10 @@ async def admin_login(body: AdminLoginRequest) -> AdminLoginResponse:
         account["password_hash"].encode("utf-8"),
     )
     if not password_ok:
+        _record_admin_failure(body.username)
         raise HTTPException(status_code=401, detail="帳號或密碼錯誤 / Invalid credentials")
 
+    _clear_admin_failures(body.username)
     now = datetime.now(timezone.utc)
     payload = {
         "sub": body.username,

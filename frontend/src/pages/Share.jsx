@@ -38,7 +38,10 @@ const LS_KEY = 'piyou_shares'; // [{code, title, body, link_urls, created_at, de
 // ── localStorage helpers ──
 
 function loadShares() {
-    try { return JSON.parse(localStorage.getItem(LS_KEY) || '[]'); } catch { return []; }
+    try {
+        const data = JSON.parse(localStorage.getItem(LS_KEY) || '[]');
+        return Array.isArray(data) ? data.filter((s) => s && typeof s.code === 'string' && s.code) : [];
+    } catch { return []; }
 }
 
 function saveShares(shares) {

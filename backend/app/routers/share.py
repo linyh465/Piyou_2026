@@ -58,6 +58,10 @@ async def create_share(
     建立新的共享貼文 / Create a new share post.
     code 須唯一（3-30 字元，英數字 / - / _）。
     """
+    # 確保 payload device_id 與請求 header 一致，防止偽造所有權
+    if x_device_id and payload.device_id != x_device_id:
+        raise HTTPException(status_code=403, detail="Device ID mismatch / 裝置 ID 不符")
+
     try:
         result = await sheets_share.create_share(
             code=payload.code,
@@ -138,6 +142,9 @@ async def update_share(
     擁有者更新共享貼文（標題、內文、連結、分享碼、密碼）。
     Owner updates a share post (title, body, links, code, password).
     """
+    if x_device_id and payload.device_id != x_device_id:
+        raise HTTPException(status_code=403, detail="Device ID mismatch / 裝置 ID 不符")
+
     try:
         result = await sheets_share.update_share(
             code=code,
@@ -162,11 +169,18 @@ async def update_share(
 
 
 @router.delete("/{code}", status_code=200)
-async def delete_share(code: str, body: _DeleteBody):
+async def delete_share(
+    code: str,
+    body: _DeleteBody,
+    x_device_id: Optional[str] = Header(None, alias="X-Device-Id"),
+):
     """
     刪除（軟刪除）分享貼文 / Soft-delete a share post.
     只有建立者（device_id 相符）才可刪除。
     """
+    if x_device_id and body.device_id != x_device_id:
+        raise HTTPException(status_code=403, detail="Device ID mismatch / 裝置 ID 不符")
+
     try:
         ok = await sheets_share.delete_share(code=code, device_id=body.device_id)
     except Exception as e:

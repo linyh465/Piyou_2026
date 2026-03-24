@@ -74,8 +74,8 @@ app.add_middleware(
     allow_origins=cors_origins,
     allow_origin_regex=_cors_origin_regex,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization", "X-Device-Id", "X-Admin-Token"],
 )
 
 # ── 安全中介層 / Security Middleware ──

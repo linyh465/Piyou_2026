@@ -118,7 +118,9 @@ export const localDb = {
         for (const s of (Array.isArray(serverTasks) ? serverTasks : [])) {
             if (tombstone.has(s.id)) continue; // 已刪除，不從伺服器恢復
             const l = merged.get(s.id);
-            if (!l || (s.updated_at || '') > (l.updated_at || '')) {
+            const serverTime = new Date(s.updated_at || 0).getTime();
+            const localTime = new Date(l?.updated_at || 0).getTime();
+            if (!l || serverTime > localTime) {
                 merged.set(s.id, s);
             }
         }

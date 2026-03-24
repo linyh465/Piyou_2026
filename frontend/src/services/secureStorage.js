@@ -10,35 +10,15 @@
 
 const PREFIX = 'piyou_secure_';
 
-// Simple XOR obfuscation for dev fallback (NOT production-grade encryption)
-function obfuscate(text) {
-    const key = 'P1y0u_2026!';
-    return btoa(
-        text
-            .split('')
-            .map((c, i) => String.fromCharCode(c.charCodeAt(0) ^ key.charCodeAt(i % key.length)))
-            .join('')
-    );
-}
-
-function deobfuscate(encoded) {
-    const key = 'P1y0u_2026!';
-    const decoded = atob(encoded);
-    return decoded
-        .split('')
-        .map((c, i) => String.fromCharCode(c.charCodeAt(0) ^ key.charCodeAt(i % key.length)))
-        .join('');
-}
+// sessionStorage is sandboxed per-origin and cleared on tab close — sufficient for web.
+// In production (Capacitor), replace with @capawesome/capacitor-secure-storage.
 
 export const secureStorage = {
     async set(key, value) {
         try {
-            // In production, call native secure storage plugin here
-            const stored = obfuscate(JSON.stringify(value));
-            sessionStorage.setItem(`${PREFIX}${key}`, stored);
+            sessionStorage.setItem(`${PREFIX}${key}`, JSON.stringify(value));
             return true;
         } catch {
-            console.error('[SecureStorage] Failed to store value');
             return false;
         }
     },
@@ -47,9 +27,8 @@ export const secureStorage = {
         try {
             const stored = sessionStorage.getItem(`${PREFIX}${key}`);
             if (!stored) return null;
-            return JSON.parse(deobfuscate(stored));
+            return JSON.parse(stored);
         } catch {
-            console.error('[SecureStorage] Failed to retrieve value');
             return null;
         }
     },

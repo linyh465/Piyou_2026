@@ -62,7 +62,7 @@ JWT_EXPIRE_HOURS = 24
 #  Credentials stored Base64-encoded, auto-expire after 24h.
 # ══════════════════════════════════════════
 _credential_cache: dict[str, dict] = {}
-_CREDENTIAL_CACHE_MAX = 200  # 最多快取 200 組帳密 / Max 200 cached credentials
+_CREDENTIAL_CACHE_MAX = 50   # 最多快取 50 組帳密 / Max 50 cached credentials
 
 
 def _evict_expired_credentials():
@@ -103,6 +103,7 @@ def get_cached_credentials(student_id: str) -> Optional[tuple[str, str]]:
         decoded = json.loads(base64.b64decode(entry["data"]))
         return (decoded["s"], decoded["p"])
     except Exception:
+        _credential_cache.pop(student_id, None)  # 清除損壞的快取項目
         return None
 
 
@@ -208,6 +209,19 @@ async def login(request_body: LoginRequest, request: Request):
             "department": user_info.get("department", ""),
         },
     )
+
+
+@router.post("/logout", status_code=200)
+async def logout(current_user: dict = Depends(get_current_user)):
+    """
+    登出端點：清除伺服器端快取帳密 / Logout: clear server-side cached credentials.
+    前端應同時清除 sessionStorage 中的 JWT。
+    Frontend should also clear the JWT from sessionStorage.
+    """
+    student_id = current_user.get("sub", "")
+    if student_id:
+        _credential_cache.pop(student_id, None)
+    return {"ok": True}
 
 
 @router.get("/sync-cooldown")

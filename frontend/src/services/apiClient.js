@@ -30,14 +30,15 @@ apiClient.interceptors.request.use((config) => {
 // ── 裝置 UUID / Device UUID ──
 // 每台裝置生成一組永久 UUID，隨所有請求傳送至後端作為冷卻追蹤 key。
 // Generates a persistent UUID per device, sent with every request for cooldown tracking.
-function getDeviceId() {
+// 模組初始化時快取一次，避免每次請求讀取 localStorage。
+const _DEVICE_ID = (() => {
     let id = localStorage.getItem('piyou_device_id');
     if (!id) {
         id = crypto.randomUUID();
         localStorage.setItem('piyou_device_id', id);
     }
     return id;
-}
+})();
 
 // ── Auth Token + Device ID Injection ──
 apiClient.interceptors.request.use((config) => {
@@ -45,7 +46,7 @@ apiClient.interceptors.request.use((config) => {
     if (token) {
         config.headers.Authorization = `Bearer ${token}`;
     }
-    config.headers['X-Device-Id'] = getDeviceId();
+    config.headers['X-Device-Id'] = _DEVICE_ID;
     return config;
 });
 

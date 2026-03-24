@@ -20,8 +20,8 @@ function sendErrorReport(error, componentStack) {
                 url: window.location.href,
                 user_agent: navigator.userAgent,
             }),
-        }).catch(() => { /* 靜默失敗 / silent fail */ });
-    } catch { /* 靜默失敗 / silent fail */ }
+        }).catch((err) => { console.warn('[ErrorBoundary] report failed:', err?.message); });
+    } catch (err) { console.warn('[ErrorBoundary] report error:', err?.message); }
 }
 
 export default class ErrorBoundary extends Component {

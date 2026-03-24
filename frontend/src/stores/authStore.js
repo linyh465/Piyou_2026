@@ -56,8 +56,6 @@ const useAuthStore = create((set, get) => ({
             // 儲存 Token 至 Session / Store token in session
             sessionStorage.setItem('piyou_token', token);
 
-            // 我們不再自動將帳號密碼存入 Secure Storage
-            // await secureStorage.set('credentials', { studentId, password });
 
             set({
                 user,
@@ -88,6 +86,8 @@ const useAuthStore = create((set, get) => ({
      * Clears all auth state and secure storage.
      */
     logout: async () => {
+        // 通知後端清除快取帳密（fire-and-forget，失敗不影響前端登出）
+        try { await api.post('/auth/logout', {}); } catch { /* ignore */ }
         sessionStorage.removeItem('piyou_token');
         await secureStorage.remove('credentials');
         set({
