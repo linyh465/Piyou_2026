@@ -7,6 +7,7 @@ import { lazy, Suspense, useEffect } from 'react';
 import { HashRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import Layout from './components/Layout';
 import ErrorBoundary from './components/ErrorBoundary';
+import SyncToast from './components/SyncToast';
 import useAuthStore from './stores/authStore';
 import { trackEvent } from './services/analytics';
 // 提早載入主題，確保初始即套用系統/使用者偏好 / Eagerly load theme store so theme is applied on first render
@@ -54,6 +55,7 @@ export default function App() {
   return (
     <HashRouter>
       <PageViewTracker />
+      <SyncToast />
       <ErrorBoundary>
         <Suspense fallback={<PageLoader />}>
           <Routes>

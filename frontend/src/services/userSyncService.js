@@ -13,7 +13,8 @@ import localDb from './localDb';
 const LS_SHARES = 'piyou_shares';
 const LS_LAST_USERSYNC = 'piyou_last_usersync';
 const LS_REMOVED_CODES = 'piyou_removed_share_codes';
-const THROTTLE_MS = 10_000; // 10 秒內不重複上傳
+const UPLOAD_DEBOUNCE_MS = 2_000;  // 2 秒 debounce，讓快速連續操作合併成一次上傳
+const THROTTLE_MS = 10_000;        // 非即時上傳的間隔限制
 
 let _uploadTimer = null;
 
@@ -88,6 +89,11 @@ export async function uploadUserSync(immediate = false) {
     try {
         await api.put('/data/usersync', { tasks, shares });
         localStorage.setItem(LS_LAST_USERSYNC, String(Date.now()));
+        // 顯示同步完成 toast（動態 import 避免循環依賴）
+        try {
+            const { default: useSyncToastStore } = await import('../stores/syncToastStore');
+            useSyncToastStore.getState().showToast('同步完成');
+        } catch { /* toast 失敗不影響同步 */ }
     } catch (err) {
         // 503 = not configured (local dev), 404 already handled - silently ignore
         if (err?.response?.status !== 503) {
@@ -133,7 +139,8 @@ export async function downloadAndMergeUserSync() {
 }
 
 /**
- * 排隊上傳（debounce 10 秒）—— 任務變更後呼叫。
+ * 排隊上傳（debounce 2 秒）—— 任務或共享資料變更後呼叫。
+ * 2 秒 debounce 讓連續快速操作合併成一次 API 呼叫，同時讓用戶感覺接近即時。
  */
 export function scheduleUpload() {
     const token = sessionStorage.getItem('piyou_token');
@@ -142,5 +149,5 @@ export function scheduleUpload() {
     _uploadTimer = setTimeout(() => {
         _uploadTimer = null;
         uploadUserSync(true);
-    }, THROTTLE_MS);
+    }, UPLOAD_DEBOUNCE_MS);
 }

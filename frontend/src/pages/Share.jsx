@@ -9,7 +9,7 @@ import {
     IconCheck, IconMinus, IconEdit, IconLock, IconEye, IconEyeOff,
 } from '../components/Icons';
 import { trackEvent } from '../services/analytics';
-import { markShareRemoved } from '../services/userSyncService';
+import { markShareRemoved, scheduleUpload } from '../services/userSyncService';
 
 // ── 響應式斷點 / Responsive breakpoint hook ──
 
@@ -170,6 +170,7 @@ function ShareCard({ entry, deviceId, onRemove, onUpdated }) {
             markShareRemoved(entry.code);
             removeShare(entry.code);
             onRemove(entry.code);
+            scheduleUpload();
         } catch (e) {
             alert(`刪除失敗：${e.message}`);
         } finally {
@@ -228,6 +229,7 @@ function ShareCard({ entry, deviceId, onRemove, onUpdated }) {
             }
             onUpdated({ ...data, is_owner: true, unlocked: true, _oldCode: entry.code });
             setEditMode(false);
+            scheduleUpload();
         } catch (e) {
             setSaveError(e.status === 409 ? '此分享碼已有人使用，請更換後重試' : (e.message || '儲存失敗，請稍後再試'));
         } finally {
@@ -416,7 +418,7 @@ function ShareCard({ entry, deviceId, onRemove, onUpdated }) {
                         </>
                     ) : (
                         <button className="btn btn-ghost"
-                            onClick={() => { markShareRemoved(entry.code); removeShare(entry.code); onRemove(entry.code); }}
+                            onClick={() => { markShareRemoved(entry.code); removeShare(entry.code); onRemove(entry.code); scheduleUpload(); }}
                             style={{ color: 'var(--text-muted)', fontSize: '13px' }}>
                             移除訂閱
                         </button>
@@ -445,6 +447,7 @@ function SubscribeForm({ onSubscribed }) {
             upsertShare(data);  // is_owner is computed server-side from X-Device-Id
             onSubscribed(data);
             trackEvent('share_subscribe', {}, '/share');
+            scheduleUpload();
             setCode('');
         } catch (e) {
             setError(e.message || '訂閱失敗，請稍後再試');
@@ -522,6 +525,7 @@ function CreateForm({ deviceId, onCreated }) {
             upsertShare({ ...data, is_owner: true, unlocked: true });
             onCreated(data);
             trackEvent('share_create', {}, '/share');
+            scheduleUpload();
             setForm({ code: '', title: '', body: '' });
             setLinkUrls(['']);
             setEnablePw(false);

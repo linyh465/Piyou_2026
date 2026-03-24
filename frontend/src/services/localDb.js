@@ -5,6 +5,17 @@
  */
 
 const STORAGE_KEY = 'piyou_tasks';
+const TOMBSTONE_KEY = 'piyou_deleted_task_ids'; // 已刪除任務 ID 集合，防止伺服器同步時恢復
+
+function readTombstone() {
+    try { return new Set(JSON.parse(localStorage.getItem(TOMBSTONE_KEY) || '[]')); } catch { return new Set(); }
+}
+
+function addToTombstone(id) {
+    const set = readTombstone();
+    set.add(id);
+    localStorage.setItem(TOMBSTONE_KEY, JSON.stringify([...set]));
+}
 
 function readTasks() {
     try {
@@ -64,6 +75,7 @@ export const localDb = {
     async deleteTask(id) {
         const tasks = readTasks().filter((t) => t.id !== id);
         writeTasks(tasks);
+        addToTombstone(id); // 記錄刪除，防止伺服器同步時恢復
     },
 
     async toggleTask(id) {
@@ -98,11 +110,13 @@ export const localDb = {
      */
     mergeWithServer(serverTasks) {
         const local = readTasks();
+        const tombstone = readTombstone(); // 本地已刪除的 ID，不從伺服器恢復
         const merged = new Map();
         // 先放本地任務
         for (const t of local) merged.set(t.id, t);
-        // 再合併伺服器任務：若伺服器版本較新則覆蓋
+        // 再合併伺服器任務：若伺服器版本較新則覆蓋，但跳過已刪除的任務
         for (const s of (Array.isArray(serverTasks) ? serverTasks : [])) {
+            if (tombstone.has(s.id)) continue; // 已刪除，不從伺服器恢復
             const l = merged.get(s.id);
             if (!l || (s.updated_at || '') > (l.updated_at || '')) {
                 merged.set(s.id, s);
