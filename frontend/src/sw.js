@@ -65,6 +65,15 @@ self.addEventListener('push', (event) => {
     event.waitUntil(self.registration.showNotification(title, options));
 });
 
+// ── SKIP_WAITING：讓等待中的 SW 立即接管，觸發頁面更新
+// Without this handler, postMessage({ type: 'SKIP_WAITING' }) is silently ignored
+// and the new SW stays in 'waiting' state forever.
+self.addEventListener('message', (event) => {
+    if (event.data && event.data.type === 'SKIP_WAITING') {
+        self.skipWaiting();
+    }
+});
+
 // ── 點擊通知 / Notification click ──
 self.addEventListener('notificationclick', (event) => {
     event.notification.close();
