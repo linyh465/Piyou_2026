@@ -378,7 +378,7 @@ function ShareCard({ entry, deviceId, onRemove, onUpdated }) {
                 <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '10px', gap: '6px', flexWrap: 'wrap' }}>
                     {entry.deleted ? (
                         <button className="btn btn-ghost"
-                            onClick={() => { removeShare(entry.code); onRemove(entry.code); }}
+                            onClick={() => { markShareRemoved(entry.code); removeShare(entry.code); onRemove(entry.code); scheduleUpload(); }}
                             style={{ color: 'var(--color-danger)', fontSize: '13px' }}>
                             移除此則
                         </button>

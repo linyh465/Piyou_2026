@@ -53,13 +53,16 @@ export function markShareRemoved(code) {
 // ── 合併邏輯 ──
 
 /**
- * 合併共享訂閱：以 code 為 key，取聯集；已退訂的 code 不從遠端恢復。
- * Merge share subscriptions; codes in the removal tombstone are never restored from remote.
+ * 合併共享訂閱：以 code 為 key，取聯集；已退訂的 code 不從遠端恢復，
+ * 且主動從本地清除（防止任何路徑導致 tombstone 碼殘留在 localStorage）。
+ * Merge share subscriptions; tombstoned codes are filtered from both local AND remote.
  */
 function mergeShares(local, remote) {
     const removed = getRemovedCodes();
     const map = new Map();
-    for (const s of local) map.set(s.code, s);
+    for (const s of local) {
+        if (!removed.has(s.code)) map.set(s.code, s); // 也清除本地殘留的 tombstone 碼
+    }
     for (const s of remote) {
         if (!map.has(s.code) && !removed.has(s.code)) map.set(s.code, s);
     }
@@ -121,11 +124,13 @@ export async function downloadAndMergeUserSync() {
             }
         }
 
-        // 合併共享訂閱
-        if (remoteShares.length > 0) {
+        // 合併共享訂閱（即使遠端為空也要跑 merge，確保 tombstone 清除本地殘留）
+        {
             const local = readShares();
             const merged = mergeShares(local, remoteShares);
-            if (merged.length !== local.length) {
+            // 長度不同 OR 內容不同（tombstone 清除了本地殘留）時才寫入
+            if (merged.length !== local.length ||
+                merged.some((s, i) => s.code !== (local[i]?.code))) {
                 saveShares(merged);
             }
         }
