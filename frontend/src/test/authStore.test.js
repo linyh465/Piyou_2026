@@ -2,7 +2,16 @@
  * authStore 單元測試 / authStore Unit Tests
  * 測試 Zustand store 的初始狀態與登出邏輯
  */
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+
+vi.mock('../services/apiClient', () => ({
+    api: { post: vi.fn().mockResolvedValue({}), get: vi.fn(), patch: vi.fn() },
+    apiError: (_err, fallback) => fallback,
+}));
+
+vi.mock('../services/secureStorage', () => ({
+    default: { remove: vi.fn().mockResolvedValue(undefined), get: vi.fn(), set: vi.fn() },
+}));
 
 // 動態重置 store，避免測試之間互相污染
 let useAuthStore;
