@@ -91,7 +91,9 @@ export default function App() {
 
   // 等待維護狀態確認（避免閃爍）/ Wait for maintenance check before rendering
   if (maintenance === null) return <PageLoader />;
-  if (maintenance !== false) return <MaintenanceScreen message={maintenance.message} />;
+  // /admin 路由永遠繞過維護模式，讓管理員可以登入後台關閉維護
+  const isAdminRoute = window.location.hash.startsWith('#/admin');
+  if (maintenance !== false && !isAdminRoute) return <MaintenanceScreen message={maintenance.message} />;
 
   return (
     <HashRouter>
