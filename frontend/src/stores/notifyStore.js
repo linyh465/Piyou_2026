@@ -256,6 +256,27 @@ const useNotifyStore = create((set, get) => ({
     },
 
     /**
+     * 以聯絡方式驗證後取得完整回饋資料 / Verify contact and get full feedback details
+     * @param {string} feedbackId
+     * @param {string} contact
+     * @returns {{ ok: boolean, data?: Object, error?: string }}
+     */
+    verifyFeedbackContact: async (feedbackId, contact) => {
+        try {
+            const res = await api.post(`/notify/feedback/${feedbackId}/verify`, { contact });
+            return { ok: true, data: res.data };
+        } catch (err) {
+            if (err.response?.status === 403) {
+                return { ok: false, error: '聯絡方式不符，請再試一次' };
+            }
+            if (err.response?.status === 404) {
+                return { ok: false, error: '找不到此回饋 ID' };
+            }
+            return { ok: false, error: '驗證失敗，請稍後再試' };
+        }
+    },
+
+    /**
      * 更新回饋聯絡方式 / Update feedback contact info
      * @param {string} feedbackId
      * @param {string} contact

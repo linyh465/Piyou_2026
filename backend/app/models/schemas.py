@@ -249,6 +249,12 @@ class FeedbackResponse(BaseModel):
     contact: Optional[str] = Field(None, description="聯絡方式 / Contact")
     admin_reply: Optional[str] = Field(None, description="管理員回覆 / Admin reply")
     replied_at: Optional[str] = Field(None, description="回覆時間 / Replied at")
+    contact_required: bool = Field(False, description="是否需要聯絡方式驗證 / Whether contact verification is required")
+
+
+class FeedbackVerifyRequest(BaseModel):
+    """聯絡方式驗證請求 / Contact Verification Request"""
+    contact: str = Field(..., max_length=100, description="用於驗證的聯絡方式 / Contact to verify")
 
 
 class FeedbackContactUpdate(BaseModel):

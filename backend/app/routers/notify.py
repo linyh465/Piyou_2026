@@ -31,6 +31,7 @@ from app.models.schemas import (
     AnnouncementsResponse,
     FeedbackRequest,
     FeedbackResponse,
+    FeedbackVerifyRequest,
     FeedbackContactUpdate,
     AdminLoginRequest,
     AdminLoginResponse,
@@ -169,8 +170,11 @@ async def submit_feedback(request: Request, body: FeedbackRequest) -> dict:
 @router.get("/feedback/{feedback_id}", response_model=FeedbackResponse, summary="查詢回饋狀態 / Get Feedback Status")
 async def get_feedback_status(feedback_id: str) -> FeedbackResponse:
     """
-    查詢單筆意見回饋的狀態與管理員回覆（有 2 分鐘 TTL 快取）。
-    Query single feedback status and admin reply (2-min TTL cache).
+    查詢單筆意見回饋的狀態。
+    若該回饋有聯絡方式，回傳 contact_required=True 並隱藏詳細內容，
+    需透過 POST /feedback/{id}/verify 驗證聯絡方式後才能查看完整資料。
+    Query feedback status. If a contact is set, returns contact_required=True
+    and hides details; use POST /feedback/{id}/verify to unlock.
     """
     if not feedback_id or len(feedback_id) > 64:
         raise HTTPException(status_code=400, detail="Invalid feedback ID")
@@ -183,6 +187,43 @@ async def get_feedback_status(feedback_id: str) -> FeedbackResponse:
 
     if result is None:
         raise HTTPException(status_code=404, detail="回饋不存在 / Feedback not found")
+
+    # 若有設定聯絡方式，需驗證後才能查看詳細內容
+    if result.get("contact"):
+        return FeedbackResponse(
+            id=result["id"],
+            status=result.get("status", "pending"),
+            contact_required=True,
+        )
+
+    return FeedbackResponse(**result)
+
+
+@router.post("/feedback/{feedback_id}/verify", response_model=FeedbackResponse, summary="驗證聯絡方式後查看回饋 / Verify Contact to View Feedback")
+async def verify_feedback_contact(feedback_id: str, body: FeedbackVerifyRequest) -> FeedbackResponse:
+    """
+    以聯絡方式驗證身分，驗證通過後回傳完整回饋資料（含管理員回覆）。
+    Verify contact info to unlock full feedback details including admin reply.
+    """
+    if not feedback_id or len(feedback_id) > 64:
+        raise HTTPException(status_code=400, detail="Invalid feedback ID")
+
+    try:
+        result = await get_feedback_by_id(feedback_id)
+    except RuntimeError as exc:
+        logger.warning(f"notify/feedback/{feedback_id}/verify: Sheets not available ({exc})")
+        raise HTTPException(status_code=503, detail="儲存服務暫時無法使用 / Storage temporarily unavailable")
+
+    if result is None:
+        raise HTTPException(status_code=404, detail="回饋不存在 / Feedback not found")
+
+    stored_contact = (result.get("contact") or "").strip()
+    if not stored_contact:
+        # 無聯絡方式的回饋直接回傳（不需驗證）
+        return FeedbackResponse(**result)
+
+    if body.contact.strip() != stored_contact:
+        raise HTTPException(status_code=403, detail="聯絡方式不符，請再試一次 / Contact verification failed")
 
     return FeedbackResponse(**result)
 

@@ -21,7 +21,7 @@ const CATEGORIES = [
 const MAX_CONTENT = 1000;
 
 export default function FeedbackModal({ show, onClose }) {
-    const { submitFeedback, getFeedbackReply, updateFeedbackContact } = useNotifyStore();
+    const { submitFeedback, getFeedbackReply, verifyFeedbackContact, updateFeedbackContact } = useNotifyStore();
 
     // 送出表單狀態
     const [category, setCategory] = useState('bug');
@@ -39,6 +39,12 @@ export default function FeedbackModal({ show, onClose }) {
     const [querying, setQuerying] = useState(false);
     const [queryError, setQueryError] = useState('');
     const [lastQueriedId, setLastQueriedId] = useState('');
+
+    // 聯絡方式驗證步驟
+    const [contactVerifyStep, setContactVerifyStep] = useState(false);
+    const [verifyContact, setVerifyContact] = useState('');
+    const [verifying, setVerifying] = useState(false);
+    const [verifyError, setVerifyError] = useState('');
 
     // 編輯聯絡方式狀態
     const [editingContact, setEditingContact] = useState(false);
@@ -74,14 +80,22 @@ export default function FeedbackModal({ show, onClose }) {
         setQueryResult(null);
         setEditingContact(false);
         setContactSaveMsg('');
+        setContactVerifyStep(false);
+        setVerifyContact('');
+        setVerifyError('');
         try {
             const result = await getFeedbackReply(trimmedId);
             if (result) {
-                setQueryResult(result);
                 setLastQueriedId(trimmedId);
-                setContactDraft(result.contact || '');
-                if (isRepeat) {
-                    setQueryError('⚠ 此 ID 已查詢過，以下為最新資料');
+                if (result.contact_required) {
+                    // 需要驗證聯絡方式才能查看詳細內容
+                    setContactVerifyStep(true);
+                } else {
+                    setQueryResult(result);
+                    setContactDraft(result.contact || '');
+                    if (isRepeat) {
+                        setQueryError('⚠ 此 ID 已查詢過，以下為最新資料');
+                    }
                 }
             } else {
                 setQueryError('找不到此回饋 ID，請確認是否正確');
@@ -90,6 +104,21 @@ export default function FeedbackModal({ show, onClose }) {
             setQueryError('查詢失敗，請稍後再試');
         }
         setQuerying(false);
+    };
+
+    const handleVerify = async () => {
+        if (verifying || !verifyContact.trim()) return;
+        setVerifying(true);
+        setVerifyError('');
+        const res = await verifyFeedbackContact(lastQueriedId, verifyContact.trim());
+        setVerifying(false);
+        if (res.ok) {
+            setContactVerifyStep(false);
+            setQueryResult(res.data);
+            setContactDraft(res.data.contact || '');
+        } else {
+            setVerifyError(res.error || '聯絡方式不符，請再試一次');
+        }
     };
 
     const handleSaveContact = async () => {
@@ -121,6 +150,10 @@ export default function FeedbackModal({ show, onClose }) {
         setQuerying(false);
         setQueryError('');
         setLastQueriedId('');
+        setContactVerifyStep(false);
+        setVerifyContact('');
+        setVerifying(false);
+        setVerifyError('');
         setEditingContact(false);
         setContactDraft('');
         setSavingContact(false);
@@ -377,6 +410,45 @@ export default function FeedbackModal({ show, onClose }) {
                             fontSize: '12px',
                         }}>
                             {queryError}
+                        </div>
+                    )}
+
+                    {/* 聯絡方式驗證步驟 / Contact verification step */}
+                    {contactVerifyStep && (
+                        <div style={{
+                            borderRadius: '10px',
+                            background: 'var(--bg-input)',
+                            padding: '12px',
+                            marginTop: '10px',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '8px',
+                        }}>
+                            <p style={{ fontSize: '12px', fontWeight: 500, color: 'var(--text-secondary)' }}>
+                                此回饋設有聯絡方式，請輸入當時填寫的聯絡方式以驗證身份
+                            </p>
+                            <div style={{ display: 'flex', gap: '6px' }}>
+                                <input
+                                    type="text"
+                                    value={verifyContact}
+                                    onChange={(e) => setVerifyContact(e.target.value)}
+                                    placeholder="輸入聯絡方式（e-mail 等）"
+                                    style={{ ...inputStyle, flex: 1, fontSize: '12px', padding: '8px 12px' }}
+                                    maxLength={100}
+                                    onKeyDown={(e) => { if (e.key === 'Enter') handleVerify(); }}
+                                />
+                                <button
+                                    onClick={handleVerify}
+                                    disabled={verifying || !verifyContact.trim()}
+                                    className="btn btn-primary"
+                                    style={{ fontSize: '12px', padding: '8px 14px', opacity: (verifying || !verifyContact.trim()) ? 0.5 : 1 }}
+                                >
+                                    {verifying ? '…' : '驗證'}
+                                </button>
+                            </div>
+                            {verifyError && (
+                                <p style={{ fontSize: '12px', color: 'var(--color-danger)' }}>{verifyError}</p>
+                            )}
                         </div>
                     )}
 
