@@ -18,7 +18,7 @@ router = APIRouter(prefix="/analytics", tags=["分析統計 / Analytics"])
 logger = logging.getLogger(__name__)
 
 _ALLOWED_EVENTS = {
-    "page_view", "sync", "share_create", "share_subscribe",
+    "page_view", "page_duration", "sync", "share_create", "share_subscribe",
     "feedback_submit", "error",
     "bus_fetch", "notify_popup", "notify_open", "button_click",
 }

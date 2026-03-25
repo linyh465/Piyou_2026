@@ -25,7 +25,7 @@ function getDeviceId() {
 }
 
 /**
- * @param {string} eventType - page_view | sync | share_create | share_subscribe | feedback_submit | error
+ * @param {string} eventType - page_view | page_duration | sync | share_create | share_subscribe | feedback_submit | button_click | bus_fetch | error
  * @param {object} [extra]   - 額外資料（選填）
  * @param {string} [page]    - 頁面路徑，page_view 事件使用
  */
@@ -44,4 +44,11 @@ export function trackEvent(eventType, extra = {}, page = '') {
     } catch {
         // 任何同步錯誤也吞掉 / Swallow any sync errors
     }
+}
+
+// ── 全域未處理 Promise 錯誤追蹤 / Global unhandled rejection tracking ──
+if (typeof window !== 'undefined') {
+    window.addEventListener('unhandledrejection', (e) => {
+        trackEvent('error', { type: 'unhandled_rejection', message: String(e.reason).slice(0, 100) });
+    });
 }

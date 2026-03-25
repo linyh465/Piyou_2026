@@ -245,6 +245,7 @@ export default function Settings() {
     };
 
     const confirmLogout = () => {
+        trackEvent('button_click', { action: 'logout_confirm' }, '/settings');
         logout();
         clearSchoolData();
         clearLibraryData();
@@ -495,7 +496,7 @@ export default function Settings() {
                             return (
                                 <button
                                     key={opt.value}
-                                    onClick={() => setTheme(opt.value)}
+                                    onClick={() => { setTheme(opt.value); trackEvent('button_click', { action: 'theme_change', value: opt.value }, '/settings'); }}
                                     style={{
                                         width: '100%', display: 'flex', alignItems: 'center', gap: '14px',
                                         padding: '14px 16px', borderRadius: '12px', fontSize: '15px', fontWeight: 500,
@@ -523,7 +524,7 @@ export default function Settings() {
                             <button
                                 key={t.id}
                                 className={`theme-swatch ${colorTheme === t.id ? 'active' : ''}`}
-                                onClick={() => setColorTheme(t.id)}
+                                onClick={() => { setColorTheme(t.id); trackEvent('button_click', { action: 'color_theme_change', value: t.id }, '/settings'); }}
                                 aria-label={`${t.label} ${t.labelEn}`}
                             >
                                 <div

@@ -4,6 +4,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import useTimetableStore from '../stores/timetableStore';
+import { trackEvent } from '../services/analytics';
 import { IconCalendar, IconRefresh, IconTrash, IconMapPin, IconClock, IconUser, IconDotsVertical } from '../components/Icons';
 import SyncLoginModal from '../components/SyncLoginModal';
 import { downloadICS } from '../utils/icsExport';
@@ -414,7 +415,7 @@ export default function Timetable() {
                         <button onClick={() => setShowSyncModal(true)} className="btn btn-soft" style={{ fontSize: '13px', display: 'flex', alignItems: 'center', gap: '4px' }}>
                             <IconUser size={14} /> {tCommon('signIn')}
                         </button>
-                        <button onClick={fetchTimetable} disabled={isLoadingTimetable} className="btn btn-ghost" style={{ fontSize: '13px' }}>
+                        <button onClick={() => { fetchTimetable(); trackEvent('button_click', { action: 'timetable_refresh' }, '/timetable'); }} disabled={isLoadingTimetable} className="btn btn-ghost" style={{ fontSize: '13px' }}>
                             <IconRefresh size={15} className={isLoadingTimetable ? 'animate-spin' : ''} />
                         </button>
                         {timetable.length > 0 && (
@@ -431,7 +432,7 @@ export default function Timetable() {
                             <button onClick={() => { setShowSyncModal(true); setShowMenu(false); }} className="btn btn-soft">
                                 <IconUser size={14} /> {tCommon('signIn')}
                             </button>
-                            <button onClick={() => { fetchTimetable(); setShowMenu(false); }} disabled={isLoadingTimetable} className="btn btn-ghost">
+                            <button onClick={() => { fetchTimetable(); setShowMenu(false); trackEvent('button_click', { action: 'timetable_refresh' }, '/timetable'); }} disabled={isLoadingTimetable} className="btn btn-ghost">
                                 <IconRefresh size={14} className={isLoadingTimetable ? 'animate-spin' : ''} /> {tCommon('refresh')}
                             </button>
                             {/* 行事曆匯出暫時停用，待開放時移除此註解

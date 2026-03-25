@@ -10,6 +10,7 @@ import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import useLibraryStore from '../stores/libraryStore';
+import { trackEvent } from '../services/analytics';
 import { IconBook, IconRefresh, IconTrash, IconClock, IconCheckCircle, IconStar, IconUser, IconDotsVertical, IconXCircle } from '../components/Icons';
 import SyncLoginModal from '../components/SyncLoginModal';
 
@@ -281,7 +282,7 @@ export default function Library() {
                             <IconUser size={14} /> {tCommon('signIn')}
                         </button>
                         <button
-                            onClick={fetchLibrary}
+                            onClick={() => { fetchLibrary(); trackEvent('button_click', { action: 'library_refresh' }, '/library'); }}
                             disabled={isLoading}
                             className="btn btn-ghost"
                             style={{ fontSize: '13px' }}
@@ -310,7 +311,7 @@ export default function Library() {
                             <button onClick={() => { setShowSyncModal(true); setShowMenu(false); }} className="btn btn-soft">
                                 <IconUser size={14} /> {tCommon('signIn')}
                             </button>
-                            <button onClick={() => { fetchLibrary(); setShowMenu(false); }} disabled={isLoading} className="btn btn-ghost">
+                            <button onClick={() => { fetchLibrary(); setShowMenu(false); trackEvent('button_click', { action: 'library_refresh' }, '/library'); }} disabled={isLoading} className="btn btn-ghost">
                                 <IconRefresh size={14} className={isLoading ? 'animate-spin' : ''} /> {tCommon('refresh')}
                             </button>
                             {(loans.length > 0 || reserves.length > 0 || history.length > 0) && (

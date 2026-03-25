@@ -43,7 +43,15 @@ function PageLoader() {
 function PageViewTracker() {
   const location = useLocation();
   useEffect(() => {
-    trackEvent('page_view', {}, location.pathname);
+    const path = location.pathname;
+    const enterTime = Date.now();
+    trackEvent('page_view', {}, path);
+    return () => {
+      const duration = Date.now() - enterTime;
+      if (duration >= 1000) {
+        trackEvent('page_duration', { duration_ms: duration }, path);
+      }
+    };
   }, [location.pathname]);
   return null;
 }

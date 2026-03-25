@@ -7,6 +7,7 @@ import { useEffect, useState, useMemo, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import useThemeStore from '../stores/themeStore';
 import useBusStore from '../stores/busStore';
+import { trackEvent } from '../services/analytics';
 import { busRoutes } from '../data/transportData';
 import { IconBus, IconMapPin, IconClock, IconRefresh, IconChevronRight } from '../components/Icons';
 
@@ -278,7 +279,7 @@ export default function Transport() {
                     </div>
                 </div>
                 <button
-                    onClick={manualRefresh}
+                    onClick={() => { manualRefresh(); trackEvent('button_click', { action: 'bus_manual_refresh' }, '/transport'); }}
                     disabled={manualCooldown > 0}
                     className="btn btn-ghost"
                     style={{ minWidth: 40, padding: '8px', borderRadius: 12 }}

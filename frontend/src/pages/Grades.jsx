@@ -5,6 +5,7 @@ import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import useTimetableStore from '../stores/timetableStore';
+import { trackEvent } from '../services/analytics';
 import { IconChartBar, IconRefresh, IconBook, IconTrash, IconUser, IconDotsVertical, IconXCircle } from '../components/Icons';
 import SyncLoginModal from '../components/SyncLoginModal';
 import { scoreToGPA } from '../utils/scoreToGPA';
@@ -261,7 +262,7 @@ export default function Grades() {
                         <button onClick={() => setShowSyncModal(true)} className="btn btn-soft" style={{ fontSize: '13px', display: 'flex', alignItems: 'center', gap: '4px' }}>
                             <IconUser size={14} /> {tCommon('signIn')}
                         </button>
-                        <button onClick={fetchGrades} disabled={isLoadingGrades} className="btn btn-ghost" style={{ fontSize: '13px' }}>
+                        <button onClick={() => { fetchGrades(); trackEvent('button_click', { action: 'grades_refresh' }, '/grades'); }} disabled={isLoadingGrades} className="btn btn-ghost" style={{ fontSize: '13px' }}>
                             <IconRefresh size={15} className={isLoadingGrades ? 'animate-spin' : ''} />
                         </button>
                         {grades.length > 0 && (
@@ -278,7 +279,7 @@ export default function Grades() {
                             <button onClick={() => { setShowSyncModal(true); setShowMenu(false); }} className="btn btn-soft">
                                 <IconUser size={14} /> {tCommon('signIn')}
                             </button>
-                            <button onClick={() => { fetchGrades(); setShowMenu(false); }} disabled={isLoadingGrades} className="btn btn-ghost">
+                            <button onClick={() => { fetchGrades(); setShowMenu(false); trackEvent('button_click', { action: 'grades_refresh' }, '/grades'); }} disabled={isLoadingGrades} className="btn btn-ghost">
                                 <IconRefresh size={14} className={isLoadingGrades ? 'animate-spin' : ''} /> {tCommon('refresh')}
                             </button>
                             {grades.length > 0 && (
