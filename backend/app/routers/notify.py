@@ -87,7 +87,9 @@ def _send_feedback_email_sync(data: dict) -> None:
         msg["Subject"] = f"[披呦] 新回饋：{data.get('category')} / {data.get('id')}"
         msg["From"] = _SMTP_USER
         msg["To"] = _NOTIFY_EMAIL
-        with smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=10) as server:
+        with smtplib.SMTP("smtp.gmail.com", 587, timeout=10) as server:
+            server.ehlo()
+            server.starttls()
             server.login(_SMTP_USER, _SMTP_PASS)
             server.sendmail(_SMTP_USER, [_NOTIFY_EMAIL], msg.as_string())
         logger.info(f"notify/feedback: email sent for id={data.get('id')}")
