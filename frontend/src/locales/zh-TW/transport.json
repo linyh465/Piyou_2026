@@ -12,7 +12,7 @@
   "toDestination": "往 {{dest}}",
   "noStopData": "目前無此路線的站牌資訊",
   "loadingOrNotOperating": "資料載入中或該路線今日未營運",
-  "autoUpdateBadge": "🕐 自動更新 2 分鐘",
+  "autoUpdateBadge": "🕐 自動更新 30 秒",
   "tdxBadge": "📊 TDX 即時資料",
   "loadingBadge": "⏳ 載入中...",
   "refreshCooldown": "請稍候 {{s}} 秒",

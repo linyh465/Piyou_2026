@@ -5,8 +5,8 @@
  *
  * 節流策略 / Throttle:
  * - 手動刷新冷卻 60 秒 (UI 按鈕鎖定)
- * - 全域每分鐘最多 2 次 API 呼叫 (含自動 + 手動)
- * - 自動輪詢每 120 秒
+ * - 全域每分鐘最多 3 次 API 呼叫 (含自動 + 手動)
+ * - 自動輪詢每 30 秒
  */
 import { create } from 'zustand';
 import { api, apiError } from '../services/apiClient';

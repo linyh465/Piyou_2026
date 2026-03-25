@@ -12,7 +12,7 @@
   "toDestination": "To {{dest}}",
   "noStopData": "No stop data for this route",
   "loadingOrNotOperating": "Loading or not in service today",
-  "autoUpdateBadge": "🕐 Auto-refresh every 2 min",
+  "autoUpdateBadge": "🕐 Auto-refresh every 30s",
   "tdxBadge": "📊 TDX Live Data",
   "loadingBadge": "⏳ Loading...",
   "refreshCooldown": "Wait {{s}}s",
