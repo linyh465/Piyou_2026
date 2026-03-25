@@ -65,8 +65,8 @@ export default function PrivacyModal() {
                             <p>您的 E校園服務網帳號與密碼<strong>僅在您主動點擊「同步」時</strong>，透過 HTTPS 加密連線傳送至伺服器進行一次性驗證，驗證完成後<strong>立即丟棄，不儲存於伺服器或本機裝置</strong>。伺服器日誌亦透過過濾機制確保密碼不會寫入任何記錄。</p>
                         </SECTION>
 
-                        <SECTION icon="📱" title="校園資料本地儲存">
-                            <p>課表、成績、圖書館借閱紀錄等校園資料<strong>僅存放於您的裝置本機</strong>（localStorage / IndexedDB），不上傳至任何第三方雲端。登出時可一鍵清除所有本機資料。</p>
+                        <SECTION icon="🔄" title="同步功能說明">
+                            <p>「同步校園資料」為<strong>自願選擇的功能</strong>，需由您主動前往「設定 → 同步校園資料」操作。同步取回的課表、成績等資料<strong>僅存放於您的裝置本機</strong>（localStorage / IndexedDB），不上傳至任何第三方雲端。登出時可一鍵清除所有本機資料。</p>
                         </SECTION>
 
                         <SECTION icon="📊" title="匿名使用行為分析">
@@ -76,8 +76,8 @@ export default function PrivacyModal() {
                         <SECTION icon="🌐" title="第三方服務揭露">
                             <p>本應用程式使用以下第三方服務：</p>
                             <ul style={{ margin: '6px 0 0 16px', padding: 0 }}>
-                                <li><strong>Google Sheets</strong> — 儲存公告、意見回饋、共享平台內容及使用分析事件</li>
-                                <li><strong>Railway</strong> — 後端服務託管平台</li>
+                                <li><strong>雲端資料服務</strong> — 儲存公告、意見回饋、共享平台內容及使用分析事件</li>
+                                <li><strong>後端託管平台</strong> — 本應用程式後端服務的雲端部署環境</li>
                                 <li><strong>TDX 運輸資料流通服務</strong> — 公車即時到站資訊</li>
                             </ul>
                             <p style={{ marginTop: '6px' }}>上述服務均有各自的隱私政策，請自行參閱。本應用程式不對第三方資料處理方式負責。</p>
