@@ -87,6 +87,9 @@ export const api = {
     async put(url, data, config) {
         return retryWithBackoff(() => apiClient.put(url, data, config));
     },
+    async patch(url, data, config) {
+        return retryWithBackoff(() => apiClient.patch(url, data, config));
+    },
     async delete(url, config) {
         return retryWithBackoff(() => apiClient.delete(url, config));
     },

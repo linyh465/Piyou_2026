@@ -271,31 +271,34 @@ def _update_contact_sync(feedback_id: str, contact: str) -> bool:
     Update the contact field (column E) for a given feedback id.
     Returns True if found and updated, False if not found.
     """
-    service = _build_service()
-    sheets_id = _get_sheets_id()
+    try:
+        service = _build_service()
+        sheets_id = _get_sheets_id()
 
-    result = service.spreadsheets().values().get(
-        spreadsheetId=sheets_id,
-        range="feedback!A2:I",
-    ).execute()
-    rows: list[list[str]] = result.get("values", [])
+        result = service.spreadsheets().values().get(
+            spreadsheetId=sheets_id,
+            range="feedback!A2:I",
+        ).execute()
+        rows: list[list[str]] = result.get("values", [])
 
-    for i, row in enumerate(rows):
-        row = row + [""] * (9 - len(row))
-        if row[0].strip() == feedback_id:
-            row_num = i + 2  # 1-indexed, skip header
-            row[4] = contact
-            service.spreadsheets().values().update(
-                spreadsheetId=sheets_id,
-                range=f"feedback!A{row_num}:I{row_num}",
-                valueInputOption="RAW",
-                body={"values": [row]},
-            ).execute()
-            # 清除快取 / Clear cache so next query reflects updated contact
-            global _fb_cache
-            _fb_cache.pop(feedback_id, None)
-            return True
-    return False
+        for i, row in enumerate(rows):
+            row = row + [""] * (9 - len(row))
+            if row[0].strip() == feedback_id:
+                row_num = i + 2  # 1-indexed, skip header
+                row[4] = contact
+                service.spreadsheets().values().update(
+                    spreadsheetId=sheets_id,
+                    range=f"feedback!A{row_num}:I{row_num}",
+                    valueInputOption="RAW",
+                    body={"values": [row]},
+                ).execute()
+                # 清除快取 / Clear cache so next query reflects updated contact
+                global _fb_cache
+                _fb_cache.pop(feedback_id, None)
+                return True
+        return False
+    except HttpError as exc:
+        raise RuntimeError(f"Sheets API error: {exc}") from exc
 
 
 async def update_feedback_contact(feedback_id: str, contact: str) -> bool:
