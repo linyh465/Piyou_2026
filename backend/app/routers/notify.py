@@ -56,7 +56,7 @@ from app.services.storage.pg_notify import (
     clear_all_feedback,
 )
 from app.services.storage import pg_usersync as sheets_usersync
-from app.services.storage import sheets_push
+from app.services.storage import pg_push as sheets_push
 from app.services.storage import pg_share as sheets_share
 from app.services.storage import pg_analytics as sheets_analytics
 from app.services.storage import pg_config as sheets_config

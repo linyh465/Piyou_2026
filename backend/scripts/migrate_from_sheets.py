@@ -244,6 +244,29 @@ async def migrate_app_config(conn, service, sheets_id: str) -> int:
     return count
 
 
+async def migrate_push_subscriptions(conn, service, sheets_id: str) -> int:
+    rows = _get_rows(service, sheets_id, "push_subscriptions!A2:E")
+    count = 0
+    for row in rows:
+        row = row + [""] * (5 - len(row))
+        device_id = row[0].strip()
+        endpoint = row[1].strip()
+        p256dh = row[2].strip()
+        auth = row[3].strip()
+        if not endpoint or not p256dh or not auth:
+            continue
+        await conn.execute("""
+            INSERT INTO push_subscriptions (endpoint, device_id, p256dh, auth, subscribed_at)
+            VALUES ($1, $2, $3, $4, $5)
+            ON CONFLICT (endpoint) DO NOTHING
+        """,
+            endpoint, device_id, p256dh, auth,
+            _parse_dt(row[4]) or datetime.now(timezone.utc),
+        )
+        count += 1
+    return count
+
+
 async def main():
     db_url = os.getenv("DATABASE_URL", "")
     if not db_url:
@@ -264,13 +287,14 @@ async def main():
     service = _build_sheets_service()
 
     tasks = [
-        ("analytics_events", migrate_analytics),
-        ("announcements",    migrate_announcements),
-        ("admin_accounts",   migrate_admin_accounts),
-        ("feedback",         migrate_feedback),
-        ("shared_items",     migrate_shared_items),
-        ("user_sync",        migrate_user_sync),
-        ("app_config",       migrate_app_config),
+        ("analytics_events",   migrate_analytics),
+        ("announcements",      migrate_announcements),
+        ("admin_accounts",     migrate_admin_accounts),
+        ("feedback",           migrate_feedback),
+        ("shared_items",       migrate_shared_items),
+        ("user_sync",          migrate_user_sync),
+        ("app_config",         migrate_app_config),
+        ("push_subscriptions", migrate_push_subscriptions),
     ]
 
     for name, fn in tasks:

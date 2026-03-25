@@ -163,4 +163,15 @@ async def init_tables() -> None:
             "ON sync_logs (ts DESC)"
         )
 
+        # ── PWA 推播訂閱 / Push Subscriptions ──
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS push_subscriptions (
+                endpoint    TEXT PRIMARY KEY,
+                device_id   TEXT NOT NULL DEFAULT '',
+                p256dh      TEXT NOT NULL,
+                auth        TEXT NOT NULL,
+                subscribed_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            )
+        """)
+
     logger.info("PostgreSQL tables initialized successfully")
