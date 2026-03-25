@@ -4,8 +4,8 @@
  * Transport 頁面和 Dashboard BusCard 共用同一份資料。
  *
  * 節流策略 / Throttle:
- * - 手動刷新冷卻 60 秒 (UI 按鈕鎖定)
- * - 全域每分鐘最多 3 次 API 呼叫 (含自動 + 手動)
+ * - 手動刷新冷卻 10 秒 (UI 按鈕鎖定)
+ * - 全域每分鐘最多 6 次 API 呼叫 (含自動 + 手動，防止手動過多壓制自動輪詢)
  * - 自動輪詢每 30 秒
  */
 import { create } from 'zustand';
@@ -13,9 +13,9 @@ import { api, apiError } from '../services/apiClient';
 import { trackEvent } from '../services/analytics';
 
 // ── 全域節流常數（TDX 基礎會員每日請求量有限，需保守控制）──
-const MANUAL_COOLDOWN_SECONDS = 60;
+const MANUAL_COOLDOWN_SECONDS = 10;
 const AUTO_POLL_INTERVAL = 30_000;  // 自動輪詢 30 秒
-const MAX_CALLS_PER_MINUTE = 3;
+const MAX_CALLS_PER_MINUTE = 6;
 
 const useBusStore = create((set, get) => ({
     arrivals: [],
@@ -139,7 +139,7 @@ const useBusStore = create((set, get) => ({
 
     /**
      * 手動刷新（按鈕觸發）/ Manual refresh (button click)
-     * 觸發 60 秒冷卻倒數
+     * 觸發 10 秒冷卻倒數
      */
     manualRefresh: () => {
         const state = get();

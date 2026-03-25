@@ -492,18 +492,18 @@ export default function FeedbackModal({ show, onClose }) {
                                 </div>
                             )}
 
-                            {/* 聯絡方式（可編輯）*/}
+                            {/* 聯絡方式（有填才可編輯）*/}
                             <div>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                                     <p style={{ fontSize: '12px', fontWeight: 500, color: 'var(--text-secondary)', flex: 1 }}>
                                         聯絡方式：
                                         {!editingContact && (
                                             <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}>
-                                                {queryResult.contact || '（匿名）'}
+                                                {queryResult.contact || '（匿名，無法修改）'}
                                             </span>
                                         )}
                                     </p>
-                                    {!editingContact && (
+                                    {!editingContact && queryResult.contact && (
                                         <button
                                             onClick={() => { setEditingContact(true); setContactSaveMsg(''); }}
                                             style={{

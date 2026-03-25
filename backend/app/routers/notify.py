@@ -16,13 +16,16 @@
   認證：Bearer JWT（POST /admin/login 取得）或向後相容的 X-Admin-Token header。
   Auth: Bearer JWT from POST /admin/login, or legacy X-Admin-Token header.
 """
+import asyncio
 import os
 import re
+import smtplib
 import jwt
 import bcrypt
 import logging
 from datetime import datetime, timedelta, timezone
-from fastapi import APIRouter, HTTPException, Header, Request, Depends
+from email.mime.text import MIMEText
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Header, Request, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel
 from typing import Optional
@@ -61,6 +64,35 @@ from app.services.storage import sheets_config
 
 router = APIRouter(prefix="/notify", tags=["通知 / Notify"])
 logger = logging.getLogger(__name__)
+
+# ── Email 通知設定 / Email notification config ──
+_NOTIFY_EMAIL = os.environ.get("NOTIFY_EMAIL", "")   # 收件人（開發者）
+_SMTP_USER    = os.environ.get("SMTP_USER", "")       # 寄件 Gmail 帳號
+_SMTP_PASS    = os.environ.get("SMTP_PASS", "")       # Gmail App Password
+
+def _send_feedback_email_sync(data: dict) -> None:
+    """用 Gmail SMTP 寄送新回饋通知給開發者（同步，跑在 thread pool）。"""
+    if not (_NOTIFY_EMAIL and _SMTP_USER and _SMTP_PASS):
+        return
+    try:
+        body = (
+            f"新意見回饋\n\n"
+            f"ID：{data.get('id')}\n"
+            f"類別：{data.get('category')}\n"
+            f"內容：{data.get('content')}\n"
+            f"聯絡：{data.get('contact') or '（匿名）'}\n"
+            f"時間：{data.get('submitted_at')}\n"
+        )
+        msg = MIMEText(body, "plain", "utf-8")
+        msg["Subject"] = f"[披呦] 新回饋：{data.get('category')} / {data.get('id')}"
+        msg["From"] = _SMTP_USER
+        msg["To"] = _NOTIFY_EMAIL
+        with smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=10) as server:
+            server.login(_SMTP_USER, _SMTP_PASS)
+            server.sendmail(_SMTP_USER, [_NOTIFY_EMAIL], msg.as_string())
+        logger.info(f"notify/feedback: email sent for id={data.get('id')}")
+    except Exception as exc:
+        logger.warning(f"notify/feedback: email send failed ({exc})")
 
 # ── 管理員登入暴力破解防護 / Admin login brute-force protection ──
 import time as _time
@@ -165,7 +197,7 @@ async def get_announcements_endpoint() -> AnnouncementsResponse:
 
 
 @router.post("/feedback", status_code=201, summary="送出意見回饋 / Submit Feedback")
-async def submit_feedback(request: Request, body: FeedbackRequest) -> dict:
+async def submit_feedback(request: Request, body: FeedbackRequest, background_tasks: BackgroundTasks) -> dict:
     """
     送出匿名意見回饋。device_id 從 X-Device-Id header 取得（防濫用）。
     Submit anonymous feedback. device_id from X-Device-Id header (anti-spam).
@@ -200,6 +232,7 @@ async def submit_feedback(request: Request, body: FeedbackRequest) -> dict:
         raise HTTPException(status_code=503, detail="儲存服務暫時無法使用 / Storage temporarily unavailable")
 
     logger.info(f"notify/feedback: submitted id={body.id} category={body.category}")
+    background_tasks.add_task(asyncio.to_thread, _send_feedback_email_sync, data)
     return {"ok": True, "id": body.id}
 
 
