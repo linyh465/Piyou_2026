@@ -32,11 +32,31 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(application: FastAPI):
     """啟動 / 關閉事件 — 取代已棄用的 on_event"""
-    from app.services.storage.sheets_setup import ensure_sheets_exist
     logger.info("🐾 Piyou API starting up / 披呦 API 啟動中...")
     logger.info("Zero-log credential filter installed / 零日誌憑證過濾器已安裝")
-    await ensure_sheets_exist()
+
+    # ── PostgreSQL 初始化（強制要求）/ PostgreSQL init (required) ──
+    import os
+    if not os.getenv("DATABASE_URL"):
+        raise RuntimeError(
+            "DATABASE_URL is not set. PostgreSQL is required — "
+            "Google Sheets fallback is no longer supported in this branch."
+        )
+    try:
+        from app.db import init_tables
+        await init_tables()
+    except Exception as exc:
+        logger.error(f"PostgreSQL init failed: {exc}")
+        raise
+
     yield
+
+    # ── 關閉連線池 / Close connection pool on shutdown ──
+    try:
+        from app.db import close_pool
+        await close_pool()
+    except Exception:
+        pass
     logger.info("🐾 Piyou API shutting down / 披呦 API 關閉中...")
 
 

@@ -8,7 +8,10 @@ pyjwt>=2.10.0
 python-dotenv>=1.0.0
 pydantic>=2.10.0
 
-# 任務儲存後端 / Task Storage Backends
+# PostgreSQL 主要儲存後端 / Primary PostgreSQL Storage Backend
+asyncpg>=0.29.0
+
+# Google Sheets 儲存後端（舊版，保留備用）/ Legacy Sheets backend (kept for reference)
 # STORAGE_BACKEND=sheets 需要 / required for sheets:
 google-api-python-client>=2.100.0
 google-auth>=2.23.0

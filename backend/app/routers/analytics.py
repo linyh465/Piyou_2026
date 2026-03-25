@@ -12,7 +12,7 @@ from fastapi import APIRouter, Request
 from pydantic import BaseModel, Field
 from typing import Optional
 
-from app.services.storage import sheets_analytics
+from app.services.storage import pg_analytics as sheets_analytics
 
 router = APIRouter(prefix="/analytics", tags=["分析統計 / Analytics"])
 logger = logging.getLogger(__name__)
@@ -36,8 +36,8 @@ async def record_event(payload: AnalyticsEvent):
     """
     記錄一筆前端分析事件（非阻塞）。
     Record a frontend analytics event (non-blocking).
-    回傳 202，不等待 Sheets 寫入完成。
-    Returns 202 immediately; Sheets write is fire-and-forget.
+    回傳 202，不等待資料庫寫入完成。
+    Returns 202 immediately; storage write is fire-and-forget.
     """
     if payload.event_type not in _ALLOWED_EVENTS:
         # 靜默忽略未知事件類型，不拋 422
