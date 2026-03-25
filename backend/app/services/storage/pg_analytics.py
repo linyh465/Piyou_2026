@@ -13,7 +13,7 @@ from app.db import get_pool
 logger = logging.getLogger(__name__)
 
 _STATS_CACHE: dict = {"expires_at": 0.0, "data": {}}
-STATS_TTL_SECONDS = 300  # 5 minutes
+STATS_TTL_SECONDS = 60  # 1 minute (PostgreSQL is fast, no need for 5-min cache)
 
 PAGE_LABELS: dict[str, str] = {
     "/":          "首頁",

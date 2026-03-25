@@ -709,7 +709,7 @@ export default function Admin() {
             {/* Analytics Tab */}
             {tab === 'analytics' && (
                 <>
-                    <button onClick={loadAnalytics} style={{ ...btnGhost, marginBottom: '12px' }}>重新整理（5 分鐘快取）</button>
+                    <button onClick={loadAnalytics} style={{ ...btnGhost, marginBottom: '12px' }}>重新整理（1 分鐘快取）</button>
                     {loading && <p style={{ color: 'var(--text-muted)', fontSize: '14px' }}>載入中…</p>}
                     {!loading && analytics && (
                         <>
