@@ -32,6 +32,17 @@ function getDeviceId() {
     return id;
 }
 
+/**
+ * 僅允許 http:// 或 https:// 開頭的 URL，防止 javascript:/data: 協定注入。
+ * Only allow http:// or https:// URLs to prevent javascript:/data: injection.
+ */
+function sanitizeUrl(url) {
+    if (!url) return '#';
+    const trimmed = url.trim();
+    if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) return trimmed;
+    return '#';
+}
+
 const API = import.meta.env.VITE_API_URL || '';
 const LS_KEY = 'piyou_shares'; // [{code, title, body, link_urls, created_at, deleted, is_owner, password_protected}]
 
@@ -366,7 +377,7 @@ function ShareCard({ entry, deviceId, onRemove, onUpdated }) {
                     {entry.link_urls?.length > 0 && (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                             {entry.link_urls.map((url, i) => (
-                                <a key={i} href={url} target="_blank" rel="noopener noreferrer"
+                                <a key={i} href={sanitizeUrl(url)} target="_blank" rel="noopener noreferrer"
                                     style={{ fontSize: '13px', color: 'var(--color-brand)', display: 'inline-flex', alignItems: 'flex-start', gap: '4px', wordBreak: 'break-all' }}>
                                     <IconLink2 size={14} style={{ flexShrink: 0, marginTop: '2px' }} /> {url}
                                 </a>

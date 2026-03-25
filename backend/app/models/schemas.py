@@ -3,8 +3,19 @@ Pydantic 資料模型 / Pydantic Data Models
 定義 API 請求與回應的資料結構
 Defines data structures for API requests and responses.
 """
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from typing import Optional
+
+
+def _validate_url(url: Optional[str]) -> Optional[str]:
+    """確保 URL 僅允許 http:// 或 https:// 協定，防止 javascript:/data: 注入。
+    Ensure URL only allows http:// or https:// scheme to prevent javascript:/data: injection."""
+    if url is None:
+        return url
+    url = url.strip()
+    if url and not (url.startswith("http://") or url.startswith("https://")):
+        raise ValueError("URL 必須以 http:// 或 https:// 開頭 / URL must start with http:// or https://")
+    return url
 
 
 # ── 認證模型 / Auth Models ──
@@ -210,6 +221,11 @@ class AnnouncementCreate(BaseModel):
     link_url: Optional[str] = Field(None, max_length=500, description="連結 / Link URL")
     link_label: Optional[str] = Field(None, max_length=100, description="連結文字 / Link label")
 
+    @field_validator("link_url", mode="before")
+    @classmethod
+    def validate_link_url(cls, v: Optional[str]) -> Optional[str]:
+        return _validate_url(v)
+
 
 class AnnouncementUpdate(BaseModel):
     """更新公告 / Update Announcement"""
@@ -222,6 +238,11 @@ class AnnouncementUpdate(BaseModel):
     link_url: Optional[str] = Field(None, max_length=500)
     link_label: Optional[str] = Field(None, max_length=100)
     republish: bool = Field(False, description="是否重置為未讀（version 遞增）/ Re-popup for all users")
+
+    @field_validator("link_url", mode="before")
+    @classmethod
+    def validate_link_url(cls, v: Optional[str]) -> Optional[str]:
+        return _validate_url(v)
 
 
 class AnnouncementsResponse(BaseModel):
@@ -276,6 +297,14 @@ class ShareCreate(BaseModel):
     device_id: str = Field(..., min_length=1, max_length=64, description="裝置 ID / Device ID")
     password: Optional[str] = Field(None, max_length=100, description="訂閱密碼（選填）/ Subscription password (optional)")
 
+    @field_validator("link_urls", mode="before")
+    @classmethod
+    def validate_link_urls(cls, v: list) -> list:
+        if v:
+            for url in v:
+                _validate_url(url)
+        return v
+
 
 class ShareResponse(BaseModel):
     """共享貼文回應 / Share Response"""
@@ -300,6 +329,14 @@ class ShareUpdate(BaseModel):
                                     description="新分享碼（選填，若要重命名）/ New code (optional rename)")
     password: Optional[str] = Field(None, max_length=100, description="設定新密碼 / Set new password")
     remove_password: bool = Field(False, description="移除密碼保護 / Remove password protection")
+
+    @field_validator("link_urls", mode="before")
+    @classmethod
+    def validate_link_urls(cls, v: Optional[list]) -> Optional[list]:
+        if v:
+            for url in v:
+                _validate_url(url)
+        return v
 
 
 class ShareViewRequest(BaseModel):

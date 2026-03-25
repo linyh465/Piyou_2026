@@ -104,3 +104,104 @@ def test_share_response_defaults():
     assert resp.deleted is False
     assert resp.body is None
     assert resp.link_urls == []
+
+
+# ══════════════════════════════════════════
+#  URL 協定安全驗證 / URL Scheme Security Validation
+# ══════════════════════════════════════════
+
+def test_share_create_rejects_javascript_url():
+    """ShareCreate link_urls 包含 javascript: 協定應拋出 ValidationError"""
+    from app.models.schemas import ShareCreate
+    with pytest.raises(ValidationError):
+        ShareCreate(
+            code="testcode",
+            title="標題",
+            link_urls=["javascript:alert(1)"],
+            device_id="dev-001",
+        )
+
+
+def test_share_create_rejects_data_url():
+    """ShareCreate link_urls 包含 data: 協定應拋出 ValidationError"""
+    from app.models.schemas import ShareCreate
+    with pytest.raises(ValidationError):
+        ShareCreate(
+            code="testcode",
+            title="標題",
+            link_urls=["data:text/html,<script>alert(1)</script>"],
+            device_id="dev-001",
+        )
+
+
+def test_share_create_accepts_http_url():
+    """ShareCreate link_urls 接受 http:// URL"""
+    from app.models.schemas import ShareCreate
+    req = ShareCreate(
+        code="testcode",
+        title="標題",
+        link_urls=["http://example.com"],
+        device_id="dev-001",
+    )
+    assert req.link_urls == ["http://example.com"]
+
+
+def test_share_create_accepts_https_url():
+    """ShareCreate link_urls 接受 https:// URL"""
+    from app.models.schemas import ShareCreate
+    req = ShareCreate(
+        code="testcode",
+        title="標題",
+        link_urls=["https://example.com/path?q=1"],
+        device_id="dev-001",
+    )
+    assert req.link_urls == ["https://example.com/path?q=1"]
+
+
+def test_share_update_rejects_javascript_url():
+    """ShareUpdate link_urls 包含 javascript: 協定應拋出 ValidationError"""
+    from app.models.schemas import ShareUpdate
+    with pytest.raises(ValidationError):
+        ShareUpdate(
+            device_id="dev-001",
+            link_urls=["javascript:void(0)"],
+        )
+
+
+def test_announcement_create_rejects_javascript_url():
+    """AnnouncementCreate link_url 包含 javascript: 協定應拋出 ValidationError"""
+    from app.models.schemas import AnnouncementCreate
+    with pytest.raises(ValidationError):
+        AnnouncementCreate(
+            title="公告標題",
+            published_at="2026-03-25T00:00:00+00:00",
+            link_url="javascript:alert(1)",
+        )
+
+
+def test_announcement_create_accepts_https_url():
+    """AnnouncementCreate link_url 接受 https:// URL"""
+    from app.models.schemas import AnnouncementCreate
+    ann = AnnouncementCreate(
+        title="公告標題",
+        published_at="2026-03-25T00:00:00+00:00",
+        link_url="https://example.com",
+    )
+    assert ann.link_url == "https://example.com"
+
+
+def test_announcement_create_accepts_none_url():
+    """AnnouncementCreate link_url 為 None 應成功（選填欄位）"""
+    from app.models.schemas import AnnouncementCreate
+    ann = AnnouncementCreate(
+        title="公告標題",
+        published_at="2026-03-25T00:00:00+00:00",
+    )
+    assert ann.link_url is None
+
+
+def test_announcement_update_rejects_data_url():
+    """AnnouncementUpdate link_url 包含 data: 協定應拋出 ValidationError"""
+    from app.models.schemas import AnnouncementUpdate
+    with pytest.raises(ValidationError):
+        AnnouncementUpdate(link_url="data:text/html,<b>xss</b>")

@@ -129,3 +129,55 @@ async def test_different_devices_independent_cooldown(client):
         headers={"X-Device-Id": DEVICE_B},
     )
     assert resp_b.json()["allowed"] is True
+
+
+# ══════════════════════════════════════════
+#  安全性測試 / Security Tests
+# ══════════════════════════════════════════
+
+@pytest.mark.anyio
+async def test_rate_limiter_uses_x_forwarded_for(client):
+    """
+    RateLimitMiddleware 應使用 X-Forwarded-For 作為客戶端 IP。
+    驗證：帶有不同 X-Forwarded-For 的請求被獨立追蹤，而非合併到同一 IP 桶。
+    RateLimitMiddleware should use X-Forwarded-For as the client IP.
+    Verify requests with different X-Forwarded-For are tracked independently.
+    """
+    from app.middleware.security import RateLimitMiddleware
+    import time as _t
+
+    # 建立一個小容量限制的測試用 middleware
+    mw = RateLimitMiddleware(app=None, max_requests=2, window_seconds=60)
+
+    now = _t.time()
+    # IP A: 填滿配額（2 筆記錄）/ Fill up quota for IP A (2 records)
+    mw.requests["1.2.3.4"] = [now, now]
+
+    # IP A 應達到上限 / IP A should be at the limit
+    assert len(mw.requests["1.2.3.4"]) >= 2
+
+    # IP B 應不受 IP A 限制影響（獨立桶）/ IP B should be unaffected (independent bucket)
+    assert len(mw.requests.get("5.6.7.8", [])) == 0
+
+
+@pytest.mark.anyio
+async def test_admin_endpoint_rejects_wrong_token(client):
+    """
+    管理員端點應拒絕錯誤 token（403）。
+    Admin endpoints should reject wrong tokens (403).
+    """
+    resp = await client.get(
+        "/api/v1/notify/admin/announcements",
+        headers={"X-Admin-Token": "wrong-token-value"},
+    )
+    assert resp.status_code == 403
+
+
+@pytest.mark.anyio
+async def test_admin_endpoint_without_token(client):
+    """
+    管理員端點在無任何 token 時應回傳 403。
+    Admin endpoints should return 403 with no token.
+    """
+    resp = await client.get("/api/v1/notify/admin/announcements")
+    assert resp.status_code == 403

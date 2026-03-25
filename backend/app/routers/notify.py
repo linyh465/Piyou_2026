@@ -17,6 +17,7 @@
   Auth: Bearer JWT from POST /admin/login, or legacy X-Admin-Token header.
 """
 import asyncio
+import hmac
 import os
 import re
 import jwt
@@ -161,8 +162,12 @@ def _check_admin(
     2. Authorization: Bearer <JWT> (new, JWT with role=admin)
     """
     # 方式 1：X-Admin-Token / Method 1: X-Admin-Token
+    # 使用 hmac.compare_digest 進行常數時間比較，防止計時攻擊
+    # Use hmac.compare_digest for constant-time comparison to prevent timing attacks
     legacy_token = os.getenv("ADMIN_TOKEN", "")
-    if legacy_token and x_admin_token == legacy_token:
+    if legacy_token and x_admin_token is not None and hmac.compare_digest(
+        x_admin_token.encode("utf-8"), legacy_token.encode("utf-8")
+    ):
         return
 
     # 方式 2：Bearer JWT / Method 2: Bearer JWT
