@@ -12,7 +12,7 @@ from fastapi import APIRouter, Request
 from pydantic import BaseModel, Field
 from typing import Optional
 
-from app.services.storage import sheets_analytics
+from app.services.storage import pg_analytics as sheets_analytics
 
 router = APIRouter(prefix="/analytics", tags=["分析統計 / Analytics"])
 logger = logging.getLogger(__name__)

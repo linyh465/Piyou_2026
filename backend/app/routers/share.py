@@ -9,8 +9,8 @@ from typing import Optional
 from pydantic import BaseModel
 
 from app.models.schemas import ShareCreate, ShareResponse, ShareUpdate, ShareViewRequest
-from app.services.storage import sheets_share
-from app.services.storage.sheets_share import _hash_device_id, _check_password
+from app.services.storage import pg_share as sheets_share
+from app.services.storage.pg_share import _hash_device_id, _check_password
 
 logger = logging.getLogger(__name__)
 

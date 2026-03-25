@@ -41,7 +41,7 @@ from app.models.schemas import (
     AnnouncementCreate,
     AnnouncementUpdate,
 )
-from app.services.storage.sheets_notify import (
+from app.services.storage.pg_notify import (
     get_announcements,
     write_feedback,
     get_feedback_by_id,
@@ -55,11 +55,11 @@ from app.services.storage.sheets_notify import (
     list_feedback,
     clear_all_feedback,
 )
-from app.services.storage import sheets_usersync
+from app.services.storage import pg_usersync as sheets_usersync
 from app.services.storage import sheets_push
-from app.services.storage import sheets_share
-from app.services.storage import sheets_analytics
-from app.services.storage import sheets_config
+from app.services.storage import pg_share as sheets_share
+from app.services.storage import pg_analytics as sheets_analytics
+from app.services.storage import pg_config as sheets_config
 
 router = APIRouter(prefix="/notify", tags=["通知 / Notify"])
 logger = logging.getLogger(__name__)

@@ -34,7 +34,7 @@ from app.services.tdx import TDXService
 from app.services.library_scraper import LibraryScraper
 from app.services.scraper_cache import get_cached_scraper, cache_scraper_session
 from app.routers.auth import get_current_user, get_cached_credentials
-from app.services.storage.sheets_synclog import log_sync
+from app.services.storage.pg_synclog import log_sync
 
 router = APIRouter(prefix="/data", tags=["資料 / Data"])
 logger = logging.getLogger(__name__)
@@ -724,7 +724,7 @@ async def put_tasks(request: Request, user: dict = Depends(get_current_user)):
 #  跨裝置使用者資料同步 / Cross-Device User Data Sync
 # ══════════════════════════════════════════
 
-from app.services.storage import sheets_usersync  # noqa: E402
+from app.services.storage import pg_usersync as sheets_usersync  # noqa: E402
 
 MAX_SYNC_TASKS = 500
 MAX_SYNC_SHARES = 200
