@@ -174,10 +174,10 @@ async def test_admin_endpoint_rejects_wrong_token(client):
 
 
 @pytest.mark.anyio
-async def test_admin_endpoint_without_token(client):
+async def test_notify_admin_announcements_endpoint_without_token(client):
     """
-    管理員端點在無任何 token 時應回傳 403。
-    Admin endpoints should return 403 with no token.
+    管理員公告端點在無任何 token 時應回傳 403。
+    Notify admin announcements endpoint should return 403 with no token.
     """
     resp = await client.get("/api/v1/notify/admin/announcements")
     assert resp.status_code == 403
