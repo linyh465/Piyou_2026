@@ -92,7 +92,9 @@ def _send_feedback_email_sync(data: dict) -> None:
             },
             timeout=10,
         )
-        resp.raise_for_status()
+        if not resp.ok:
+            logger.warning(f"notify/feedback: Resend {resp.status_code}: {resp.text}")
+            return
         logger.info(f"notify/feedback: email sent via Resend for id={data.get('id')}")
     except Exception as exc:
         logger.warning(f"notify/feedback: Resend email failed ({exc})")
