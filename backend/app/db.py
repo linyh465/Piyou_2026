@@ -22,11 +22,14 @@ async def get_pool() -> asyncpg.Pool:
         # asyncpg 接受 postgresql:// 或 postgres:// / asyncpg accepts both schemes
         if url.startswith("postgres://"):
             url = url.replace("postgres://", "postgresql://", 1)
+        # SSL 模式：預設 "require"；可透過 PG_SSL_MODE=disable 關閉（本機開發用）
+        ssl_env = os.getenv("PG_SSL_MODE", "require").strip().lower()
+        pool_ssl: str | None = None if ssl_env in ("", "disable", "disabled", "false", "0") else ssl_env
         _pool = await asyncpg.create_pool(
             url,
             min_size=2,
             max_size=10,
-            ssl="require",
+            ssl=pool_ssl,
             command_timeout=30,
         )
         logger.info("PostgreSQL connection pool created")
@@ -50,6 +53,9 @@ async def init_tables() -> None:
     """
     pool = await get_pool()
     async with pool.acquire() as conn:
+        # pgcrypto 提供 gen_random_uuid()（PG 13+ 已內建，此處確保舊版也能用）
+        await conn.execute('CREATE EXTENSION IF NOT EXISTS "pgcrypto"')
+
         # ── 分析事件 / Analytics Events ──
         await conn.execute("""
             CREATE TABLE IF NOT EXISTS analytics_events (
@@ -101,9 +107,10 @@ async def init_tables() -> None:
         """)
 
         # ── 意見回饋 / Feedback ──
+        # id 用 TEXT（與 Sheets 版本及現有 API 一致，避免非 UUID 字串轉換失敗）
         await conn.execute("""
             CREATE TABLE IF NOT EXISTS feedback (
-                id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                id          TEXT PRIMARY KEY,
                 submitted_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
                 category    TEXT NOT NULL DEFAULT '',
                 content     TEXT NOT NULL,

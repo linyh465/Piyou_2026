@@ -24,7 +24,6 @@ import asyncio
 import json
 import os
 import sys
-import hashlib
 import uuid
 from datetime import datetime, timezone
 
@@ -280,8 +279,12 @@ async def main():
         print("ERROR: GOOGLE_SHEETS_ID not set")
         sys.exit(1)
 
+    # SSL 模式：預設 "require"；本機測試可設 PG_SSL_MODE=disable
+    ssl_env = os.getenv("PG_SSL_MODE", "require").strip().lower()
+    conn_ssl: str | None = None if ssl_env in ("", "disable", "disabled", "false", "0") else ssl_env
+
     print("Connecting to PostgreSQL...")
-    conn = await asyncpg.connect(db_url, ssl="require")
+    conn = await asyncpg.connect(db_url, ssl=conn_ssl)
 
     print("Building Google Sheets service...")
     service = _build_sheets_service()

@@ -259,7 +259,7 @@ async def _query_stats() -> dict:
 
 
 async def get_stats() -> dict:
-    """取得統計摘要（5 分鐘快取）/ Get stats summary with 5-min TTL cache."""
+    """取得統計摘要（1 分鐘快取）/ Get stats summary with 1-min TTL cache."""
     global _STATS_CACHE
     now_ts = datetime.now(timezone.utc).timestamp()
     if _STATS_CACHE["expires_at"] > now_ts:

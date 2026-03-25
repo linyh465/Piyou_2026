@@ -168,13 +168,14 @@ async def delete_announcement(ann_id: str) -> bool:
 async def write_feedback(data: dict) -> None:
     """寫入新回饋 / Write new feedback."""
     pool = await get_pool()
+    # id 為 TEXT，與 Sheets 版本及現有 API 保持一致
     fb_id = data.get("id") or str(uuid.uuid4())
     submitted_at = data.get("submitted_at")
     await pool.execute("""
         INSERT INTO feedback (id, submitted_at, category, content, contact, device_id_hash, status)
         VALUES ($1, $2, $3, $4, $5, $6, 'pending')
     """,
-        uuid.UUID(fb_id) if isinstance(fb_id, str) else fb_id,
+        str(fb_id),
         datetime.fromisoformat(submitted_at.replace("Z", "+00:00")) if submitted_at else datetime.now(timezone.utc),
         data.get("category", ""),
         data.get("content", ""),
@@ -187,12 +188,9 @@ async def write_feedback(data: dict) -> None:
 async def get_feedback_by_id(feedback_id: str) -> dict | None:
     """查詢單筆回饋 / Get single feedback by ID."""
     pool = await get_pool()
-    try:
-        row = await pool.fetchrow(
-            "SELECT * FROM feedback WHERE id = $1", uuid.UUID(feedback_id)
-        )
-    except Exception:
-        return None
+    row = await pool.fetchrow(
+        "SELECT * FROM feedback WHERE id = $1", str(feedback_id)
+    )
     if not row:
         return None
     return {
@@ -209,13 +207,10 @@ async def get_feedback_by_id(feedback_id: str) -> dict | None:
 async def update_feedback_contact(feedback_id: str, contact: str) -> bool:
     """更新聯絡方式 / Update feedback contact field."""
     pool = await get_pool()
-    try:
-        result = await pool.execute(
-            "UPDATE feedback SET contact = $2 WHERE id = $1",
-            uuid.UUID(feedback_id), contact or None,
-        )
-    except Exception:
-        return False
+    result = await pool.execute(
+        "UPDATE feedback SET contact = $2 WHERE id = $1",
+        str(feedback_id), contact or None,
+    )
     return result.split()[-1] != "0"
 
 
@@ -229,7 +224,7 @@ async def reply_feedback(feedback_id: str, reply: str) -> bool:
                 admin_reply = $2,
                 replied_at  = NOW()
             WHERE id = $1
-        """, uuid.UUID(feedback_id), reply)
+        """, str(feedback_id), reply)
     except Exception:
         return False
     ok = result.split()[-1] != "0"

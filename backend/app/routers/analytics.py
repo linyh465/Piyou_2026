@@ -36,8 +36,8 @@ async def record_event(payload: AnalyticsEvent):
     """
     記錄一筆前端分析事件（非阻塞）。
     Record a frontend analytics event (non-blocking).
-    回傳 202，不等待 Sheets 寫入完成。
-    Returns 202 immediately; Sheets write is fire-and-forget.
+    回傳 202，不等待資料庫寫入完成。
+    Returns 202 immediately; storage write is fire-and-forget.
     """
     if payload.event_type not in _ALLOWED_EVENTS:
         # 靜默忽略未知事件類型，不拋 422

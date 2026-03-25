@@ -150,17 +150,18 @@ async def update_share(
         else (_hash_password(password) if password is not None else row["password_hash"])
     )
 
+    # device_id_hash 放入 WHERE 確保授權在同一 SQL 原子完成（防 TOCTOU）
     updated = await pool.fetchrow("""
         UPDATE shared_items SET
-            code          = $2,
-            title         = $3,
-            body          = $4,
-            link_urls     = $5,
-            password_hash = $6
-        WHERE code = $1
+            code          = $3,
+            title         = $4,
+            body          = $5,
+            link_urls     = $6,
+            password_hash = $7
+        WHERE code = $1 AND device_id_hash = $2
         RETURNING *
     """,
-        code, target_code, new_title, new_body,
+        code, device_id_hash, target_code, new_title, new_body,
         new_link_urls, new_password_hash,
     )
     logger.info(f"pg_share: updated share code={code} → {target_code}")
