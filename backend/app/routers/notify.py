@@ -19,12 +19,11 @@
 import asyncio
 import os
 import re
-import smtplib
 import jwt
 import bcrypt
 import logging
+import requests as _requests
 from datetime import datetime, timedelta, timezone
-from email.mime.text import MIMEText
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Header, Request, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel
@@ -65,14 +64,13 @@ from app.services.storage import sheets_config
 router = APIRouter(prefix="/notify", tags=["通知 / Notify"])
 logger = logging.getLogger(__name__)
 
-# ── Email 通知設定 / Email notification config ──
-_NOTIFY_EMAIL = os.environ.get("NOTIFY_EMAIL", "")   # 收件人（開發者）
-_SMTP_USER    = os.environ.get("SMTP_USER", "")       # 寄件 Gmail 帳號
-_SMTP_PASS    = os.environ.get("SMTP_PASS", "")       # Gmail App Password
+# ── Email 通知設定（Resend API）/ Email notification config (Resend API) ──
+_NOTIFY_EMAIL  = os.environ.get("NOTIFY_EMAIL", "")    # 收件人（開發者）
+_RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "")  # Resend API Key
 
 def _send_feedback_email_sync(data: dict) -> None:
-    """用 Gmail SMTP 寄送新回饋通知給開發者（同步，跑在 thread pool）。"""
-    if not (_NOTIFY_EMAIL and _SMTP_USER and _SMTP_PASS):
+    """透過 Resend API 寄送新回饋通知給開發者（同步，跑在 thread pool）。"""
+    if not (_NOTIFY_EMAIL and _RESEND_API_KEY):
         return
     try:
         body = (
@@ -83,18 +81,21 @@ def _send_feedback_email_sync(data: dict) -> None:
             f"聯絡：{data.get('contact') or '（匿名）'}\n"
             f"時間：{data.get('submitted_at')}\n"
         )
-        msg = MIMEText(body, "plain", "utf-8")
-        msg["Subject"] = f"[披呦] 新回饋：{data.get('category')} / {data.get('id')}"
-        msg["From"] = _SMTP_USER
-        msg["To"] = _NOTIFY_EMAIL
-        with smtplib.SMTP("smtp.gmail.com", 587, timeout=10) as server:
-            server.ehlo()
-            server.starttls()
-            server.login(_SMTP_USER, _SMTP_PASS)
-            server.sendmail(_SMTP_USER, [_NOTIFY_EMAIL], msg.as_string())
-        logger.info(f"notify/feedback: email sent for id={data.get('id')}")
+        resp = _requests.post(
+            "https://api.resend.com/emails",
+            headers={"Authorization": f"Bearer {_RESEND_API_KEY}"},
+            json={
+                "from": "披呦 Piyou <onboarding@resend.dev>",
+                "to": [_NOTIFY_EMAIL],
+                "subject": f"[披呦] 新回饋：{data.get('category')} / {data.get('id')}",
+                "text": body,
+            },
+            timeout=10,
+        )
+        resp.raise_for_status()
+        logger.info(f"notify/feedback: email sent via Resend for id={data.get('id')}")
     except Exception as exc:
-        logger.warning(f"notify/feedback: email send failed ({exc})")
+        logger.warning(f"notify/feedback: Resend email failed ({exc})")
 
 # ── 管理員登入暴力破解防護 / Admin login brute-force protection ──
 import time as _time
