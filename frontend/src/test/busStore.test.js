@@ -74,11 +74,11 @@ describe('busStore', () => {
 
   it('manualRefresh starts cooldown', async () => {
     useBusStore.getState().manualRefresh();
-    expect(useBusStore.getState().manualCooldown).toBe(60);
+    expect(useBusStore.getState().manualCooldown).toBe(10);
 
     // 倒數 1 秒
     vi.advanceTimersByTime(1000);
-    expect(useBusStore.getState().manualCooldown).toBe(59);
+    expect(useBusStore.getState().manualCooldown).toBe(9);
   });
 
   it('manualRefresh is blocked during cooldown', async () => {
