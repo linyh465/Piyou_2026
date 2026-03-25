@@ -91,7 +91,7 @@ def _read_announcements_sync() -> list[dict]:
 
     result = service.spreadsheets().values().get(
         spreadsheetId=sheets_id,
-        range="announcements!A2:J",
+        range="announcements!A2:K",
     ).execute()
     rows: list[list[str]] = result.get("values", [])
 
@@ -99,8 +99,8 @@ def _read_announcements_sync() -> list[dict]:
     announcements: list[dict] = []
 
     for i, row in enumerate(rows):
-        # pad 至 10 欄 / pad to 10 columns (A-J)
-        row = row + [""] * (10 - len(row))
+        # pad 至 11 欄 / pad to 11 columns (A-K)
+        row = row + [""] * (11 - len(row))
         published_at = row[5].strip()
         if not published_at:
             continue  # 草稿 / draft
@@ -133,6 +133,10 @@ def _read_announcements_sync() -> list[dict]:
             version = int(row[9].strip()) if row[9].strip() else 1
         except ValueError:
             version = 1
+        try:
+            sort_order = int(row[10].strip()) if row[10].strip() else 0
+        except ValueError:
+            sort_order = 0
 
         announcements.append({
             "id": row_id,
@@ -145,10 +149,11 @@ def _read_announcements_sync() -> list[dict]:
             "link_url": row[7].strip() or None,
             "link_label": row[8].strip() or None,
             "version": version,
+            "sort_order": sort_order,
         })
 
-    # 最新公告排前面 / newest first
-    return sorted(announcements, key=lambda x: x["published_at"], reverse=True)
+    # sort_order 大者優先，再按發布時間 / sort by sort_order desc, then published_at desc
+    return sorted(announcements, key=lambda x: (x["sort_order"], x["published_at"]), reverse=True)
 
 
 async def get_announcements() -> list[dict]:
@@ -357,12 +362,12 @@ def _find_announcement_row_sync(ann_id: str) -> tuple[int, list[str]] | None:
 
     result = service.spreadsheets().values().get(
         spreadsheetId=sheets_id,
-        range="announcements!A2:J",
+        range="announcements!A2:K",
     ).execute()
     rows: list[list[str]] = result.get("values", [])
 
     for i, row in enumerate(rows):
-        row = row + [""] * (10 - len(row))
+        row = row + [""] * (11 - len(row))
         if row[0].strip() == ann_id:
             return (i + 2, row)  # 1-based row number (row 2 = first data row)
     return None
@@ -378,6 +383,7 @@ def _create_announcement_sync(data: dict) -> dict:
     sheets_id = _get_sheets_id()
 
     ann_id = str(uuid.uuid4())
+    sort_order = data.get("sort_order") or 0
     row = [
         ann_id,
         data.get("title", ""),
@@ -389,18 +395,19 @@ def _create_announcement_sync(data: dict) -> dict:
         data.get("link_url", "") or "",
         data.get("link_label", "") or "",
         "1",  # version starts at 1
+        str(sort_order),
     ]
 
     service.spreadsheets().values().append(
         spreadsheetId=sheets_id,
-        range="announcements!A:J",
+        range="announcements!A:K",
         valueInputOption="RAW",
         insertDataOption="INSERT_ROWS",
         body={"values": [row]},
     ).execute()
 
     logger.info(f"SheetsNotify: created announcement id={ann_id}")
-    return {**data, "id": ann_id, "version": 1}
+    return {**data, "id": ann_id, "version": 1, "sort_order": sort_order}
 
 
 def _update_announcement_sync(ann_id: str, updates: dict, republish: bool) -> dict | None:
@@ -433,14 +440,21 @@ def _update_announcement_sync(ann_id: str, updates: dict, republish: bool) -> di
         except ValueError:
             row[9] = "2"
 
+    if "sort_order" in updates and updates["sort_order"] is not None:
+        row[10] = str(updates["sort_order"])
+
     service.spreadsheets().values().update(
         spreadsheetId=sheets_id,
-        range=f"announcements!A{row_num}:J{row_num}",
+        range=f"announcements!A{row_num}:K{row_num}",
         valueInputOption="RAW",
         body={"values": [row]},
     ).execute()
 
     version = int(row[9]) if row[9] else 1
+    try:
+        sort_order = int(row[10]) if row[10] else 0
+    except ValueError:
+        sort_order = 0
     logger.info(f"SheetsNotify: updated announcement id={ann_id} version={version}")
     return {
         "id": ann_id,
@@ -453,6 +467,7 @@ def _update_announcement_sync(ann_id: str, updates: dict, republish: bool) -> di
         "link_url": row[7] or None,
         "link_label": row[8] or None,
         "version": version,
+        "sort_order": sort_order,
     }
 
 
@@ -471,7 +486,7 @@ def _delete_announcement_sync(ann_id: str) -> bool:
 
     service.spreadsheets().values().clear(
         spreadsheetId=sheets_id,
-        range=f"announcements!A{row_num}:J{row_num}",
+        range=f"announcements!A{row_num}:K{row_num}",
     ).execute()
 
     logger.info(f"SheetsNotify: deleted announcement id={ann_id} (row {row_num} cleared)")

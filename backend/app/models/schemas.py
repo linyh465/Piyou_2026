@@ -183,6 +183,7 @@ class Announcement(BaseModel):
     link_url: Optional[str] = Field(None, description="連結 URL / Link URL")
     link_label: Optional[str] = Field(None, description="連結文字 / Link label")
     version: int = Field(1, description="版本號（更新時遞增，觸發所有用戶重新彈窗）/ Version (incremented on update to re-popup)")
+    sort_order: int = Field(0, description="排序順序（數字越大越前面）/ Sort order (higher = shown first)")
 
 
 # ── 管理員模型 / Admin Models ──
@@ -209,6 +210,7 @@ class AnnouncementCreate(BaseModel):
     expires_at: Optional[str] = Field(None, description="過期時間 / Expires at")
     link_url: Optional[str] = Field(None, max_length=500, description="連結 / Link URL")
     link_label: Optional[str] = Field(None, max_length=100, description="連結文字 / Link label")
+    sort_order: Optional[int] = Field(0, description="排序順序 / Sort order (higher = shown first)")
 
 
 class AnnouncementUpdate(BaseModel):
@@ -221,6 +223,7 @@ class AnnouncementUpdate(BaseModel):
     expires_at: Optional[str] = None
     link_url: Optional[str] = Field(None, max_length=500)
     link_label: Optional[str] = Field(None, max_length=100)
+    sort_order: Optional[int] = Field(None, description="排序順序 / Sort order")
     republish: bool = Field(False, description="是否重置為未讀（version 遞增）/ Re-popup for all users")
 
 

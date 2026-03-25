@@ -90,6 +90,18 @@ const TYPE_COLORS = {
 
 const TYPE_LABELS = { info: '公告', warning: '注意', urgent: '緊急' };
 
+/**
+ * 將 UTC ISO 字串轉為 datetime-local input 所需的本地時間格式
+ * Convert UTC ISO string to local datetime-local input format (YYYY-MM-DDTHH:MM)
+ */
+function toLocalDatetimeInput(isoString) {
+    if (!isoString) return '';
+    const d = new Date(isoString);
+    if (isNaN(d.getTime())) return '';
+    const pad = (n) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
 // ══════════════════════════════════════
 //  登入表單 / Login Form
 // ══════════════════════════════════════
@@ -141,14 +153,15 @@ function LoginForm({ onLogin }) {
 //  公告表單 / Announcement Form
 // ══════════════════════════════════════
 function AnnouncementForm({ initial, onSave, onCancel }) {
-    const now = new Date().toISOString().slice(0, 16);
+    const now = toLocalDatetimeInput(new Date().toISOString());
     const [title, setTitle] = useState(initial?.title || '');
     const [body, setBody] = useState(initial?.body || '');
     const [type, setType] = useState(initial?.type || 'info');
-    const [publishedAt, setPublishedAt] = useState(initial?.published_at?.slice(0, 16) || now);
-    const [expiresAt, setExpiresAt] = useState(initial?.expires_at?.slice(0, 16) || '');
+    const [publishedAt, setPublishedAt] = useState(initial?.published_at ? toLocalDatetimeInput(initial.published_at) : now);
+    const [expiresAt, setExpiresAt] = useState(initial?.expires_at ? toLocalDatetimeInput(initial.expires_at) : '');
     const [linkUrl, setLinkUrl] = useState(initial?.link_url || '');
     const [linkLabel, setLinkLabel] = useState(initial?.link_label || '');
+    const [sortOrder, setSortOrder] = useState(initial?.sort_order ?? 0);
     const [republish, setRepublish] = useState(false);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState('');
@@ -166,6 +179,7 @@ function AnnouncementForm({ initial, onSave, onCancel }) {
             expires_at: expiresAt ? new Date(expiresAt).toISOString() : null,
             link_url: linkUrl.trim() || null,
             link_label: linkLabel.trim() || null,
+            sort_order: Number(sortOrder) || 0,
             ...(initial ? { republish } : {}),
         };
         try {
@@ -186,7 +200,7 @@ function AnnouncementForm({ initial, onSave, onCancel }) {
             </h3>
             {error && <div style={{ padding: '8px', borderRadius: '8px', background: 'rgba(239,68,68,0.1)', color: 'var(--color-danger)', fontSize: '13px', marginBottom: '10px' }}>{error}</div>}
             <input style={inputStyle} type="text" placeholder="標題 *" value={title} onChange={(e) => setTitle(e.target.value)} />
-            <textarea style={{ ...inputStyle, minHeight: '80px', resize: 'vertical', fontFamily: 'inherit' }} placeholder="內文" value={body} onChange={(e) => setBody(e.target.value)} />
+            <textarea style={{ ...inputStyle, minHeight: '140px', resize: 'vertical', fontFamily: 'inherit' }} placeholder="內文" value={body} onChange={(e) => setBody(e.target.value)} />
             <select style={selectStyle} value={type} onChange={(e) => setType(e.target.value)}>
                 <option value="info">公告 (info)</option>
                 <option value="warning">注意 (warning)</option>
@@ -198,6 +212,8 @@ function AnnouncementForm({ initial, onSave, onCancel }) {
             <input style={inputStyle} type="datetime-local" value={expiresAt} onChange={(e) => setExpiresAt(e.target.value)} />
             <input style={inputStyle} type="url" placeholder="連結 URL（選填）" value={linkUrl} onChange={(e) => setLinkUrl(e.target.value)} />
             <input style={inputStyle} type="text" placeholder="連結文字（選填）" value={linkLabel} onChange={(e) => setLinkLabel(e.target.value)} />
+            <label style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>排序順序（數字越大越前面，預設 0）</label>
+            <input style={inputStyle} type="number" placeholder="排序順序（預設 0）" value={sortOrder} onChange={(e) => setSortOrder(e.target.value)} />
             {initial && (
                 <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '12px', cursor: 'pointer' }}>
                     <input type="checkbox" checked={republish} onChange={(e) => setRepublish(e.target.checked)} />

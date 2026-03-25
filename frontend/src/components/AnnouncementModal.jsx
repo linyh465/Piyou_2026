@@ -81,7 +81,7 @@ export default function AnnouncementModal() {
                         <span style={{ fontSize: '12px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', opacity: 0.85 }}>{config.label}</span>
                         <button onClick={closeOpenedAnn} style={{ color: 'rgba(255,255,255,0.7)', background: 'none', border: 'none', cursor: 'pointer', fontSize: '18px', lineHeight: 1, padding: '4px' }} aria-label="關閉">✕</button>
                     </div>
-                    <div style={{ padding: '20px' }}>
+                    <div style={{ padding: '20px', maxHeight: '60vh', overflowY: 'auto' }}>
                         <h3 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text)', marginBottom: '8px' }}>{manualAnn.title}</h3>
                         <p style={{ fontSize: '14px', color: 'var(--text-secondary)', whiteSpace: 'pre-line', lineHeight: 1.6 }}>{manualAnn.body}</p>
                         {manualAnn.link_url && (
@@ -199,7 +199,7 @@ export default function AnnouncementModal() {
                 </div>
 
                 {/* 內文 / Body */}
-                <div style={{ padding: '20px' }}>
+                <div style={{ padding: '20px', maxHeight: '60vh', overflowY: 'auto' }}>
                     <h3 style={{
                         fontSize: '1rem',
                         fontWeight: 600,

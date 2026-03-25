@@ -188,15 +188,26 @@ export default function Tasks() {
         if (syncing) return;
         setSyncing(true);
         try {
-            await uploadUserSync(true);
             await downloadAndMergeUserSync();
             await loadTasks();
+            await uploadUserSync(true);
         } finally {
             setSyncing(false);
         }
     };
 
     useEffect(() => { loadTasks(); }, [loadTasks]);
+
+    // 每分鐘自動同步 / Auto-sync every 60s when authenticated
+    useEffect(() => {
+        if (!isAuthenticated) return;
+        const id = setInterval(async () => {
+            await downloadAndMergeUserSync();
+            await loadTasks();
+            await uploadUserSync(true);
+        }, 60_000);
+        return () => clearInterval(id);
+    }, [isAuthenticated, loadTasks]);
 
     useEffect(() => {
         if (!showMenu) return;
@@ -228,11 +239,19 @@ export default function Tasks() {
                     </button>
                     <div className="page-menu-wrapper" ref={menuRef}>
                         <div className="page-header-actions">
-                            {isAuthenticated && (
-                                <button onClick={handleSync} disabled={syncing} className="btn btn-ghost" style={{ fontSize: '13px' }} aria-label="同步">
-                                    <IconRefresh size={15} style={{ opacity: syncing ? 0.4 : 1 }} />
-                                </button>
-                            )}
+                            <button
+                                onClick={handleSync}
+                                disabled={syncing}
+                                className="btn btn-ghost"
+                                style={{ fontSize: '13px', flexDirection: 'column', gap: '1px', padding: '4px 8px', lineHeight: 1.2 }}
+                                aria-label="同步"
+                            >
+                                <span style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+                                    <IconRefresh size={14} style={{ opacity: syncing ? 0.4 : 1 }} />
+                                    同步
+                                </span>
+                                <span style={{ fontSize: '10px', color: 'var(--text-muted)', opacity: 0.75 }}>任務・共享</span>
+                            </button>
                             <button onClick={exportToMarkdown} className="btn btn-ghost" style={{ fontSize: '13px' }} aria-label={tCommon('exportMarkdown')}>
                                 <IconDownload size={15} /> MD
                             </button>
@@ -242,11 +261,9 @@ export default function Tasks() {
                         </button>
                         {showMenu && (
                             <div className="page-menu-dropdown">
-                                {isAuthenticated && (
-                                    <button onClick={() => { handleSync(); setShowMenu(false); }} disabled={syncing} className="btn btn-ghost">
-                                        <IconRefresh size={14} style={{ opacity: syncing ? 0.4 : 1 }} /> 同步
-                                    </button>
-                                )}
+                                <button onClick={() => { handleSync(); setShowMenu(false); }} disabled={syncing} className="btn btn-ghost">
+                                    <IconRefresh size={14} style={{ opacity: syncing ? 0.4 : 1 }} /> 同步（任務・共享）
+                                </button>
                                 <button onClick={() => { exportToMarkdown(); setShowMenu(false); }} className="btn btn-ghost">
                                     <IconDownload size={14} /> {tCommon('exportMarkdown')}
                                 </button>

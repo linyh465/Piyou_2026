@@ -3,7 +3,9 @@
 提供文字 + 連結分享功能，以自訂分享碼為索引。
 Provides text + link sharing keyed by user-chosen share codes.
 """
+import hashlib
 import logging
+import os
 from fastapi import APIRouter, HTTPException, Header
 from typing import Optional
 from pydantic import BaseModel
@@ -14,6 +16,26 @@ from app.services.storage.sheets_share import _hash_device_id, _check_password
 
 logger = logging.getLogger(__name__)
 
+
+def _extract_student_id_hash(authorization: Optional[str]) -> Optional[str]:
+    """
+    從 JWT Authorization header 提取學號並計算雜湊。
+    Extract student_id from JWT and return SHA-256[:16] hash.
+    Returns None if token is absent, invalid, or has no sub claim.
+    """
+    if not authorization or not authorization.startswith("Bearer "):
+        return None
+    try:
+        import jwt as _jwt
+        token = authorization.split(" ", 1)[1]
+        payload = _jwt.decode(token, os.getenv("JWT_SECRET", ""), algorithms=["HS256"])
+        student_id = payload.get("sub", "")
+        if student_id:
+            return hashlib.sha256(student_id.encode()).hexdigest()[:16]
+    except Exception:
+        pass
+    return None
+
 router = APIRouter(prefix="/share", tags=["共享平台 / Share Platform"])
 
 
@@ -22,17 +44,22 @@ class _DeleteBody(BaseModel):
 
 
 def _build_response(data: dict, device_id: Optional[str] = None,
+                    student_id_hash: Optional[str] = None,
                     include_content: bool = True,
                     password_verified: bool = False) -> ShareResponse:
     """
     從 dict 建立 ShareResponse。
     若密碼保護且非擁有者且未通過密碼驗證，隱藏 body 和 link_urls。
+    擁有者：device_id_hash 相符，或 student_id_hash 相符（跨裝置）。
     Build ShareResponse from dict, hiding body/links for protected shares
-    unless the requester is the owner or has verified the password.
+    unless the requester is the owner (device or student) or has verified the password.
     """
     is_owner = False
     if device_id:
         is_owner = _hash_device_id(device_id) == data.get("device_id_hash", "")
+    if not is_owner and student_id_hash:
+        stored_sih = data.get("student_id_hash") or ""
+        is_owner = bool(stored_sih and stored_sih == student_id_hash)
 
     password_protected = bool(data.get("password_hash"))
     show_content = include_content and (not password_protected or is_owner or password_verified)
@@ -53,6 +80,7 @@ def _build_response(data: dict, device_id: Optional[str] = None,
 async def create_share(
     payload: ShareCreate,
     x_device_id: Optional[str] = Header(None, alias="X-Device-Id"),
+    authorization: Optional[str] = Header(None),
 ):
     """
     建立新的共享貼文 / Create a new share post.
@@ -62,6 +90,8 @@ async def create_share(
     if x_device_id and payload.device_id != x_device_id:
         raise HTTPException(status_code=403, detail="Device ID mismatch / 裝置 ID 不符")
 
+    student_id_hash = _extract_student_id_hash(authorization)
+
     try:
         result = await sheets_share.create_share(
             code=payload.code,
@@ -70,6 +100,7 @@ async def create_share(
             link_urls=payload.link_urls,
             device_id=payload.device_id,
             password=payload.password or None,
+            student_id_hash=student_id_hash,
         )
     except ValueError as e:
         raise HTTPException(status_code=409, detail=str(e))
@@ -77,13 +108,14 @@ async def create_share(
         logger.error(f"share create error: {e}")
         raise HTTPException(status_code=503, detail="暫時無法建立分享，請稍後再試")
 
-    return _build_response(result, device_id=payload.device_id, include_content=True)
+    return _build_response(result, device_id=payload.device_id, student_id_hash=student_id_hash, include_content=True)
 
 
 @router.get("/{code}", response_model=ShareResponse)
 async def get_share(
     code: str,
     x_device_id: Optional[str] = Header(None, alias="X-Device-Id"),
+    authorization: Optional[str] = Header(None),
 ):
     """
     取得分享貼文 / Get a share post by code.
@@ -99,7 +131,8 @@ async def get_share(
     if result is None:
         raise HTTPException(status_code=404, detail="找不到此分享碼 / Share code not found")
 
-    return _build_response(result, device_id=x_device_id, include_content=True)
+    student_id_hash = _extract_student_id_hash(authorization)
+    return _build_response(result, device_id=x_device_id, student_id_hash=student_id_hash, include_content=True)
 
 
 @router.post("/{code}/view", response_model=ShareResponse)
@@ -107,6 +140,7 @@ async def view_protected_share(
     code: str,
     body: ShareViewRequest,
     x_device_id: Optional[str] = Header(None, alias="X-Device-Id"),
+    authorization: Optional[str] = Header(None),
 ):
     """
     輸入密碼後取得受保護分享的完整內容。
@@ -121,15 +155,16 @@ async def view_protected_share(
     if result is None:
         raise HTTPException(status_code=404, detail="找不到此分享碼 / Share code not found")
 
+    student_id_hash = _extract_student_id_hash(authorization)
     pw_hash = result.get("password_hash") or ""
     if not pw_hash:
         # 無密碼保護，直接回傳
-        return _build_response(result, device_id=x_device_id, include_content=True)
+        return _build_response(result, device_id=x_device_id, student_id_hash=student_id_hash, include_content=True)
 
     if not _check_password(body.password, pw_hash):
         raise HTTPException(status_code=403, detail="密碼錯誤 / Incorrect password")
 
-    return _build_response(result, device_id=x_device_id, include_content=True, password_verified=True)
+    return _build_response(result, device_id=x_device_id, student_id_hash=student_id_hash, include_content=True, password_verified=True)
 
 
 @router.patch("/{code}", response_model=ShareResponse)
@@ -137,6 +172,7 @@ async def update_share(
     code: str,
     payload: ShareUpdate,
     x_device_id: Optional[str] = Header(None, alias="X-Device-Id"),
+    authorization: Optional[str] = Header(None),
 ):
     """
     擁有者更新共享貼文（標題、內文、連結、分享碼、密碼）。
@@ -145,10 +181,13 @@ async def update_share(
     if x_device_id and payload.device_id != x_device_id:
         raise HTTPException(status_code=403, detail="Device ID mismatch / 裝置 ID 不符")
 
+    student_id_hash = _extract_student_id_hash(authorization)
+
     try:
         result = await sheets_share.update_share(
             code=code,
             device_id=payload.device_id,
+            student_id_hash=student_id_hash,
             title=payload.title,
             body=payload.body,
             link_urls=payload.link_urls,
@@ -165,7 +204,7 @@ async def update_share(
     if result is None:
         raise HTTPException(status_code=403, detail="無權限更新此分享 / Not authorized to update")
 
-    return _build_response(result, device_id=payload.device_id, include_content=True)
+    return _build_response(result, device_id=payload.device_id, student_id_hash=student_id_hash, include_content=True)
 
 
 @router.delete("/{code}", status_code=200)
@@ -173,16 +212,19 @@ async def delete_share(
     code: str,
     body: _DeleteBody,
     x_device_id: Optional[str] = Header(None, alias="X-Device-Id"),
+    authorization: Optional[str] = Header(None),
 ):
     """
     刪除（軟刪除）分享貼文 / Soft-delete a share post.
-    只有建立者（device_id 相符）才可刪除。
+    只有建立者（device_id 或 student_id 相符）才可刪除。
     """
     if x_device_id and body.device_id != x_device_id:
         raise HTTPException(status_code=403, detail="Device ID mismatch / 裝置 ID 不符")
 
+    student_id_hash = _extract_student_id_hash(authorization)
+
     try:
-        ok = await sheets_share.delete_share(code=code, device_id=body.device_id)
+        ok = await sheets_share.delete_share(code=code, device_id=body.device_id, student_id_hash=student_id_hash)
     except Exception as e:
         logger.error(f"share delete error: {e}")
         raise HTTPException(status_code=503, detail="暫時無法刪除，請稍後再試")

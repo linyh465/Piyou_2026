@@ -70,10 +70,13 @@ function renameShare(oldCode, newEntry) {
 // ── API calls ──
 
 function deviceHeaders() {
-    return {
+    const headers = {
         'Content-Type': 'application/json',
         'X-Device-Id': getDeviceId(),
     };
+    const token = sessionStorage.getItem('piyou_token');
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    return headers;
 }
 
 async function apiFetch(path, opts = {}) {
