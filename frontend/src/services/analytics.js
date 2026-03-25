@@ -51,4 +51,30 @@ if (typeof window !== 'undefined') {
     window.addEventListener('unhandledrejection', (e) => {
         trackEvent('error', { type: 'unhandled_rejection', message: String(e.reason).slice(0, 100) });
     });
+
+    // ── 工作階段時長追蹤 / Session duration tracking ──
+    const _sessionStart = Date.now();
+    window.addEventListener('beforeunload', () => {
+        const duration = Date.now() - _sessionStart;
+        if (duration >= 5000) {
+            // 用 sendBeacon 確保瀏覽器關閉時也能送出
+            const payload = JSON.stringify({
+                device_id: getDeviceId(),
+                event_type: 'session_duration',
+                page: '',
+                extra: { duration_ms: duration },
+            });
+            if (navigator.sendBeacon) {
+                navigator.sendBeacon(`${API}/api/v1/analytics/event`, new Blob([payload], { type: 'application/json' }));
+            }
+        }
+    });
+
+    // ── PWA 安裝追蹤 / PWA install tracking ──
+    window.addEventListener('appinstalled', () => {
+        trackEvent('pwa_install', { action: 'installed' });
+    });
+    window.addEventListener('beforeinstallprompt', () => {
+        trackEvent('pwa_install', { action: 'prompt_shown' });
+    });
 }

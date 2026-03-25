@@ -35,16 +35,19 @@ PAGE_LABELS: dict[str, str] = {
 }
 
 EVENT_LABELS: dict[str, str] = {
-    "page_view":       "頁面瀏覽",
-    "sync":            "校務同步",
-    "share_create":    "建立分享",
-    "share_subscribe": "訂閱分享",
-    "feedback_submit": "意見回饋",
-    "error":           "前端錯誤",
-    "bus_fetch":       "公車資料取得",
-    "notify_popup":    "通知彈窗",
-    "notify_open":     "開啟公告",
-    "button_click":    "按鈕點擊",
+    "page_view":        "頁面瀏覽",
+    "page_duration":    "頁面停留時間",
+    "session_duration": "工作階段時長",
+    "sync":             "校務同步",
+    "share_create":     "建立分享",
+    "share_subscribe":  "訂閱分享",
+    "feedback_submit":  "意見回饋",
+    "error":            "前端錯誤",
+    "bus_fetch":        "公車資料取得",
+    "notify_popup":     "通知彈窗",
+    "notify_open":      "開啟公告",
+    "button_click":     "按鈕點擊",
+    "pwa_install":      "PWA 安裝",
 }
 
 
