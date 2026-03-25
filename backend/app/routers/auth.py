@@ -23,6 +23,10 @@ from app.models.schemas import LoginRequest, LoginResponse
 from app.services.scraper import SchoolScraper
 from app.services.scraper_cache import cache_scraper_session
 from app.middleware.security import sync_cooldown
+from app.services.demo import (
+    is_demo_account, verify_demo_password,
+    DEMO_STUDENT_ID, DEMO_NAME, DEMO_DEPARTMENT,
+)
 
 router = APIRouter(prefix="/auth", tags=["認證 / Auth"])
 logger = logging.getLogger(__name__)
@@ -159,6 +163,30 @@ async def login(request_body: LoginRequest, request: Request):
         else:
             detail = f"同步冷卻中，請 {remaining // 60 + 1} 分鐘後重試 / Sync cooldown, please wait {remaining // 60 + 1} min"
         raise HTTPException(status_code=429, detail=detail)
+
+    # ── 展示帳號快速路徑（不呼叫校務爬蟲）──
+    # ── Demo account fast path (no school portal scraper) ──
+    if is_demo_account(request_body.student_id):
+        if not await verify_demo_password(request_body.password):
+            sync_cooldown.record_error(device_id)
+            raise HTTPException(
+                status_code=401,
+                detail="展示帳號密碼錯誤 / Demo account password incorrect",
+            )
+        sync_cooldown.record_success(device_id)
+        payload = {
+            "sub": DEMO_STUDENT_ID,
+            "name": DEMO_NAME,
+            "iat": datetime.now(timezone.utc),
+            "exp": datetime.now(timezone.utc) + timedelta(hours=JWT_EXPIRE_HOURS),
+            "is_demo": True,
+        }
+        token = jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
+        logger.info("Demo account login successful")
+        return LoginResponse(
+            token=token,
+            user={"student_id": DEMO_STUDENT_ID, "name": DEMO_NAME, "department": DEMO_DEPARTMENT},
+        )
 
     # ── 驗證邏輯（帳密僅存在於此函數作用域）──
     # ── Auth logic (credentials exist ONLY in this function scope) ──

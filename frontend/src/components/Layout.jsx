@@ -67,11 +67,21 @@ const mobileSchoolItems = [
 
 const SYNC_STEP_LABELS = { '課表': '同步課表…', '成績': '同步成績…', '圖書館': '同步圖書館…', '任務': '同步任務…', done: '✓ 同步完成', error: '同步失敗' };
 
+function _isDemoToken() {
+    try {
+        const token = sessionStorage.getItem('piyou_token');
+        if (!token) return false;
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        return payload.is_demo === true;
+    } catch { return false; }
+}
+
 export default function Layout() {
     const timetable = useTimetableStore((s) => s.timetable);
     const grades = useTimetableStore((s) => s.grades);
     const bgSyncStep = useTimetableStore((s) => s.bgSyncStep);
     const syncStatus = (timetable.length > 0 || grades.length > 0) ? 'synced' : 'error';
+    const isDemo = useMemo(() => _isDemoToken(), []);
 
     const [showFeedback, setShowFeedback] = useState(false);
 
@@ -238,6 +248,20 @@ export default function Layout() {
 
             {/* ═══ 主要內容區 / Main Content ═══ */}
             <main className="sidebar-main">
+                {isDemo && (
+                    <div style={{
+                        background: 'rgba(234,179,8,0.12)',
+                        borderBottom: '1px solid rgba(234,179,8,0.35)',
+                        padding: '7px 16px',
+                        fontSize: '12px',
+                        color: 'var(--color-warning, #92400e)',
+                        textAlign: 'center',
+                        fontWeight: 500,
+                        flexShrink: 0,
+                    }}>
+                        展示帳號 · 目前顯示示範資料，非真實資料 / Demo Account · Sample data only
+                    </div>
+                )}
                 <Outlet />
             </main>
 

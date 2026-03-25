@@ -26,7 +26,7 @@ import requests as _requests
 from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Header, Request, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Optional
 
 from app.models.schemas import (
@@ -813,3 +813,193 @@ async def admin_push_broadcast(
 
     logger.info(f"push/broadcast: sent={sent} failed={failed} stale={len(stale)}")
     return {"ok": True, "sent": sent, "failed": failed, "stale_removed": len(stale)}
+
+
+# ══════════════════════════════════════════
+#  展示帳號管理端點 / Demo Account Admin Endpoints
+# ══════════════════════════════════════════
+
+class _DemoPasswordRequest(BaseModel):
+    password: str = Field(..., min_length=1, max_length=128)
+
+
+class _DemoSyncRequest(BaseModel):
+    student_id: str = Field(..., min_length=1, max_length=20)
+    password: str = Field(..., min_length=1, max_length=128)
+
+
+class _DemoTasksRequest(BaseModel):
+    tasks: list
+
+
+@router.get("/admin/demo/status", dependencies=[Depends(_check_admin)], tags=["展示帳號 / Demo"])
+async def demo_get_status():
+    """取得展示帳號各欄位設定狀態 / Get demo account field status."""
+    from app.services import demo as demo_svc
+    return await demo_svc.get_status()
+
+
+@router.post("/admin/demo/password", dependencies=[Depends(_check_admin)], tags=["展示帳號 / Demo"])
+async def demo_set_password(body: _DemoPasswordRequest):
+    """設定展示帳號密碼（bcrypt 雜湊）/ Set demo account password (bcrypt hashed)."""
+    from app.services import demo as demo_svc
+    await demo_svc.set_demo_password(body.password)
+    return {"ok": True}
+
+
+@router.get("/admin/demo/timetable", dependencies=[Depends(_check_admin)], tags=["展示帳號 / Demo"])
+async def demo_get_timetable():
+    """取得展示課表 / Get stored demo timetable."""
+    from app.services import demo as demo_svc
+    data = await demo_svc.get_demo_timetable()
+    return data or {}
+
+
+@router.put("/admin/demo/timetable", dependencies=[Depends(_check_admin)], tags=["展示帳號 / Demo"])
+async def demo_set_timetable(request: Request):
+    """覆寫展示課表（已轉換格式 JSON）/ Overwrite demo timetable (transformed JSON)."""
+    from app.services import demo as demo_svc
+    data = await request.json()
+    await demo_svc.set_demo_timetable(data)
+    return {"ok": True}
+
+
+@router.get("/admin/demo/grades", dependencies=[Depends(_check_admin)], tags=["展示帳號 / Demo"])
+async def demo_get_grades():
+    """取得展示成績 / Get stored demo grades."""
+    from app.services import demo as demo_svc
+    data = await demo_svc.get_demo_grades()
+    return data or {}
+
+
+@router.put("/admin/demo/grades", dependencies=[Depends(_check_admin)], tags=["展示帳號 / Demo"])
+async def demo_set_grades(request: Request):
+    """覆寫展示成績 / Overwrite demo grades."""
+    from app.services import demo as demo_svc
+    data = await request.json()
+    await demo_svc.set_demo_grades(data)
+    return {"ok": True}
+
+
+@router.get("/admin/demo/library", dependencies=[Depends(_check_admin)], tags=["展示帳號 / Demo"])
+async def demo_get_library():
+    """取得展示圖書館資料 / Get stored demo library data."""
+    from app.services import demo as demo_svc
+    data = await demo_svc.get_demo_library()
+    return data or {}
+
+
+@router.put("/admin/demo/library", dependencies=[Depends(_check_admin)], tags=["展示帳號 / Demo"])
+async def demo_set_library(request: Request):
+    """覆寫展示圖書館資料 / Overwrite demo library data."""
+    from app.services import demo as demo_svc
+    data = await request.json()
+    await demo_svc.set_demo_library(data)
+    return {"ok": True}
+
+
+@router.get("/admin/demo/tasks", dependencies=[Depends(_check_admin)], tags=["展示帳號 / Demo"])
+async def demo_get_tasks():
+    """取得展示帳號任務 / Get demo account tasks."""
+    from app.services import demo as demo_svc
+    data = await demo_svc.get_demo_tasks()
+    return data or {"tasks": []}
+
+
+@router.put("/admin/demo/tasks", dependencies=[Depends(_check_admin)], tags=["展示帳號 / Demo"])
+async def demo_set_tasks(body: _DemoTasksRequest):
+    """
+    設定展示帳號任務。
+    同時寫入 Google Sheets（demo_svc）與磁碟快取（file-based task storage）。
+    Set demo account tasks. Writes to both Sheets and disk cache.
+    """
+    import json
+    from pathlib import Path
+    from datetime import datetime, timezone
+    from app.services import demo as demo_svc
+
+    # 寫入磁碟（與 /data/tasks 端點相同路徑，safe_id of "s001test!" = "s001test"）
+    # Write to disk (same path as /data/tasks endpoint)
+    cache_dir = Path(__file__).resolve().parent.parent.parent / "cache" / "tasks"
+    cache_dir.mkdir(exist_ok=True)
+    path = cache_dir / "s001test.json"
+    task_data = {"tasks": body.tasks, "updated_at": datetime.now(timezone.utc).isoformat()}
+    path.write_text(json.dumps(task_data, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    # 同步至 Sheets / Sync to Sheets
+    await demo_svc.set_demo_tasks(task_data)
+
+    return {"ok": True, "count": len(body.tasks)}
+
+
+@router.post("/admin/demo/sync", dependencies=[Depends(_check_admin)], tags=["展示帳號 / Demo"])
+async def demo_sync(body: _DemoSyncRequest):
+    """
+    從真實帳號同步展示資料（課表、成績、圖書館）。
+    ⚠️ 帳密僅在此函數作用域使用，絕不儲存或記錄。
+    Sync demo data from a real account. Credentials exist ONLY in this function scope.
+    """
+    import asyncio as _asyncio
+    from app.services.scraper import SchoolScraper
+    from app.services.library_scraper import LibraryScraper
+    from app.services import demo as demo_svc
+    from app.routers.data import (
+        transform_timetable, transform_grades,
+        transform_library, _calc_overdue,
+    )
+
+    scraper = SchoolScraper()
+    results: dict[str, str] = {}
+
+    try:
+        await _asyncio.to_thread(scraper.login, body.student_id, body.password)
+    except Exception:
+        # ⚠️ 不記錄帳密 / Do NOT log credentials
+        logger.info("demo/sync: real account login failed")
+        raise HTTPException(status_code=401, detail="真實帳號登入失敗 / Real account login failed")
+
+    # ── 課表 / Timetable ──
+    try:
+        raw_tt = await _asyncio.to_thread(scraper.fetch_timetable)
+        if raw_tt and raw_tt.get("courses"):
+            tt = transform_timetable(raw_tt)
+            await demo_svc.set_demo_timetable(tt.model_dump())
+            results["timetable"] = f"ok ({len(tt.courses)} 筆課程)"
+        else:
+            results["timetable"] = "empty"
+    except Exception as e:
+        results["timetable"] = f"error: {type(e).__name__}"
+
+    # ── 成績 / Grades ──
+    try:
+        raw_gr = await _asyncio.to_thread(scraper.fetch_grades)
+        if raw_gr:
+            gr = transform_grades(raw_gr)
+            await demo_svc.set_demo_grades(gr.model_dump())
+            total = sum(len(s.courses) for s in gr.semesters)
+            results["grades"] = f"ok ({total} 筆成績，{len(gr.semesters)} 學期)"
+        else:
+            results["grades"] = "empty"
+    except Exception as e:
+        results["grades"] = f"error: {type(e).__name__}"
+
+    # ── 圖書館 / Library ──
+    try:
+        lib_scraper = LibraryScraper()
+        success = await _asyncio.to_thread(lib_scraper.login, body.student_id, body.password)
+        if success:
+            loans_raw = await _asyncio.to_thread(lib_scraper.fetch_loans)
+            reserves_raw = await _asyncio.to_thread(lib_scraper.fetch_reserves)
+            history_raw = await _asyncio.to_thread(lib_scraper.fetch_history)
+            if loans_raw:
+                loans_raw = _calc_overdue(loans_raw)
+            lib = transform_library(loans_raw, reserves_raw, history_raw)
+            await demo_svc.set_demo_library(lib.model_dump())
+            results["library"] = f"ok ({lib.loans_count} 筆借閱)"
+        else:
+            results["library"] = "library login failed"
+    except Exception as e:
+        results["library"] = f"error: {type(e).__name__}"
+
+    logger.info(f"demo/sync: {results}")
+    return {"results": results, "demo_account": demo_svc.DEMO_STUDENT_ID}

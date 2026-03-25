@@ -35,6 +35,7 @@ from app.services.library_scraper import LibraryScraper
 from app.services.scraper_cache import get_cached_scraper, cache_scraper_session
 from app.routers.auth import get_current_user, get_cached_credentials
 from app.services.storage.sheets_synclog import log_sync
+from app.services.demo import is_demo_account, get_demo_timetable, get_demo_grades, get_demo_library
 
 router = APIRouter(prefix="/data", tags=["資料 / Data"])
 logger = logging.getLogger(__name__)
@@ -466,6 +467,16 @@ async def get_timetable(user: dict = Depends(get_current_user)):
     Scraper fetch → return directly. No server-side cache (privacy).
     Frontend caches in localStorage on its own.
     """
+    # ── 展示帳號：直接回傳預存資料 / Demo account: return pre-stored data ──
+    if user.get("is_demo"):
+        demo_data = await get_demo_timetable()
+        if demo_data:
+            try:
+                return TimetableResponse(**demo_data)
+            except Exception:
+                pass
+        return MOCK_TIMETABLE
+
     # 爬蟲抓取（在執行緒池中執行，避免阻塞事件迴圈）
     # Scraper fetch (run in thread pool to avoid blocking event loop)
     student_id = user.get("sub", "")
@@ -496,6 +507,16 @@ async def get_grades(user: dict = Depends(get_current_user)):
     Scraper fetch → return directly. No server-side cache (privacy).
     Frontend caches in localStorage on its own.
     """
+    # ── 展示帳號：直接回傳預存資料 / Demo account: return pre-stored data ──
+    if user.get("is_demo"):
+        demo_data = await get_demo_grades()
+        if demo_data:
+            try:
+                return GradesResponse(**demo_data)
+            except Exception:
+                pass
+        return MOCK_GRADES
+
     # 爬蟲抓取（在執行緒池中執行，避免阻塞事件迴圈）
     # Scraper fetch (run in thread pool to avoid blocking event loop)
     student_id = user.get("sub", "")
@@ -626,6 +647,16 @@ async def get_library(user: dict = Depends(get_current_user)):
     Uses same credentials as school portal to login library OPAC.
     Includes: current loans, reservations, borrowing history.
     """
+    # ── 展示帳號：直接回傳預存資料 / Demo account: return pre-stored data ──
+    if user.get("is_demo"):
+        demo_data = await get_demo_library()
+        if demo_data:
+            try:
+                return LibraryResponse(**demo_data)
+            except Exception:
+                pass
+        return MOCK_LIBRARY
+
     try:
         lib = await asyncio.to_thread(_get_library_scraper, user)
 

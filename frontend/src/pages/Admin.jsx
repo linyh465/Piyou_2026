@@ -215,6 +215,204 @@ function AnnouncementForm({ initial, onSave, onCancel }) {
 }
 
 // ══════════════════════════════════════
+//  展示帳號面板 / Demo Account Panel
+// ══════════════════════════════════════
+function DemoPanel({ token, showMsg }) {
+    const [status, setStatus] = useState(null);
+    const [password, setPassword] = useState('');
+    const [syncId, setSyncId] = useState('');
+    const [syncPw, setSyncPw] = useState('');
+    const [syncing, setSyncing] = useState(false);
+    const [syncResult, setSyncResult] = useState(null);
+    const [tasks, setTasks] = useState('');
+    const [saving, setSaving] = useState('');
+
+    const loadStatus = useCallback(async () => {
+        try {
+            const res = await api.get('/notify/admin/demo/status', adminHeaders(token));
+            setStatus(res.data);
+        } catch { setStatus(null); }
+    }, [token]);
+
+    useEffect(() => { loadStatus(); }, [loadStatus]);
+
+    const handleSetPassword = async () => {
+        if (!password.trim()) return;
+        setSaving('password');
+        try {
+            await api.post('/notify/admin/demo/password', { password }, adminHeaders(token));
+            showMsg('展示帳號密碼已更新');
+            setPassword('');
+            loadStatus();
+        } catch (err) {
+            showMsg(apiError(err, '設定失敗'));
+        } finally { setSaving(''); }
+    };
+
+    const handleSync = async () => {
+        if (!syncId.trim() || !syncPw.trim()) { showMsg('請填入真實帳號帳密'); return; }
+        if (!window.confirm('確定從真實帳號同步資料？此操作將覆蓋現有展示資料。')) return;
+        setSyncing(true);
+        setSyncResult(null);
+        try {
+            const res = await api.post(
+                '/notify/admin/demo/sync',
+                { student_id: syncId, password: syncPw },
+                { ...adminHeaders(token), timeout: 120000 },
+            );
+            setSyncResult(res.data.results);
+            setSyncId('');
+            setSyncPw('');
+            loadStatus();
+            showMsg('同步完成');
+        } catch (err) {
+            showMsg(apiError(err, '同步失敗'));
+        } finally { setSyncing(false); }
+    };
+
+    const handleLoadTasks = async () => {
+        try {
+            const res = await api.get('/notify/admin/demo/tasks', adminHeaders(token));
+            setTasks(JSON.stringify(res.data.tasks || [], null, 2));
+        } catch { showMsg('載入任務失敗'); }
+    };
+
+    const handleSetTasks = async () => {
+        let parsed;
+        try { parsed = JSON.parse(tasks); } catch { showMsg('JSON 格式錯誤'); return; }
+        if (!Array.isArray(parsed)) { showMsg('tasks 必須為陣列'); return; }
+        setSaving('tasks');
+        try {
+            await api.put('/notify/admin/demo/tasks', { tasks: parsed }, adminHeaders(token));
+            showMsg(`已設定 ${parsed.length} 筆展示任務`);
+        } catch (err) { showMsg(apiError(err, '設定失敗')); }
+        finally { setSaving(''); }
+    };
+
+    const statusFields = [
+        { key: 'password_set', label: '密碼' },
+        { key: 'timetable_set', label: '課表' },
+        { key: 'grades_set', label: '成績' },
+        { key: 'library_set', label: '圖書館' },
+        { key: 'tasks_set', label: '任務' },
+    ];
+
+    return (
+        <>
+            {/* 狀態 / Status */}
+            <div style={card}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                    <p style={{ fontWeight: 700, fontSize: '14px', color: 'var(--text)', margin: 0 }}>展示帳號狀態</p>
+                    <button onClick={loadStatus} style={{ ...btnGhost, fontSize: '12px', padding: '4px 10px' }}>重新整理</button>
+                </div>
+                {status ? (
+                    <>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '10px' }}>
+                            {statusFields.map(({ key, label }) => (
+                                <div key={key} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                    <span style={{ fontSize: '14px', color: status[key] ? 'var(--color-success)' : 'var(--text-muted)' }}>
+                                        {status[key] ? '✓' : '✗'}
+                                    </span>
+                                    <span style={{ fontSize: '13px', color: status[key] ? 'var(--text)' : 'var(--text-muted)' }}>{label}</span>
+                                </div>
+                            ))}
+                        </div>
+                        <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0 }}>
+                            展示帳號：<code style={{ fontFamily: 'monospace' }}>{status.demo_student_id}</code>
+                        </p>
+                    </>
+                ) : (
+                    <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>載入中…</p>
+                )}
+            </div>
+
+            {/* 設定密碼 / Set Password */}
+            <div style={card}>
+                <p style={{ fontWeight: 700, fontSize: '14px', color: 'var(--text)', margin: '0 0 12px' }}>設定展示帳號密碼</p>
+                <input
+                    style={inputStyle}
+                    type="password"
+                    placeholder="新密碼（例：S001Test!）"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    autoComplete="new-password"
+                />
+                <button
+                    style={{ ...btnPrimary, opacity: saving === 'password' ? 0.6 : 1 }}
+                    disabled={saving === 'password'}
+                    onClick={handleSetPassword}
+                >
+                    {saving === 'password' ? '儲存中…' : '設定密碼'}
+                </button>
+            </div>
+
+            {/* 從真實帳號同步 / Sync from real account */}
+            <div style={{ ...card, borderLeft: '4px solid #eab308' }}>
+                <p style={{ fontWeight: 700, fontSize: '14px', color: 'var(--text)', margin: '0 0 4px' }}>從真實帳號同步資料</p>
+                <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: '0 0 12px' }}>
+                    帳密僅用於本次同步，不存入任何地方。同步課表、成績、圖書館資料。
+                </p>
+                <input
+                    style={inputStyle}
+                    type="text"
+                    placeholder="真實帳號學號"
+                    value={syncId}
+                    onChange={(e) => setSyncId(e.target.value)}
+                    autoComplete="off"
+                />
+                <input
+                    style={inputStyle}
+                    type="password"
+                    placeholder="真實帳號密碼"
+                    value={syncPw}
+                    onChange={(e) => setSyncPw(e.target.value)}
+                    autoComplete="new-password"
+                />
+                <button
+                    style={{ ...btnPrimary, opacity: syncing ? 0.6 : 1, background: '#ca8a04' }}
+                    disabled={syncing}
+                    onClick={handleSync}
+                >
+                    {syncing ? '同步中（約 30–60 秒）…' : '開始同步'}
+                </button>
+                {syncResult && (
+                    <div style={{ marginTop: '12px', borderTop: '1px solid var(--border)', paddingTop: '10px' }}>
+                        {Object.entries(syncResult).map(([k, v]) => (
+                            <div key={k} style={{ display: 'flex', gap: '8px', padding: '3px 0', fontSize: '13px' }}>
+                                <span style={{ fontWeight: 600, color: 'var(--text)', minWidth: '64px' }}>{k}</span>
+                                <span style={{ color: String(v).startsWith('ok') ? 'var(--color-success)' : 'var(--color-danger)' }}>{v}</span>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
+
+            {/* 展示任務 / Demo Tasks */}
+            <div style={card}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                    <p style={{ fontWeight: 700, fontSize: '14px', color: 'var(--text)', margin: 0 }}>展示帳號任務</p>
+                    <button onClick={handleLoadTasks} style={{ ...btnGhost, fontSize: '12px', padding: '4px 10px' }}>載入</button>
+                </div>
+                <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: '0 0 8px' }}>以 JSON 陣列格式輸入任務（與前端 taskStore 格式相同）</p>
+                <textarea
+                    style={{ ...inputStyle, minHeight: '120px', resize: 'vertical', fontFamily: 'monospace', fontSize: '12px' }}
+                    placeholder='[{"id":"1","title":"期中報告","done":false,"dueDate":null}]'
+                    value={tasks}
+                    onChange={(e) => setTasks(e.target.value)}
+                />
+                <button
+                    style={{ ...btnPrimary, opacity: saving === 'tasks' ? 0.6 : 1 }}
+                    disabled={saving === 'tasks'}
+                    onClick={handleSetTasks}
+                >
+                    {saving === 'tasks' ? '儲存中…' : '儲存任務'}
+                </button>
+            </div>
+        </>
+    );
+}
+
+// ══════════════════════════════════════
 //  資安面板 / Security Panel
 // ══════════════════════════════════════
 const SEVERITY_COLORS = {
@@ -548,14 +746,14 @@ export default function Admin() {
 
             {/* Tabs */}
             <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', flexWrap: 'wrap' }}>
-                {['announcements', 'feedback', 'shares', 'analytics', 'config', 'security'].map((t) => (
+                {['announcements', 'feedback', 'shares', 'analytics', 'config', 'security', 'demo'].map((t) => (
                     <button key={t} onClick={() => setTab(t)} style={{
                         padding: '8px 16px', borderRadius: '10px', border: 'none', cursor: 'pointer',
-                        background: tab === t ? (t === 'security' ? 'var(--color-danger)' : 'var(--color-brand)') : 'var(--bg-input)',
+                        background: tab === t ? (t === 'security' ? 'var(--color-danger)' : t === 'demo' ? '#ca8a04' : 'var(--color-brand)') : 'var(--bg-input)',
                         color: tab === t ? 'white' : 'var(--text-secondary)',
                         fontWeight: tab === t ? 600 : 400, fontSize: '14px',
                     }}>
-                        {t === 'announcements' ? '公告管理' : t === 'feedback' ? '意見回饋' : t === 'shares' ? '共享平台' : t === 'analytics' ? '使用統計' : t === 'config' ? '系統設定' : '資安面板'}
+                        {t === 'announcements' ? '公告管理' : t === 'feedback' ? '意見回饋' : t === 'shares' ? '共享平台' : t === 'analytics' ? '使用統計' : t === 'config' ? '系統設定' : t === 'security' ? '資安面板' : '展示帳號'}
                     </button>
                 ))}
             </div>
@@ -909,6 +1107,11 @@ export default function Admin() {
             {/* Security Tab */}
             {tab === 'security' && (
                 <SecurityPanel token={token} showMsg={showMsg} />
+            )}
+
+            {/* Demo Tab */}
+            {tab === 'demo' && (
+                <DemoPanel token={token} showMsg={showMsg} />
             )}
 
             {/* Config Tab */}
