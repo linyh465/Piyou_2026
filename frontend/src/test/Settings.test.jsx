@@ -147,6 +147,6 @@ describe('Settings Page', () => {
         <Settings />
       </MemoryRouter>
     );
-    expect(screen.getByText('1.0.0-beta')).toBeInTheDocument();
+    expect(screen.getByText('1.0.0')).toBeInTheDocument();
   });
 });
