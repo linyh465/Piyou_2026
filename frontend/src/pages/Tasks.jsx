@@ -7,7 +7,7 @@ import useTaskStore from '../stores/taskStore';
 import { trackEvent } from '../services/analytics';
 import {
     IconCheckSquare, IconPlus, IconEdit, IconTrash,
-    IconCheck, IconDownload, IconStar, IconRefresh,
+    IconCheck, IconDownload, IconStar,
     IconFolder, IconBook, IconCalendar, IconUser,
     IconDotsVertical,
 } from '../components/Icons';
@@ -178,21 +178,9 @@ export default function Tasks() {
     const [showForm, setShowForm] = useState(false);
     const [editTask, setEditTask] = useState(null);
     const [showMenu, setShowMenu] = useState(false);
-    const [syncing, setSyncing] = useState(false);
     const menuRef = useRef(null);
 
-    const handleSync = async () => {
-        if (syncing) return;
-        setSyncing(true);
-        try {
-            await loadTasks();
-        } finally {
-            setSyncing(false);
-        }
-    };
-
     useEffect(() => { loadTasks(); }, [loadTasks]);
-
 
     useEffect(() => {
         if (!showMenu) return;
@@ -224,15 +212,6 @@ export default function Tasks() {
                     </button>
                     <div className="page-menu-wrapper" ref={menuRef}>
                         <div className="page-header-actions">
-                            <button
-                                onClick={handleSync}
-                                disabled={syncing}
-                                className="btn btn-ghost"
-                                style={{ fontSize: '13px' }}
-                                aria-label="同步"
-                            >
-                                <IconRefresh size={15} style={{ opacity: syncing ? 0.4 : 1 }} />
-                            </button>
                             <button onClick={exportToMarkdown} className="btn btn-ghost" style={{ fontSize: '13px' }} aria-label={tCommon('exportMarkdown')}>
                                 <IconDownload size={15} /> MD
                             </button>
@@ -242,9 +221,6 @@ export default function Tasks() {
                         </button>
                         {showMenu && (
                             <div className="page-menu-dropdown">
-                                <button onClick={() => { handleSync(); setShowMenu(false); }} disabled={syncing} className="btn btn-ghost">
-                                    <IconRefresh size={14} style={{ opacity: syncing ? 0.4 : 1 }} /> 同步
-                                </button>
                                 <button onClick={() => { exportToMarkdown(); setShowMenu(false); }} className="btn btn-ghost">
                                     <IconDownload size={14} /> {tCommon('exportMarkdown')}
                                 </button>
