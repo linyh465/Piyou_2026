@@ -17,7 +17,7 @@ export const COLOR_THEMES = [
     { id: 'crimson', label: '緋紅', labelEn: 'Crimson', description: '丹霞映雪', color: '#DC2626' },
     { id: 'emerald', label: '翠柏', labelEn: 'Emerald', description: '蒼松斂翠', color: '#059669' },
     { id: 'rose', label: '薔薇', labelEn: 'Rose', description: '春庭薔薇', color: '#E11D48' },
-    { id: 'wisteria', label: '紫櫻', labelEn: 'Wisteria', description: '幽夢花期', color: '#C026D3' },
+    { id: 'wisteria', label: '紫櫻', labelEn: 'Wisteria', description: '幽夢花期', color: '#F9DCFD' },
 ];
 
 function getSystemTheme() {
