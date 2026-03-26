@@ -144,10 +144,17 @@ function ShareCard({ entry, deviceId, onRemove, onUpdated }) {
     const [confirmDelete, setConfirmDelete] = useState(false);
     const [deleting, setDeleting] = useState(false);
 
-    // 密碼解鎖
+    // 密碼解鎖（訂閱密碼）
     const [unlockPw, setUnlockPw] = useState('');
     const [unlocking, setUnlocking] = useState(false);
     const [unlockError, setUnlockError] = useState('');
+
+    // 編輯密碼解鎖（其他裝置）
+    const [showEditUnlock, setShowEditUnlock] = useState(false);
+    const [editUnlockInput, setEditUnlockInput] = useState('');
+
+    // 是否有編輯權限（裝置擁有者 or 已輸入編輯密碼）
+    const canEdit = entry.is_owner || !!entry.edit_password;
 
     // 編輯模式
     const [editMode, setEditMode] = useState(false);
@@ -170,12 +177,18 @@ function ShareCard({ entry, deviceId, onRemove, onUpdated }) {
         try {
             await apiFetch(`/${entry.code}`, {
                 method: 'DELETE',
-                body: JSON.stringify({ device_id: deviceId }),
+                body: JSON.stringify({ device_id: deviceId, edit_password: entry.edit_password || undefined }),
             });
             removeShare(entry.code);
             onRemove(entry.code);
         } catch (e) {
-            alert(`刪除失敗：${e.message}`);
+            if (e.status === 403) {
+                // 編輯密碼可能已變更，清除本地緩存
+                upsertShare({ ...entry, edit_password: undefined });
+                alert('編輯密碼錯誤或無權限，請重新輸入編輯密碼。');
+            } else {
+                alert(`刪除失敗：${e.message}`);
+            }
         } finally {
             setDeleting(false);
             setConfirmDelete(false);
@@ -212,6 +225,7 @@ function ShareCard({ entry, deviceId, onRemove, onUpdated }) {
         const validUrls = editLinkUrls.map((u) => u.trim()).filter(Boolean);
         const payload = {
             device_id: deviceId,
+            edit_password: entry.edit_password || undefined,
             title: editForm.title.trim() || undefined,
             body: editForm.body.trim() || null,
             link_urls: validUrls,
@@ -225,15 +239,21 @@ function ShareCard({ entry, deviceId, onRemove, onUpdated }) {
                 body: JSON.stringify(payload),
             });
             const newCode = data.code;
+            const preserved = { unlocked: entry.unlocked, edit_password: entry.edit_password };
             if (newCode !== entry.code) {
-                renameShare(entry.code, { ...data, is_owner: true, unlocked: true });
+                renameShare(entry.code, { ...data, is_owner: entry.is_owner, ...preserved });
             } else {
-                upsertShare({ ...data, is_owner: true, unlocked: true });
+                upsertShare({ ...data, is_owner: entry.is_owner, ...preserved });
             }
-            onUpdated({ ...data, is_owner: true, unlocked: true, _oldCode: entry.code });
+            onUpdated({ ...data, is_owner: entry.is_owner, ...preserved, _oldCode: entry.code });
             setEditMode(false);
         } catch (e) {
-            setSaveError(e.status === 409 ? '此分享碼已有人使用，請更換後重試' : (e.message || '儲存失敗，請稍後再試'));
+            if (e.status === 403) {
+                upsertShare({ ...entry, edit_password: undefined });
+                setSaveError('編輯密碼錯誤或無權限，請重新輸入編輯密碼。');
+            } else {
+                setSaveError(e.status === 409 ? '此分享碼已有人使用，請更換後重試' : (e.message || '儲存失敗，請稍後再試'));
+            }
         } finally {
             setSaving(false);
         }
@@ -256,6 +276,9 @@ function ShareCard({ entry, deviceId, onRemove, onUpdated }) {
                 </span>
                 {entry.is_owner && (
                     <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>你的分享</span>
+                )}
+                {!entry.is_owner && canEdit && (
+                    <span style={{ fontSize: '11px', color: 'var(--color-success)' }}>已解鎖編輯</span>
                 )}
                 {entry.password_protected && (
                     <span style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '3px' }}>
@@ -375,6 +398,54 @@ function ShareCard({ entry, deviceId, onRemove, onUpdated }) {
                 </>
             )}
 
+            {/* 編輯密碼解鎖（其他裝置）*/}
+            {!entry.is_owner && !entry.deleted && entry.has_edit_password && !canEdit && (
+                <div style={{ marginTop: '10px' }}>
+                    {showEditUnlock ? (
+                        <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
+                            <input
+                                type="password"
+                                value={editUnlockInput}
+                                onChange={(e) => setEditUnlockInput(e.target.value)}
+                                placeholder="輸入編輯密碼…"
+                                maxLength={100}
+                                style={{
+                                    flex: 1, minWidth: '120px', padding: '8px 12px', borderRadius: '8px',
+                                    fontSize: '13px', border: '1.5px solid var(--border-subtle)',
+                                    background: 'var(--bg-input)', color: 'var(--text-primary)', outline: 'none',
+                                }}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                        e.preventDefault();
+                                        upsertShare({ ...entry, edit_password: editUnlockInput });
+                                        setEditUnlockInput('');
+                                        setShowEditUnlock(false);
+                                    }
+                                }}
+                            />
+                            <button className="btn btn-ghost" style={{ fontSize: '13px' }}
+                                onClick={() => {
+                                    upsertShare({ ...entry, edit_password: editUnlockInput });
+                                    setEditUnlockInput('');
+                                    setShowEditUnlock(false);
+                                }}>
+                                解鎖
+                            </button>
+                            <button className="btn btn-ghost" style={{ fontSize: '13px' }}
+                                onClick={() => { setShowEditUnlock(false); setEditUnlockInput(''); }}>
+                                取消
+                            </button>
+                        </div>
+                    ) : (
+                        <button className="btn btn-ghost"
+                            onClick={() => setShowEditUnlock(true)}
+                            style={{ fontSize: '13px', display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--color-brand)' }}>
+                            <IconLock size={13} /> 輸入編輯密碼以編輯
+                        </button>
+                    )}
+                </div>
+            )}
+
             {/* 操作按鈕 */}
             {!editMode && (
                 <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '10px', gap: '6px', flexWrap: 'wrap' }}>
@@ -384,7 +455,7 @@ function ShareCard({ entry, deviceId, onRemove, onUpdated }) {
                             style={{ color: 'var(--color-danger)', fontSize: '13px' }}>
                             移除此則
                         </button>
-                    ) : entry.is_owner ? (
+                    ) : canEdit ? (
                         <>
                             <button className="btn btn-ghost"
                                 onClick={() => {
@@ -492,6 +563,11 @@ function CreateForm({ deviceId, onCreated }) {
     const [open, setOpen] = useState(false);
     const [form, setForm] = useState({ code: '', title: '', body: '' });
     const [linkUrls, setLinkUrls] = useState(['']);
+    // 編輯密碼（必填）
+    const [editPassword, setEditPassword] = useState('');
+    const [editPasswordConfirm, setEditPasswordConfirm] = useState('');
+    const [showEditPw, setShowEditPw] = useState(false);
+    // 訂閱密碼（選填）
     const [enablePw, setEnablePw] = useState(false);
     const [password, setPassword] = useState('');
     const [pwConfirm, setPwConfirm] = useState('');
@@ -504,8 +580,12 @@ function CreateForm({ deviceId, onCreated }) {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        if (editPassword !== editPasswordConfirm) {
+            setError('兩次輸入的編輯密碼不一致');
+            return;
+        }
         if (enablePw && password !== pwConfirm) {
-            setError('兩次輸入的密碼不一致');
+            setError('兩次輸入的訂閱密碼不一致');
             return;
         }
         setLoading(true);
@@ -521,13 +601,16 @@ function CreateForm({ deviceId, onCreated }) {
                     link_urls: validUrls,
                     device_id: deviceId,
                     password: enablePw ? password : null,
+                    edit_password: editPassword,
                 }),
             });
-            upsertShare({ ...data, is_owner: true, unlocked: true });
+            upsertShare({ ...data, is_owner: true, unlocked: true, edit_password: editPassword });
             onCreated(data);
             trackEvent('share_create', {}, '/share');
             setForm({ code: '', title: '', body: '' });
             setLinkUrls(['']);
+            setEditPassword('');
+            setEditPasswordConfirm('');
             setEnablePw(false);
             setPassword('');
             setPwConfirm('');
@@ -599,12 +682,32 @@ function CreateForm({ deviceId, onCreated }) {
             </div>
             <LinkUrlsEditor linkUrls={linkUrls} setLinkUrls={setLinkUrls} />
 
-            {/* 密碼保護 */}
+            {/* 編輯密碼（必填）*/}
+            <div>
+                <label style={labelStyle}>編輯密碼（必填，其他裝置輸入此密碼後可編輯）</label>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <div style={{ position: 'relative' }}>
+                        <input type={showEditPw ? 'text' : 'password'} value={editPassword}
+                            onChange={(e) => setEditPassword(e.target.value.slice(0, 100))}
+                            style={{ ...inputStyle, paddingRight: '40px' }}
+                            placeholder="設定編輯密碼" maxLength={100} required />
+                        <button type="button" onClick={() => setShowEditPw((v) => !v)}
+                            style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}>
+                            {showEditPw ? <IconEyeOff size={16} /> : <IconEye size={16} />}
+                        </button>
+                    </div>
+                    <input type={showEditPw ? 'text' : 'password'} value={editPasswordConfirm}
+                        onChange={(e) => setEditPasswordConfirm(e.target.value.slice(0, 100))}
+                        style={inputStyle} placeholder="再次輸入編輯密碼" maxLength={100} required />
+                </div>
+            </div>
+
+            {/* 訂閱密碼（選填）*/}
             <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
                     <label style={{ ...labelStyle, marginBottom: 0, display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
                         <input type="checkbox" checked={enablePw} onChange={(e) => setEnablePw(e.target.checked)} />
-                        啟用訂閱密碼
+                        啟用訂閱密碼（限制誰能查看內容）
                     </label>
                 </div>
                 {enablePw && (
@@ -613,7 +716,7 @@ function CreateForm({ deviceId, onCreated }) {
                             <input type={showPw ? 'text' : 'password'} value={password}
                                 onChange={(e) => setPassword(e.target.value.slice(0, 100))}
                                 style={{ ...inputStyle, paddingRight: '40px' }}
-                                placeholder="設定密碼" maxLength={100} required={enablePw} />
+                                placeholder="設定訂閱密碼" maxLength={100} required={enablePw} />
                             <button type="button"
                                 onClick={() => setShowPw((v) => !v)}
                                 style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}>
@@ -622,7 +725,7 @@ function CreateForm({ deviceId, onCreated }) {
                         </div>
                         <input type={showPw ? 'text' : 'password'} value={pwConfirm}
                             onChange={(e) => setPwConfirm(e.target.value.slice(0, 100))}
-                            style={inputStyle} placeholder="再次輸入密碼" maxLength={100} required={enablePw} />
+                            style={inputStyle} placeholder="再次輸入訂閱密碼" maxLength={100} required={enablePw} />
                     </div>
                 )}
             </div>

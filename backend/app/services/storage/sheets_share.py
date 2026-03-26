@@ -4,7 +4,7 @@ Google Sheets 共享平台儲存 / Google Sheets Share Platform Storage
 Uses the same Service Account auth pattern as sheets_notify.py.
 
 shared_items 欄位 / shared_items columns:
-  A=code  B=title  C=body  D=link_urls  E=device_id_hash  F=created_at  G=is_deleted  H=password_hash
+  A=code  B=title  C=body  D=link_urls  E=device_id_hash  F=created_at  G=is_deleted  H=password_hash  I=edit_password_hash
 """
 import os
 import json
@@ -100,7 +100,8 @@ def _row_to_dict(row: list) -> dict:
         "device_id_hash": get(4),
         "created_at": get(5),
         "deleted": get(6).upper() == "TRUE",
-        "password_hash": get(7) or None,  # H 欄，空字串代表無密碼
+        "password_hash": get(7) or None,      # H 欄，訂閱密碼雜湊
+        "edit_password_hash": get(8) or None,  # I 欄，編輯密碼雜湊
     }
 
 
@@ -110,7 +111,7 @@ def _get_share_sync(code: str) -> Optional[dict]:
     sheets_id = _get_sheets_id()
     result = service.spreadsheets().values().get(
         spreadsheetId=sheets_id,
-        range="shared_items!A2:H",
+        range="shared_items!A2:I",
     ).execute()
     rows = result.get("values", [])
     for row in rows:
@@ -121,7 +122,8 @@ def _get_share_sync(code: str) -> Optional[dict]:
 
 def _create_share_sync(code: str, title: str, body: Optional[str],
                        link_urls: list, device_id: str,
-                       password: Optional[str] = None) -> dict:
+                       password: Optional[str] = None,
+                       edit_password: str = "") -> dict:
     """同步建立分享項 / Sync create share item."""
     service = _build_service()
     sheets_id = _get_sheets_id()
@@ -135,7 +137,8 @@ def _create_share_sync(code: str, title: str, body: Optional[str],
     device_id_hash = _hash_device_id(device_id)
     link_urls_str = json.dumps(link_urls, ensure_ascii=False) if link_urls else ""
     password_hash = _hash_password(password) if password else ""
-    row = [code, title, body or "", link_urls_str, device_id_hash, now, "FALSE", password_hash]
+    edit_password_hash = _hash_password(edit_password) if edit_password else ""
+    row = [code, title, body or "", link_urls_str, device_id_hash, now, "FALSE", password_hash, edit_password_hash]
 
     service.spreadsheets().values().append(
         spreadsheetId=sheets_id,
@@ -153,13 +156,15 @@ def _create_share_sync(code: str, title: str, body: Optional[str],
         "created_at": now,
         "deleted": False,
         "password_hash": password_hash or None,
+        "edit_password_hash": edit_password_hash or None,
     }
 
 
-def _delete_share_sync(code: str, device_id: str) -> bool:
+def _delete_share_sync(code: str, device_id: str,
+                       edit_password: Optional[str] = None) -> bool:
     """
     同步刪除（標記）分享項 / Sync soft-delete share item.
-    擁有者驗證：device_id_hash 相符。
+    擁有者驗證：device_id_hash 相符，或 edit_password 驗證通過。
     Returns True if deleted, False if not found or not authorized.
     """
     service = _build_service()
@@ -167,7 +172,7 @@ def _delete_share_sync(code: str, device_id: str) -> bool:
 
     result = service.spreadsheets().values().get(
         spreadsheetId=sheets_id,
-        range="shared_items!A2:H",
+        range="shared_items!A2:I",
     ).execute()
     rows = result.get("values", [])
     device_id_hash = _hash_device_id(device_id)
@@ -176,10 +181,12 @@ def _delete_share_sync(code: str, device_id: str) -> bool:
         if not row or row[0] != code:
             continue
         stored_device_hash = row[4] if len(row) > 4 else ""
-        if stored_device_hash != device_id_hash:
+        stored_edit_hash = row[8] if len(row) > 8 else ""
+        is_device_owner = stored_device_hash == device_id_hash
+        is_edit_auth = bool(edit_password and stored_edit_hash and _check_password(edit_password, stored_edit_hash))
+        if not (is_device_owner or is_edit_auth):
             return False
-        # 標記 is_deleted = TRUE / Mark as deleted
-        row_number = i + 2  # +1 header +1 1-indexed
+        row_number = i + 2
         service.spreadsheets().values().update(
             spreadsheetId=sheets_id,
             range=f"shared_items!G{row_number}",
@@ -192,14 +199,17 @@ def _delete_share_sync(code: str, device_id: str) -> bool:
 
 
 def _update_share_sync(code: str, device_id: str, *,
+                       edit_password: Optional[str] = None,
                        title: Optional[str] = None,
                        body: Optional[str] = None,
                        link_urls: Optional[list] = None,
                        new_code: Optional[str] = None,
                        password: Optional[str] = None,
-                       remove_password: bool = False) -> Optional[dict]:
+                       remove_password: bool = False,
+                       new_edit_password: Optional[str] = None) -> Optional[dict]:
     """
     同步更新分享項（驗證擁有者）/ Sync update share item (verifies owner).
+    擁有者驗證：device_id_hash 相符，或 edit_password 驗證通過。
     Returns updated dict or None if not found / not authorized.
     Raises ValueError if new_code already exists.
     """
@@ -208,16 +218,19 @@ def _update_share_sync(code: str, device_id: str, *,
 
     result = service.spreadsheets().values().get(
         spreadsheetId=sheets_id,
-        range="shared_items!A2:H",
+        range="shared_items!A2:I",
     ).execute()
     rows = result.get("values", [])
     device_id_hash = _hash_device_id(device_id)
 
     for i, row in enumerate(rows):
-        row = row + [""] * (8 - len(row))
+        row = row + [""] * (9 - len(row))
         if row[0] != code:
             continue
-        if row[4] != device_id_hash:
+        stored_edit_hash = row[8]
+        is_device_owner = row[4] == device_id_hash
+        is_edit_auth = bool(edit_password and stored_edit_hash and _check_password(edit_password, stored_edit_hash))
+        if not (is_device_owner or is_edit_auth):
             return None  # not authorized
 
         # 若要改分享碼，先確認新碼不重複
@@ -237,11 +250,13 @@ def _update_share_sync(code: str, device_id: str, *,
             row[7] = ""
         elif password is not None:
             row[7] = _hash_password(password)
+        if new_edit_password is not None:
+            row[8] = _hash_password(new_edit_password)
 
         row_number = i + 2
         service.spreadsheets().values().update(
             spreadsheetId=sheets_id,
-            range=f"shared_items!A{row_number}:H{row_number}",
+            range=f"shared_items!A{row_number}:I{row_number}",
             valueInputOption="RAW",
             body={"values": [row]},
         ).execute()
@@ -262,14 +277,16 @@ async def get_share(code: str) -> Optional[dict]:
 
 async def create_share(code: str, title: str, body: Optional[str],
                        link_urls: list, device_id: str,
-                       password: Optional[str] = None) -> dict:
+                       password: Optional[str] = None,
+                       edit_password: str = "") -> dict:
     """建立分享項（非同步）/ Create share item (async)."""
-    return await asyncio.to_thread(_create_share_sync, code, title, body, link_urls, device_id, password)
+    return await asyncio.to_thread(_create_share_sync, code, title, body, link_urls, device_id, password, edit_password)
 
 
-async def delete_share(code: str, device_id: str) -> bool:
+async def delete_share(code: str, device_id: str,
+                       edit_password: Optional[str] = None) -> bool:
     """刪除分享項（非同步）/ Delete share item (async)."""
-    return await asyncio.to_thread(_delete_share_sync, code, device_id)
+    return await asyncio.to_thread(_delete_share_sync, code, device_id, edit_password)
 
 
 async def update_share(code: str, device_id: str, **kwargs) -> Optional[dict]:
@@ -303,7 +320,7 @@ def _clear_all_shares_sync() -> int:
     count = len(result.get("values", []))
     if count > 0:
         service.spreadsheets().values().clear(
-            spreadsheetId=sheets_id, range="shared_items!A2:H", body={}
+            spreadsheetId=sheets_id, range="shared_items!A2:I", body={}
         ).execute()
     return count
 

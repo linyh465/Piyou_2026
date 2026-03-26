@@ -20,6 +20,7 @@ router = APIRouter(prefix="/share", tags=["共享平台 / Share Platform"])
 
 class _DeleteBody(BaseModel):
     device_id: str
+    edit_password: Optional[str] = None
 
 
 def _build_response(data: dict, device_id: Optional[str] = None,
@@ -34,6 +35,7 @@ def _build_response(data: dict, device_id: Optional[str] = None,
     is_owner = False
     if device_id:
         is_owner = _hash_device_id(device_id) == data.get("device_id_hash", "")
+    has_edit_password = bool(data.get("edit_password_hash"))
 
     password_protected = bool(data.get("password_hash"))
     show_content = include_content and (not password_protected or is_owner or password_verified)
@@ -47,6 +49,7 @@ def _build_response(data: dict, device_id: Optional[str] = None,
         deleted=data.get("deleted", False),
         password_protected=password_protected,
         is_owner=is_owner,
+        has_edit_password=has_edit_password,
     )
 
 
@@ -71,6 +74,7 @@ async def create_share(
             link_urls=payload.link_urls,
             device_id=payload.device_id,
             password=payload.password or None,
+            edit_password=payload.edit_password,
         )
     except ValueError as e:
         raise HTTPException(status_code=409, detail=str(e))
@@ -149,12 +153,14 @@ async def update_share(
         result = await sheets_share.update_share(
             code=code,
             device_id=payload.device_id,
+            edit_password=payload.edit_password,
             title=payload.title,
             body=payload.body,
             link_urls=payload.link_urls,
             new_code=payload.new_code,
             password=payload.password,
             remove_password=payload.remove_password,
+            new_edit_password=payload.new_edit_password,
         )
     except ValueError as e:
         raise HTTPException(status_code=409, detail=str(e))
@@ -182,7 +188,7 @@ async def delete_share(
         raise HTTPException(status_code=403, detail="Device ID mismatch / 裝置 ID 不符")
 
     try:
-        ok = await sheets_share.delete_share(code=code, device_id=body.device_id)
+        ok = await sheets_share.delete_share(code=code, device_id=body.device_id, edit_password=body.edit_password)
     except Exception as e:
         logger.error(f"share delete error: {e}")
         raise HTTPException(status_code=503, detail="暫時無法刪除，請稍後再試")
