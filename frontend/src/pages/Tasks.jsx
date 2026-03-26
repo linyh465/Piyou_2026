@@ -230,6 +230,14 @@ export default function Tasks() {
                 </div>
             </div>
 
+            <div style={{
+                background: 'rgba(99,102,241,0.06)', borderRadius: '12px', padding: '10px 14px',
+                border: '1px solid rgba(99,102,241,0.18)', fontSize: '12px',
+                color: 'var(--text-muted)', lineHeight: '1.6',
+            }}>
+                由於本程式不存取使用者帳號資料，任務資料僅儲存於此裝置，<strong style={{ color: 'var(--text-secondary)' }}>無法跨裝置同步</strong>。
+            </div>
+
             <div style={{ display: 'flex', gap: '8px' }}>
                 {filters.map((f) => (
                     <button

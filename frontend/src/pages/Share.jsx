@@ -702,6 +702,15 @@ export default function Share() {
                 點擊他人分享的連結前請先確認來源可信，勿輕易輸入個人資料或帳號密碼。本平台不對第三方連結的安全性負責，分享內容由使用者自行負責。若發現違規內容，請向管理員檢舉。
             </div>
 
+            {/* 跨裝置提示 */}
+            <div style={{
+                background: 'rgba(99,102,241,0.06)', borderRadius: '12px', padding: '10px 14px',
+                border: '1px solid rgba(99,102,241,0.18)', fontSize: '12px',
+                color: 'var(--text-muted)', lineHeight: '1.6',
+            }}>
+                由於本程式不存取使用者帳號資料，分享訂閱清單僅儲存於此裝置，<strong style={{ color: 'var(--text-secondary)' }}>無法跨裝置同步</strong>。
+            </div>
+
             {/* 訂閱分享碼 */}
             <div style={{
                 background: 'var(--bg-card)', borderRadius: '14px', padding: '16px 18px',
