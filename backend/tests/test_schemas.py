@@ -63,6 +63,7 @@ def test_share_create_valid():
         body="請大家查看附件",
         link_urls=["https://example.com"],
         device_id="device-abc-123",
+        edit_password="secret123",
     )
     assert req.code == "mygroup-2026"
     assert req.title == "小組期末報告"

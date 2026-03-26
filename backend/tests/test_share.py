@@ -68,6 +68,7 @@ async def test_create_share_no_sheets(client):
         "code": "mygroup-2026",
         "title": "小組報告",
         "device_id": "test-device-001",
+        "edit_password": "secret123",
     })
     assert resp.status_code == 503
 
