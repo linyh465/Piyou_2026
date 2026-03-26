@@ -4,7 +4,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import useTaskStore from '../stores/taskStore';
-import useAuthStore from '../stores/authStore';
 import { trackEvent } from '../services/analytics';
 import {
     IconCheckSquare, IconPlus, IconEdit, IconTrash,
@@ -176,7 +175,6 @@ export default function Tasks() {
     const { t } = useTranslation('tasks');
     const { t: tCommon } = useTranslation('common');
     const { isLoading, filter, setFilter, loadTasks, getFilteredTasks, exportToMarkdown } = useTaskStore();
-    const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
     const [showForm, setShowForm] = useState(false);
     const [editTask, setEditTask] = useState(null);
     const [showMenu, setShowMenu] = useState(false);

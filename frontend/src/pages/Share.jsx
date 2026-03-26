@@ -675,7 +675,7 @@ export default function Share() {
     }, []);
 
     useEffect(() => {
-        refreshAll();
+        refreshAll(); // eslint-disable-line react-hooks/set-state-in-effect
     }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
     const handleSubscribed = () => setShares(loadShares());
