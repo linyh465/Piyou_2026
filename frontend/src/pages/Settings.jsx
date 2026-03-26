@@ -117,6 +117,9 @@ export default function Settings() {
     const [announceNotify, setAnnounceNotify] = useState(() => {
         try { return JSON.parse(localStorage.getItem('piyou_announceNotify') ?? 'true'); } catch { return true; }
     });
+    const [crossDeviceSync, setCrossDeviceSync] = useState(() => {
+        try { return JSON.parse(localStorage.getItem('piyou_crossDeviceSync') ?? 'true'); } catch { return true; }
+    });
     const [showFeedback, setShowFeedback] = useState(false);
     const [showPolicy, setShowPolicy] = useState(null); // 'privacy' | 'terms' | null
     const [updateStatus, setUpdateStatus] = useState('idle'); // 'idle' | 'checking' | 'updating' | 'latest' | 'unavailable'
@@ -162,6 +165,7 @@ export default function Settings() {
     useEffect(() => { localStorage.setItem('piyou_busNotify', JSON.stringify(busNotify)); }, [busNotify]);
     useEffect(() => { localStorage.setItem('piyou_taskNotify', JSON.stringify(taskNotify)); }, [taskNotify]);
     useEffect(() => { localStorage.setItem('piyou_announceNotify', JSON.stringify(announceNotify)); }, [announceNotify]);
+    useEffect(() => { localStorage.setItem('piyou_crossDeviceSync', JSON.stringify(crossDeviceSync)); }, [crossDeviceSync]);
 
     const handleAnnounceNotifyToggle = async (val) => {
         if (val && typeof Notification !== 'undefined' && Notification.permission !== 'granted') {
@@ -576,6 +580,24 @@ export default function Settings() {
                     </SettingItem>
                     <SettingItem icon={IconBell} label="任務截止提醒" labelEn="Task deadline reminders">
                         <Toggle checked={taskNotify} onChange={setTaskNotify} aria-label="任務截止提醒" />
+                    </SettingItem>
+                </div>
+            </div>
+
+            {/* ═══ 同步偏好 / Sync Preferences ═══ */}
+            <div className="card-stack">
+                <SectionHeader title="同步偏好" titleEn="Sync Preferences" />
+                <div className="card">
+                    <SettingItem
+                        icon={IconRefresh}
+                        label="跨裝置同步"
+                        labelEn="Tasks & Share Platform"
+                    >
+                        <Toggle
+                            checked={crossDeviceSync}
+                            onChange={setCrossDeviceSync}
+                            aria-label="跨裝置同步"
+                        />
                     </SettingItem>
                 </div>
             </div>

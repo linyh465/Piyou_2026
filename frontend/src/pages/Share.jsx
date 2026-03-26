@@ -660,37 +660,44 @@ export default function Share() {
 
     const refreshAll = useCallback(async () => {
         setRefreshing(true);
-        // 先執行使用者資料同步（上傳本地 + 合併遠端）
-        await uploadUserSync(true);
-        await downloadAndMergeUserSync();
+        try {
+            // 跨裝置同步（若開啟）/ Cross-device sync (if enabled)
+            const crossSync = (() => { try { return JSON.parse(localStorage.getItem('piyou_crossDeviceSync') ?? 'true'); } catch { return true; } })();
+            if (crossSync) {
+                await downloadAndMergeUserSync().catch(() => {});
+            }
 
-        const list = loadShares();
-        if (list.length) {
-            const updated = await Promise.all(
-                list.map(async (s) => {
-                    try {
-                        const fresh = await apiFetch(`/${s.code}`);
-                        // 如果本地已解鎖，保留解鎖內容，只更新 title/deleted/password_protected
-                        if (s.unlocked && fresh.password_protected) {
-                            return { ...s, title: fresh.title, deleted: fresh.deleted, password_protected: fresh.password_protected };
+            const list = loadShares();
+            if (list.length) {
+                const updated = await Promise.all(
+                    list.map(async (s) => {
+                        try {
+                            const fresh = await apiFetch(`/${s.code}`);
+                            // 如果本地已解鎖，保留解鎖內容，只更新 title/deleted/password_protected
+                            if (s.unlocked && fresh.password_protected) {
+                                return { ...s, title: fresh.title, deleted: fresh.deleted, password_protected: fresh.password_protected };
+                            }
+                            return { ...s, ...fresh };
+                        } catch {
+                            return s;
                         }
-                        return { ...s, ...fresh };
-                    } catch {
-                        return s;
-                    }
-                })
-            );
-            updated.forEach(upsertShare);
+                    })
+                );
+                updated.forEach(upsertShare);
+            }
+
+            if (crossSync) {
+                await uploadUserSync(true).catch(() => {});
+            }
+
+            setShares(loadShares());
+        } finally {
+            setRefreshing(false);
         }
-        setRefreshing(false);
-        setShares(loadShares());
     }, []);
 
     useEffect(() => {
-        let active = true;
-        // eslint-disable-next-line react-hooks/set-state-in-effect
-        refreshAll().then(() => { if (!active) setRefreshing(false); });
-        return () => { active = false; };
+        refreshAll();
     }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
     const handleSubscribed = () => setShares(loadShares());
