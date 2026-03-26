@@ -4,7 +4,7 @@ Google Sheets 共享平台儲存 / Google Sheets Share Platform Storage
 Uses the same Service Account auth pattern as sheets_notify.py.
 
 shared_items 欄位 / shared_items columns:
-  A=code  B=title  C=body  D=link_urls  E=device_id_hash  F=created_at  G=is_deleted  H=password_hash  I=student_id_hash
+  A=code  B=title  C=body  D=link_urls  E=device_id_hash  F=created_at  G=is_deleted  H=password_hash
 """
 import os
 import json
@@ -101,7 +101,6 @@ def _row_to_dict(row: list) -> dict:
         "created_at": get(5),
         "deleted": get(6).upper() == "TRUE",
         "password_hash": get(7) or None,  # H 欄，空字串代表無密碼
-        "student_id_hash": get(8) or None,  # I 欄，學號雜湊（跨裝置辨識擁有者）
     }
 
 
@@ -111,7 +110,7 @@ def _get_share_sync(code: str) -> Optional[dict]:
     sheets_id = _get_sheets_id()
     result = service.spreadsheets().values().get(
         spreadsheetId=sheets_id,
-        range="shared_items!A2:I",
+        range="shared_items!A2:H",
     ).execute()
     rows = result.get("values", [])
     for row in rows:
@@ -122,8 +121,7 @@ def _get_share_sync(code: str) -> Optional[dict]:
 
 def _create_share_sync(code: str, title: str, body: Optional[str],
                        link_urls: list, device_id: str,
-                       password: Optional[str] = None,
-                       student_id_hash: Optional[str] = None) -> dict:
+                       password: Optional[str] = None) -> dict:
     """同步建立分享項 / Sync create share item."""
     service = _build_service()
     sheets_id = _get_sheets_id()
@@ -137,7 +135,7 @@ def _create_share_sync(code: str, title: str, body: Optional[str],
     device_id_hash = _hash_device_id(device_id)
     link_urls_str = json.dumps(link_urls, ensure_ascii=False) if link_urls else ""
     password_hash = _hash_password(password) if password else ""
-    row = [code, title, body or "", link_urls_str, device_id_hash, now, "FALSE", password_hash, student_id_hash or ""]
+    row = [code, title, body or "", link_urls_str, device_id_hash, now, "FALSE", password_hash]
 
     service.spreadsheets().values().append(
         spreadsheetId=sheets_id,
@@ -155,16 +153,13 @@ def _create_share_sync(code: str, title: str, body: Optional[str],
         "created_at": now,
         "deleted": False,
         "password_hash": password_hash or None,
-        "student_id_hash": student_id_hash or None,
     }
 
 
-def _delete_share_sync(code: str, device_id: str,
-                       student_id_hash: Optional[str] = None) -> bool:
+def _delete_share_sync(code: str, device_id: str) -> bool:
     """
     同步刪除（標記）分享項 / Sync soft-delete share item.
-    擁有者驗證：device_id_hash 相符，或 student_id_hash 相符（跨裝置）。
-    Owner check: match device_id_hash OR student_id_hash (cross-device).
+    擁有者驗證：device_id_hash 相符。
     Returns True if deleted, False if not found or not authorized.
     """
     service = _build_service()
@@ -172,7 +167,7 @@ def _delete_share_sync(code: str, device_id: str,
 
     result = service.spreadsheets().values().get(
         spreadsheetId=sheets_id,
-        range="shared_items!A2:I",
+        range="shared_items!A2:H",
     ).execute()
     rows = result.get("values", [])
     device_id_hash = _hash_device_id(device_id)
@@ -180,13 +175,8 @@ def _delete_share_sync(code: str, device_id: str,
     for i, row in enumerate(rows):
         if not row or row[0] != code:
             continue
-        # 驗證擁有者（device_id_hash 或 student_id_hash）/ Verify owner
         stored_device_hash = row[4] if len(row) > 4 else ""
-        stored_student_hash = row[8] if len(row) > 8 else ""
-        is_owner = (stored_device_hash == device_id_hash) or (
-            student_id_hash and stored_student_hash and stored_student_hash == student_id_hash
-        )
-        if not is_owner:
+        if stored_device_hash != device_id_hash:
             return False
         # 標記 is_deleted = TRUE / Mark as deleted
         row_number = i + 2  # +1 header +1 1-indexed
@@ -207,11 +197,9 @@ def _update_share_sync(code: str, device_id: str, *,
                        link_urls: Optional[list] = None,
                        new_code: Optional[str] = None,
                        password: Optional[str] = None,
-                       remove_password: bool = False,
-                       student_id_hash: Optional[str] = None) -> Optional[dict]:
+                       remove_password: bool = False) -> Optional[dict]:
     """
     同步更新分享項（驗證擁有者）/ Sync update share item (verifies owner).
-    擁有者驗證：device_id_hash 相符，或 student_id_hash 相符（跨裝置）。
     Returns updated dict or None if not found / not authorized.
     Raises ValueError if new_code already exists.
     """
@@ -220,24 +208,19 @@ def _update_share_sync(code: str, device_id: str, *,
 
     result = service.spreadsheets().values().get(
         spreadsheetId=sheets_id,
-        range="shared_items!A2:I",
+        range="shared_items!A2:H",
     ).execute()
     rows = result.get("values", [])
     device_id_hash = _hash_device_id(device_id)
 
     for i, row in enumerate(rows):
-        row = row + [""] * (9 - len(row))
+        row = row + [""] * (8 - len(row))
         if row[0] != code:
             continue
-        # 驗證擁有者（device_id_hash 或 student_id_hash）/ Verify owner
-        is_owner = (row[4] == device_id_hash) or (
-            student_id_hash and row[8] and row[8] == student_id_hash
-        )
-        if not is_owner:
+        if row[4] != device_id_hash:
             return None  # not authorized
 
         # 若要改分享碼，先確認新碼不重複
-        target_code = new_code or code
         if new_code and new_code != code:
             existing = _get_share_sync(new_code)
             if existing is not None:
@@ -258,7 +241,7 @@ def _update_share_sync(code: str, device_id: str, *,
         row_number = i + 2
         service.spreadsheets().values().update(
             spreadsheetId=sheets_id,
-            range=f"shared_items!A{row_number}:I{row_number}",
+            range=f"shared_items!A{row_number}:H{row_number}",
             valueInputOption="RAW",
             body={"values": [row]},
         ).execute()
@@ -279,22 +262,19 @@ async def get_share(code: str) -> Optional[dict]:
 
 async def create_share(code: str, title: str, body: Optional[str],
                        link_urls: list, device_id: str,
-                       password: Optional[str] = None,
-                       student_id_hash: Optional[str] = None) -> dict:
+                       password: Optional[str] = None) -> dict:
     """建立分享項（非同步）/ Create share item (async)."""
-    return await asyncio.to_thread(_create_share_sync, code, title, body, link_urls, device_id, password, student_id_hash)
+    return await asyncio.to_thread(_create_share_sync, code, title, body, link_urls, device_id, password)
 
 
-async def delete_share(code: str, device_id: str,
-                       student_id_hash: Optional[str] = None) -> bool:
+async def delete_share(code: str, device_id: str) -> bool:
     """刪除分享項（非同步）/ Delete share item (async)."""
-    return await asyncio.to_thread(_delete_share_sync, code, device_id, student_id_hash)
+    return await asyncio.to_thread(_delete_share_sync, code, device_id)
 
 
-async def update_share(code: str, device_id: str,
-                       student_id_hash: Optional[str] = None, **kwargs) -> Optional[dict]:
+async def update_share(code: str, device_id: str, **kwargs) -> Optional[dict]:
     """更新分享項（非同步）/ Update share item (async)."""
-    return await asyncio.to_thread(_update_share_sync, code, device_id, student_id_hash=student_id_hash, **kwargs)
+    return await asyncio.to_thread(_update_share_sync, code, device_id, **kwargs)
 
 
 def _list_all_shares_sync() -> list:
@@ -303,7 +283,7 @@ def _list_all_shares_sync() -> list:
     sheets_id = _get_sheets_id()
     result = service.spreadsheets().values().get(
         spreadsheetId=sheets_id,
-        range="shared_items!A2:I",
+        range="shared_items!A2:H",
     ).execute()
     rows = result.get("values", [])
     return [_row_to_dict(row) for row in rows if row]
@@ -323,7 +303,7 @@ def _clear_all_shares_sync() -> int:
     count = len(result.get("values", []))
     if count > 0:
         service.spreadsheets().values().clear(
-            spreadsheetId=sheets_id, range="shared_items!A2:I", body={}
+            spreadsheetId=sheets_id, range="shared_items!A2:H", body={}
         ).execute()
     return count
 

@@ -6,7 +6,6 @@ import { useTranslation } from 'react-i18next';
 import useTaskStore from '../stores/taskStore';
 import useAuthStore from '../stores/authStore';
 import { trackEvent } from '../services/analytics';
-import { uploadUserSync, downloadAndMergeUserSync } from '../services/userSyncService';
 import {
     IconCheckSquare, IconPlus, IconEdit, IconTrash,
     IconCheck, IconDownload, IconStar, IconRefresh,
@@ -184,19 +183,11 @@ export default function Tasks() {
     const [syncing, setSyncing] = useState(false);
     const menuRef = useRef(null);
 
-    const crossDeviceSync = (() => { try { return JSON.parse(localStorage.getItem('piyou_crossDeviceSync') ?? 'true'); } catch { return true; } })();
-
     const handleSync = async () => {
         if (syncing) return;
         setSyncing(true);
         try {
-            if (crossDeviceSync) {
-                await downloadAndMergeUserSync();
-            }
             await loadTasks();
-            if (crossDeviceSync) {
-                await uploadUserSync(true);
-            }
         } finally {
             setSyncing(false);
         }
@@ -204,16 +195,6 @@ export default function Tasks() {
 
     useEffect(() => { loadTasks(); }, [loadTasks]);
 
-    // 每分鐘自動同步（跨裝置同步開啟時）/ Auto-sync every 60s when authenticated and cross-device sync enabled
-    useEffect(() => {
-        if (!isAuthenticated || !crossDeviceSync) return;
-        const id = setInterval(async () => {
-            await downloadAndMergeUserSync().catch(() => {});
-            await loadTasks();
-            await uploadUserSync(true).catch(() => {});
-        }, 60_000);
-        return () => clearInterval(id);
-    }, [isAuthenticated, crossDeviceSync, loadTasks]);
 
     useEffect(() => {
         if (!showMenu) return;

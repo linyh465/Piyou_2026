@@ -5,11 +5,10 @@
  */
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
-    IconLink2, IconPlus, IconTrash, IconRefresh, IconXCircle,
+    IconLink2, IconPlus, IconTrash, IconXCircle,
     IconCheck, IconMinus, IconEdit, IconLock, IconEye, IconEyeOff,
 } from '../components/Icons';
 import { trackEvent } from '../services/analytics';
-import { markShareRemoved, scheduleUpload, uploadUserSync, downloadAndMergeUserSync } from '../services/userSyncService';
 
 // ── 響應式斷點 / Responsive breakpoint hook ──
 
@@ -173,10 +172,8 @@ function ShareCard({ entry, deviceId, onRemove, onUpdated }) {
                 method: 'DELETE',
                 body: JSON.stringify({ device_id: deviceId }),
             });
-            markShareRemoved(entry.code);
             removeShare(entry.code);
             onRemove(entry.code);
-            scheduleUpload();
         } catch (e) {
             alert(`刪除失敗：${e.message}`);
         } finally {
@@ -235,7 +232,6 @@ function ShareCard({ entry, deviceId, onRemove, onUpdated }) {
             }
             onUpdated({ ...data, is_owner: true, unlocked: true, _oldCode: entry.code });
             setEditMode(false);
-            scheduleUpload();
         } catch (e) {
             setSaveError(e.status === 409 ? '此分享碼已有人使用，請更換後重試' : (e.message || '儲存失敗，請稍後再試'));
         } finally {
@@ -384,7 +380,7 @@ function ShareCard({ entry, deviceId, onRemove, onUpdated }) {
                 <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '10px', gap: '6px', flexWrap: 'wrap' }}>
                     {entry.deleted ? (
                         <button className="btn btn-ghost"
-                            onClick={() => { markShareRemoved(entry.code); removeShare(entry.code); onRemove(entry.code); scheduleUpload(); }}
+                            onClick={() => { removeShare(entry.code); onRemove(entry.code); }}
                             style={{ color: 'var(--color-danger)', fontSize: '13px' }}>
                             移除此則
                         </button>
@@ -424,7 +420,7 @@ function ShareCard({ entry, deviceId, onRemove, onUpdated }) {
                         </>
                     ) : (
                         <button className="btn btn-ghost"
-                            onClick={() => { markShareRemoved(entry.code); removeShare(entry.code); onRemove(entry.code); scheduleUpload(); }}
+                            onClick={() => { removeShare(entry.code); onRemove(entry.code); }}
                             style={{ color: 'var(--text-muted)', fontSize: '13px' }}>
                             移除訂閱
                         </button>
@@ -453,7 +449,6 @@ function SubscribeForm({ onSubscribed }) {
             upsertShare(data);  // is_owner is computed server-side from X-Device-Id
             onSubscribed(data);
             trackEvent('share_subscribe', {}, '/share');
-            scheduleUpload();
             setCode('');
         } catch (e) {
             setError(e.message || '訂閱失敗，請稍後再試');
@@ -531,7 +526,6 @@ function CreateForm({ deviceId, onCreated }) {
             upsertShare({ ...data, is_owner: true, unlocked: true });
             onCreated(data);
             trackEvent('share_create', {}, '/share');
-            scheduleUpload();
             setForm({ code: '', title: '', body: '' });
             setLinkUrls(['']);
             setEnablePw(false);
@@ -653,32 +647,18 @@ function CreateForm({ deviceId, onCreated }) {
 export default function Share() {
     const deviceId = getDeviceId();
     const [shares, setShares] = useState(loadShares);
-    const [refreshing, setRefreshing] = useState(false);
     const isDesktop = useIsDesktop();
     // Track scroll container ref so sticky sidebar works correctly
     const containerRef = useRef(null);
 
     const refreshAll = useCallback(async () => {
-        setRefreshing(true);
         try {
-            const crossSync = (() => { try { return JSON.parse(localStorage.getItem('piyou_crossDeviceSync') ?? 'true'); } catch { return true; } })();
-
-            // 記錄下載前本地是否有資料 / Note whether local had data before download
-            const hadLocalData = loadShares().length > 0;
-
-            if (crossSync) {
-                // 先下載合併，再更新內容，最後上傳
-                // download+merge first, then refresh content, then upload
-                await downloadAndMergeUserSync().catch(() => {});
-            }
-
             const list = loadShares();
             if (list.length) {
                 const updated = await Promise.all(
                     list.map(async (s) => {
                         try {
                             const fresh = await apiFetch(`/${s.code}`);
-                            // 如果本地已解鎖，保留解鎖內容，只更新 title/deleted/password_protected
                             if (s.unlocked && fresh.password_protected) {
                                 return { ...s, title: fresh.title, deleted: fresh.deleted, password_protected: fresh.password_protected };
                             }
@@ -690,20 +670,8 @@ export default function Share() {
                 );
                 updated.forEach(upsertShare);
             }
-
-            if (crossSync) {
-                // 只有在本地有資料（包含下載後合併的）才上傳，防止空資料覆蓋遠端
-                // Only upload if there's data to upload; prevents overwriting remote with nothing
-                const finalShares = loadShares();
-                if (hadLocalData || finalShares.length > 0) {
-                    await uploadUserSync(true).catch(() => {});
-                }
-            }
-
             setShares(loadShares());
-        } finally {
-            setRefreshing(false);
-        }
+        } catch { /* ignore */ }
     }, []);
 
     useEffect(() => {
@@ -793,11 +761,6 @@ export default function Share() {
                 {isDesktop && (
                     <span style={{ fontSize: '13px', color: 'var(--text-muted)', marginLeft: '4px' }}>Share Platform</span>
                 )}
-                <button onClick={refreshAll} disabled={refreshing}
-                    style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: refreshing ? 'not-allowed' : 'pointer', color: 'var(--text-muted)', padding: '4px' }}
-                    title="重新整理">
-                    <IconRefresh size={18} className={refreshing ? 'animate-spin' : ''} style={{ opacity: refreshing ? 0.7 : 1 }} />
-                </button>
             </div>
 
             {isDesktop ? (
