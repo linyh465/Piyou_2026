@@ -661,9 +661,14 @@ export default function Share() {
     const refreshAll = useCallback(async () => {
         setRefreshing(true);
         try {
-            // 跨裝置同步（若開啟）/ Cross-device sync (if enabled)
             const crossSync = (() => { try { return JSON.parse(localStorage.getItem('piyou_crossDeviceSync') ?? 'true'); } catch { return true; } })();
+
+            // 記錄下載前本地是否有資料 / Note whether local had data before download
+            const hadLocalData = loadShares().length > 0;
+
             if (crossSync) {
+                // 先下載合併，再更新內容，最後上傳
+                // download+merge first, then refresh content, then upload
                 await downloadAndMergeUserSync().catch(() => {});
             }
 
@@ -687,7 +692,12 @@ export default function Share() {
             }
 
             if (crossSync) {
-                await uploadUserSync(true).catch(() => {});
+                // 只有在本地有資料（包含下載後合併的）才上傳，防止空資料覆蓋遠端
+                // Only upload if there's data to upload; prevents overwriting remote with nothing
+                const finalShares = loadShares();
+                if (hadLocalData || finalShares.length > 0) {
+                    await uploadUserSync(true).catch(() => {});
+                }
             }
 
             setShares(loadShares());
@@ -786,7 +796,7 @@ export default function Share() {
                 <button onClick={refreshAll} disabled={refreshing}
                     style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: refreshing ? 'not-allowed' : 'pointer', color: 'var(--text-muted)', padding: '4px' }}
                     title="重新整理">
-                    <IconRefresh size={18} style={{ opacity: refreshing ? 0.4 : 1 }} />
+                    <IconRefresh size={18} className={refreshing ? 'animate-spin' : ''} style={{ opacity: refreshing ? 0.7 : 1 }} />
                 </button>
             </div>
 
