@@ -736,16 +736,17 @@ body {
    ══════════════════════════════════════════════════════ */
 .mobile-bottom-nav {
   position: fixed;
-  bottom: calc(env(safe-area-inset-bottom, 0px) + 12px);
-  left: 12px;
-  right: 12px;
+  bottom: 0;
+  left: 0;
+  right: 0;
   background: var(--bg-nav);
-  border: 0.5px solid var(--bg-nav-border);
-  border-radius: 28px;
+  border-top: 0.5px solid var(--bg-nav-border);
+  border-radius: 16px 16px 0 0;
   backdrop-filter: blur(40px) saturate(180%);
   -webkit-backdrop-filter: blur(40px) saturate(180%);
   z-index: 50;
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.10), 0 1px 6px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 -2px 16px rgba(0, 0, 0, 0.08);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 .mobile-nav-slider {
@@ -879,8 +880,8 @@ body {
   }
 
   .sidebar-main {
-    /* 96px nav 高度 + 12px 間距 + home indicator 安全區 */
-    padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+    /* 58px nav 高度 + safe area + 12px 緩衝 */
+    padding-bottom: calc(58px + env(safe-area-inset-bottom, 0px) + 12px);
     /* 頂部安全區 + 12px 基礎間距（Android/iOS status bar 穿透）*/
     padding-top: calc(env(safe-area-inset-top, 0px) + 12px);
   }
