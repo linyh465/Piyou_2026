@@ -7,7 +7,6 @@ import { lazy, Suspense, useEffect, useState } from 'react';
 import { HashRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import Layout from './components/Layout';
 import ErrorBoundary from './components/ErrorBoundary';
-import SyncToast from './components/SyncToast';
 import useAuthStore from './stores/authStore';
 import { trackEvent } from './services/analytics';
 import apiClient from './services/apiClient';
@@ -106,7 +105,6 @@ export default function App() {
   return (
     <HashRouter>
       <PageViewTracker />
-      <SyncToast />
       <ErrorBoundary>
         <Suspense fallback={<PageLoader />}>
           <Routes>

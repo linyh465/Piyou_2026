@@ -8,6 +8,10 @@
   Basic rate limiting guard.
 - 同步冷卻追蹤器（裝置獨立冷卻）
   Sync cooldown tracker (per-device cooldown via X-Device-Id).
+- 機器人與爬蟲封鎖
+  Bot and crawler blocking via User-Agent detection.
+- 安全標頭
+  Security response headers (CSP, X-Frame-Options, etc.).
 """
 import logging
 import re
@@ -274,3 +278,75 @@ class SyncCooldownTracker:
 
 # 全域單例 / Global singleton
 sync_cooldown = SyncCooldownTracker()
+
+
+# ══════════════════════════════════════════════
+#  機器人與爬蟲封鎖 / Bot & Crawler Blocker
+# ══════════════════════════════════════════════
+
+class BotBlockerMiddleware(BaseHTTPMiddleware):
+    """
+    封鎖已知惡意機器人、AI 爬蟲、安全掃描器的 User-Agent。
+    Block known malicious bots, AI scrapers, and security scanners by User-Agent.
+    允許合法搜尋引擎爬蟲正常通過健康檢查路徑。
+    Legitimate search engine crawlers are allowed only on health-check paths.
+    """
+
+    # 明確封鎖的 User-Agent 關鍵字（正規表達式）
+    _BLOCKED_UA = re.compile(
+        r'(scrapy|python-requests|curl/|wget/|libwww-perl|'
+        r'go-http-client|java/|okhttp|axios|node-fetch|'
+        r'masscan|nmap|nikto|sqlmap|nessus|openvas|'
+        r'zgrab|nuclei|dirbuster|gobuster|wfuzz|ffuf|'
+        r'semrushbot|ahrefsbot|dotbot|mj12bot|'
+        r'gptbot|claudebot|anthropic-ai|ccbot|'
+        r'chatgpt-user|cohere-ai|perplexitybot|'
+        r'bytespider|petalbot|dataforseobot)',
+        re.IGNORECASE,
+    )
+
+    # 允許通過的路徑（不論 UA）
+    _ALLOW_PATHS = frozenset({"/", "/health"})
+
+    async def dispatch(self, request, call_next):
+        if request.url.path in self._ALLOW_PATHS:
+            return await call_next(request)
+
+        ua = request.headers.get("user-agent", "")
+        if not ua:
+            # 無 User-Agent 的請求視為可疑，封鎖 API 存取
+            return JSONResponse(
+                status_code=403,
+                content={"detail": "存取被拒 / Access denied"},
+            )
+
+        if self._BLOCKED_UA.search(ua):
+            return JSONResponse(
+                status_code=403,
+                content={"detail": "自動化存取被拒 / Automated access denied"},
+            )
+
+        return await call_next(request)
+
+
+# ══════════════════════════════════════════════
+#  安全回應標頭 / Security Response Headers
+# ══════════════════════════════════════════════
+
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    """
+    為所有回應加入安全標頭，防禦點擊劫持、MIME 嗅探、XSS 等攻擊。
+    Adds security headers to all responses to defend against
+    clickjacking, MIME sniffing, XSS, and information leakage.
+    """
+
+    async def dispatch(self, request, call_next):
+        response = await call_next(request)
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["X-XSS-Protection"] = "1; mode=block"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()"
+        # 移除伺服器版本資訊 / Strip server version info
+        response.headers["Server"] = "Piyou"
+        return response
