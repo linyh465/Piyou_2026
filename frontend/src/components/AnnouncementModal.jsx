@@ -13,6 +13,17 @@ import { trackEvent } from '../services/analytics';
 
 const SESSION_KEY = 'piyou_announce_shown';
 
+/**
+ * 僅允許 http:// 或 https:// 開頭的 URL，防止 javascript:/data: 協定注入。
+ * Only allow http:// or https:// URLs to prevent javascript:/data: injection.
+ */
+function sanitizeUrl(url) {
+    if (!url) return '#';
+    const trimmed = url.trim();
+    if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) return trimmed;
+    return '#';
+}
+
 const TYPE_CONFIG = {
     urgent: {
         bg: 'var(--color-danger)',
@@ -85,7 +96,7 @@ export default function AnnouncementModal() {
                         <h3 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text)', marginBottom: '8px' }}>{manualAnn.title}</h3>
                         <p style={{ fontSize: '14px', color: 'var(--text-secondary)', whiteSpace: 'pre-line', lineHeight: 1.6 }}>{manualAnn.body}</p>
                         {manualAnn.link_url && (
-                            <a href={manualAnn.link_url} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-block', marginTop: '12px', fontSize: '14px', fontWeight: 500, color: 'var(--color-brand)', textDecoration: 'underline' }}>
+                            <a href={sanitizeUrl(manualAnn.link_url)} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-block', marginTop: '12px', fontSize: '14px', fontWeight: 500, color: 'var(--color-brand)', textDecoration: 'underline' }}>
                                 {manualAnn.link_label || '了解更多'}
                             </a>
                         )}
@@ -219,7 +230,7 @@ export default function AnnouncementModal() {
 
                     {current.link_url && (
                         <a
-                            href={current.link_url}
+                            href={sanitizeUrl(current.link_url)}
                             target="_blank"
                             rel="noopener noreferrer"
                             style={{

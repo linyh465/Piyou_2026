@@ -134,7 +134,17 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         self._last_gc = now
 
     async def dispatch(self, request, call_next):
-        client_ip = request.client.host if request.client else "unknown"
+        # 優先使用 X-Forwarded-For 取得真實客戶端 IP（Railway / nginx 反向代理環境）
+        # 取第一個 IP（代理未被信任時，客戶端可偽造此 header，但此方式已優於
+        # 直接使用 request.client.host，後者在反向代理環境中永遠是代理的 IP）
+        # Prefer X-Forwarded-For for real client IP in reverse-proxy deployments.
+        # We take the first entry; this is consistent with the _get_client_ip helper
+        # in auth.py and is far better than request.client.host (the proxy's IP).
+        forwarded = request.headers.get("x-forwarded-for", "")
+        if forwarded:
+            client_ip = forwarded.split(",")[0].strip()
+        else:
+            client_ip = request.client.host if request.client else "unknown"
         now = time.time()
         path = request.url.path
 
