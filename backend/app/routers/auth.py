@@ -4,24 +4,23 @@ POST /auth/login — 代理校務系統驗證並回傳 JWT。
 Proxies school portal authentication and returns JWT.
 
 ⚠️ 零日誌策略 / Zero-Log Policy:
-- 帳號密碼絕不寫入日誌或全域變數
-  Credentials are NEVER logged or stored in global variables.
-- 所有敏感資料僅存在於函數作用域內
-  All sensitive data exists only within function scope.
+⚠️ 零帳密儲存策略 / Zero-Credential-Storage Policy:
+- 帳號密碼絕不寫入日誌、全域變數或任何持久化儲存
+  Credentials are NEVER logged, stored globally, or persisted anywhere.
+- 所有敏感資料僅存在於函數作用域內，用畢即丟棄
+  All sensitive data exists ONLY within function scope and is discarded immediately after use.
 """
 import jwt
-import time
 import asyncio
 import logging
 import os
-import base64
-import json
 from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, HTTPException, Depends, Header, Request
 from typing import Optional
 from app.models.schemas import LoginRequest, LoginResponse
 from app.services.scraper import SchoolScraper
-from app.services.scraper_cache import cache_scraper_session
+from app.services.library_scraper import LibraryScraper
+from app.services.scraper_cache import cache_scraper_session, cache_library_session
 from app.middleware.security import sync_cooldown
 from app.services.demo import (
     is_demo_account, verify_demo_password,
@@ -60,56 +59,6 @@ if not JWT_SECRET:
 JWT_ALGORITHM = "HS256"
 JWT_EXPIRE_HOURS = 24
 
-# ══════════════════════════════════════════
-#  憑證快取 / Credential Cache (In-Memory)
-#  帳密 Base64 編碼存放，24h TTL 自動過期
-#  Credentials stored Base64-encoded, auto-expire after 24h.
-# ══════════════════════════════════════════
-_credential_cache: dict[str, dict] = {}
-_CREDENTIAL_CACHE_MAX = 50   # 最多快取 50 組帳密 / Max 50 cached credentials
-
-
-def _evict_expired_credentials():
-    """清理過期帳密快取 / Evict expired credential entries"""
-    now = time.time()
-    expired = [k for k, v in _credential_cache.items() if now > v["expires"]]
-    for k in expired:
-        _credential_cache.pop(k, None)
-
-
-def _cache_credentials(student_id: str, password: str):
-    """快取帳密 / Cache credentials with TTL and size cap"""
-    # 超過上限時先清理過期再淘汰最舊 / Evict when over capacity
-    if len(_credential_cache) >= _CREDENTIAL_CACHE_MAX:
-        _evict_expired_credentials()
-    if len(_credential_cache) >= _CREDENTIAL_CACHE_MAX:
-        oldest_key = min(_credential_cache, key=lambda k: _credential_cache[k]["expires"])
-        _credential_cache.pop(oldest_key, None)
-
-    encoded = base64.b64encode(json.dumps({
-        "s": student_id, "p": password
-    }).encode()).decode()
-    _credential_cache[student_id] = {
-        "data": encoded,
-        "expires": time.time() + JWT_EXPIRE_HOURS * 3600,
-    }
-
-
-def get_cached_credentials(student_id: str) -> Optional[tuple[str, str]]:
-    """取得快取帳密 / Get cached credentials"""
-    entry = _credential_cache.get(student_id)
-    if not entry:
-        return None
-    if time.time() > entry["expires"]:
-        _credential_cache.pop(student_id, None)
-        return None
-    try:
-        decoded = json.loads(base64.b64decode(entry["data"]))
-        return (decoded["s"], decoded["p"])
-    except Exception:
-        _credential_cache.pop(student_id, None)  # 清除損壞的快取項目
-        return None
-
 
 def decode_jwt(token: str) -> dict:
     """解碼 JWT / Decode JWT token"""
@@ -144,9 +93,11 @@ async def login(request_body: LoginRequest, request: Request):
     2. 接收學號與密碼（不記錄） / Receive credentials (never logged)
     3. 透過爬蟲代理校務系統驗證 / Proxy auth via school portal scraper
     4. 成功後簽發 JWT / Issue JWT on success
-    5. 快取帳密供資料端點使用 / Cache credentials for data endpoints
+    5. 快取校園 Session（30 分鐘）/ Cache school session (30 min TTL)
     6. 記錄同步成功至冷卻追蹤器 / Record sync success in cooldown tracker
 
+    ⚠️ 帳號密碼不以任何形式快取或持久化存放
+       Credentials are NEVER cached or persisted in any form.
     ⚠️ 此函數內嚴禁使用 logger 記錄任何包含帳密的變數
        DO NOT use logger to record any variable containing credentials
     """
@@ -211,11 +162,20 @@ async def login(request_body: LoginRequest, request: Request):
     # ── 記錄同步成功至冷卻追蹤器 / Record sync success in cooldown tracker ──
     sync_cooldown.record_success(device_id)
 
-    # ── 快取帳密 / Cache credentials ──
-    _cache_credentials(request_body.student_id, request_body.password)
-
-    # ── 快取 scraper session / Cache scraper session ──
+    # ── 快取校務 scraper session / Cache school scraper session ──
     cache_scraper_session(request_body.student_id, scraper)
+
+    # ── 順帶建立並快取圖書館 session（帳密仍在作用域內，用完即丟）──
+    # ── Also create and cache library session (credentials still in scope, discarded after) ──
+    try:
+        lib_scraper = LibraryScraper()
+        lib_ok = await asyncio.to_thread(
+            lib_scraper.login, request_body.student_id, request_body.password
+        )
+        if lib_ok:
+            cache_library_session(request_body.student_id, lib_scraper)
+    except Exception:
+        pass  # 圖書館登入失敗不阻斷主流程 / Library login failure does not block main flow
 
     # ── 簽發 JWT / Issue JWT ──
     payload = {
@@ -242,13 +202,11 @@ async def login(request_body: LoginRequest, request: Request):
 @router.post("/logout", status_code=200)
 async def logout(current_user: dict = Depends(get_current_user)):
     """
-    登出端點：清除伺服器端快取帳密 / Logout: clear server-side cached credentials.
+    登出端點 / Logout endpoint.
     前端應同時清除 sessionStorage 中的 JWT。
     Frontend should also clear the JWT from sessionStorage.
+    帳密從未快取，無需清除。/ Credentials were never cached; nothing to clear.
     """
-    student_id = current_user.get("sub", "")
-    if student_id:
-        _credential_cache.pop(student_id, None)
     return {"ok": True}
 
 
