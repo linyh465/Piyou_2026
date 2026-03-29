@@ -20,6 +20,8 @@ from app.middleware.security import (
     install_credential_filter,
     HTTPSRedirectMiddleware,
     RateLimitMiddleware,
+    BotBlockerMiddleware,
+    SecurityHeadersMiddleware,
 )
 install_credential_filter()
 
@@ -79,6 +81,10 @@ app.add_middleware(
 )
 
 # ── 安全中介層 / Security Middleware ──
+# 注意：Starlette 中介層以 LIFO 順序執行（後加的先執行）
+# Note: Starlette middleware executes in LIFO order (last added runs first)
+app.add_middleware(SecurityHeadersMiddleware)
+app.add_middleware(BotBlockerMiddleware)
 app.add_middleware(RateLimitMiddleware, max_requests=60, window_seconds=60)
 app.add_middleware(HTTPSRedirectMiddleware)
 

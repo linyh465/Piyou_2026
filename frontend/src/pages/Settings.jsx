@@ -13,7 +13,6 @@ import useThemeStore from '../stores/themeStore';
 import { COLOR_THEMES } from '../stores/themeStore';
 import useAuthStore from '../stores/authStore';
 import useTimetableStore from '../stores/timetableStore';
-import useTaskStore from '../stores/taskStore';
 import useLibraryStore from '../stores/libraryStore';
 import useNotifyStore from '../stores/notifyStore';
 import { getPushStatus, subscribePush, unsubscribePush } from '../services/pushService';
@@ -103,7 +102,6 @@ export default function Settings() {
     const { theme, setTheme, colorTheme, setColorTheme } = useThemeStore();
     const { user, isAuthenticated, login, logout, error, clearError } = useAuthStore();
     const { fetchTimetable, fetchGrades, canSync, recordSyncSuccess, recordSyncError, hasCachedData, lastSyncTime, clearSchoolData, serverCooldown } = useTimetableStore();
-    const { syncTasksFromServer, syncTasksToServer } = useTaskStore();
     const { clearLibraryData } = useLibraryStore();
 
     const { requestNotificationPermission } = useNotifyStore();
@@ -225,7 +223,6 @@ export default function Settings() {
                 // 背景非同步執行，不阻擋 UI / Background fetch, non-blocking
                 fetchTimetable();
                 fetchGrades();
-                syncTasksFromServer().then(() => syncTasksToServer()).catch(() => {});
             } else {
                 // 登入失敗計入同步錯誤，並解鎖讓使用者可重試
                 // Login failure counts as sync error; unlock so user can retry
@@ -543,7 +540,14 @@ export default function Settings() {
 
             {/* ═══ 通知 / Notifications ═══ */}
             <div className="card-stack">
-                <SectionHeader title="通知" titleEn="Notifications" />
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '0 4px' }}>
+                    <h3 style={{ fontSize: '15px', fontWeight: 600, color: 'var(--text-secondary)', letterSpacing: '0.02em' }}>
+                        通知 <span style={{ color: 'var(--text-muted)', fontSize: '12px', fontWeight: 400 }}>Notifications</span>
+                    </h3>
+                    <span style={{ fontSize: '11px', color: 'var(--color-warning)', background: 'rgba(245,158,11,0.1)', padding: '2px 7px', borderRadius: '999px', fontWeight: 500 }}>
+                        目前只是裝飾，無作用
+                    </span>
+                </div>
                 <div className="card">
                     {/* PWA 推播通知開關 */}
                     {pushStatus !== 'unsupported' && (

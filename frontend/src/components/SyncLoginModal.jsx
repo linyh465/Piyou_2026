@@ -7,7 +7,6 @@ import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import useAuthStore from '../stores/authStore';
 import useTimetableStore from '../stores/timetableStore';
-import useTaskStore from '../stores/taskStore';
 import useLibraryStore from '../stores/libraryStore';
 
 export default function SyncLoginModal({ show, onClose }) {
@@ -18,7 +17,6 @@ export default function SyncLoginModal({ show, onClose }) {
         recordSyncSuccess, recordSyncError, serverCooldown, setBgSyncStep,
     } = useTimetableStore();
     const { fetchLibrary } = useLibraryStore();
-    const { syncTasksFromServer, syncTasksToServer } = useTaskStore();
 
     const [studentId, setStudentId] = useState('');
     const [password, setPassword] = useState('');
@@ -72,9 +70,6 @@ export default function SyncLoginModal({ show, onClose }) {
                     await fetchGrades();
                     setBgSyncStep('圖書館');
                     await fetchLibrary();
-                    setBgSyncStep('任務');
-                    await syncTasksFromServer();
-                    await syncTasksToServer();
                     recordSyncSuccess();
                     setBgSyncStep('done');
                 } catch {
