@@ -78,12 +78,7 @@ function PrivacyContent() {
             <H2>七、資料安全措施</H2>
             <ul style={{ margin: '0 0 8px 16px', padding: 0 }}>
                 <LI>所有 API 通訊均透過 HTTPS 加密傳輸，生產環境強制重導向</LI>
-                <LI>管理員帳號使用 bcrypt 雜湊儲存密碼</LI>
-                <LI>JWT 身份驗證採用強隨機金鑰（伺服器端），有效期 24 小時</LI>
-                <LI>登入端點速率限制：每 IP 每分鐘最多 10 次，超過回傳 HTTP 429</LI>
-                <LI>裝置識別碼於後端統一以 SHA-256 雜湊，原始 ID 不離開裝置</LI>
-                <LI>伺服器設有憑證日誌過濾機制（零日誌政策），自動攔截含敏感字串的記錄</LI>
-                <LI>HTTP 安全標頭：X-Frame-Options (DENY)、X-Content-Type-Options (nosniff)、X-XSS-Protection、Referrer-Policy、Permissions-Policy</LI>
+                <LI>登入端點速率限制：每 IP 每分鐘最多 10 次為限</LI>
                 <LI>已知惡意機器人、AI 爬蟲（GPTBot、ClaudeBot 等）及安全掃描工具封鎖機制</LI>
                 <LI>robots.txt 禁止所有搜尋引擎及 AI 訓練爬蟲索引本應用程式</LI>
             </ul>
