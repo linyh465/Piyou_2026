@@ -140,6 +140,8 @@ def _get_stats_sync() -> dict:
     unique_devices_week: set[str] = set()
     unique_devices_month: set[str] = set()
     unique_devices_total: set[str] = set()
+    # 平台裝置計數（從 extra.platform 讀取）/ Platform device counts (from extra.platform)
+    platform_devices: dict[str, set[str]] = defaultdict(set)
     page_views: dict[str, int] = defaultdict(int)
     event_counts: dict[str, int] = defaultdict(int)
     sync_success = 0
@@ -165,6 +167,18 @@ def _get_stats_sync() -> dict:
         unique_devices_total.add(device_hash)
         event_counts[event_type] += 1
 
+        # 平台分類 / Platform classification
+        extra_parsed: dict = {}
+        if extra_str:
+            try:
+                extra_parsed = json.loads(extra_str)
+            except Exception:
+                pass
+        platform = str(extra_parsed.get("platform", "unknown"))
+        if platform not in ("mobile", "tablet", "desktop"):
+            platform = "unknown"
+        platform_devices[platform].add(device_hash)
+
         try:
             ts = datetime.fromisoformat(ts_str.replace("Z", "+00:00"))
         except Exception:
@@ -182,14 +196,6 @@ def _get_stats_sync() -> dict:
                 week_daily[day_str] += 1
             if ts >= month_ago:
                 unique_devices_month.add(device_hash)
-
-        # 詳細活動紀錄（最新 100 筆）/ Detailed activity log (latest 100)
-        extra_parsed: dict = {}
-        if extra_str:
-            try:
-                extra_parsed = json.loads(extra_str)
-            except Exception:
-                pass
         recent_events.append({
             "ts": ts_str,
             "device": device_hash,
@@ -256,6 +262,14 @@ def _get_stats_sync() -> dict:
         for k, v in sorted(button_clicks.items(), key=lambda x: x[1], reverse=True)
     ]
 
+    # 平台裝置分類統計 / Platform device breakdown
+    platform_breakdown = {
+        "mobile": len(platform_devices.get("mobile", set())),
+        "tablet": len(platform_devices.get("tablet", set())),
+        "desktop": len(platform_devices.get("desktop", set())),
+        "unknown": len(platform_devices.get("unknown", set())),
+    }
+
     return {
         "total_events": total_events,
         "today_events": today_events,
@@ -264,6 +278,7 @@ def _get_stats_sync() -> dict:
         "unique_devices_week": len(unique_devices_week),
         "unique_devices_month": len(unique_devices_month),
         "unique_devices_total": len(unique_devices_total),
+        "platform_breakdown": platform_breakdown,
         "sync_success": sync_success,
         "sync_fail": sync_fail,
         "sync_total": sync_success + sync_fail,

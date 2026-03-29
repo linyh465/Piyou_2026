@@ -778,9 +778,26 @@ export default function Admin() {
             {tab === 'announcements' && (
                 <>
                     {!showCreateForm && !editingId && (
-                        <button onClick={() => setShowCreateForm(true)} style={{ ...btnPrimary, marginBottom: '12px' }}>
-                            + 新增公告
-                        </button>
+                        <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
+                            <button onClick={() => setShowCreateForm(true)} style={{ ...btnPrimary, flex: 1 }}>
+                                + 新增公告
+                            </button>
+                            <button
+                                onClick={async () => {
+                                    try {
+                                        await api.post('/notify/admin/announcements/invalidate', {}, adminHeaders(token));
+                                        showMsg('快取已清除，重新載入中…');
+                                        await loadAnnouncements();
+                                    } catch (err) {
+                                        showMsg(apiError(err, '刷新失敗'));
+                                    }
+                                }}
+                                style={{ ...btnGhost, whiteSpace: 'nowrap' }}
+                                title="若直接修改試算表後公告未更新，點此強制刷新快取"
+                            >
+                                刷新快取
+                            </button>
+                        </div>
                     )}
                     {showCreateForm && (
                         <AnnouncementForm onSave={handleCreate} onCancel={() => setShowCreateForm(false)} />
@@ -793,30 +810,51 @@ export default function Admin() {
                         />
                     )}
                     {loading && <p style={{ color: 'var(--text-muted)', fontSize: '14px' }}>載入中…</p>}
-                    {!loading && !showCreateForm && !editingId && announcements.map((ann) => (
-                        <div key={ann.id} style={{ ...card, borderLeft: `4px solid ${TYPE_COLORS[ann.type] || TYPE_COLORS.info}` }}>
-                            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '8px' }}>
-                                <div style={{ flex: 1, minWidth: 0 }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
-                                        <span style={{ fontSize: '11px', fontWeight: 600, color: TYPE_COLORS[ann.type] || TYPE_COLORS.info }}>
-                                            {TYPE_LABELS[ann.type] || ann.type}
-                                        </span>
-                                        <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>v{ann.version || 1}</span>
+                    {!loading && !showCreateForm && !editingId && announcements.map((ann) => {
+                        const isScheduled = ann._is_scheduled;
+                        const isExpired = ann._is_expired;
+                        const isDraft = ann._is_draft;
+                        const borderColor = isScheduled ? '#8b5cf6' : isExpired ? 'var(--text-muted)' : isDraft ? '#6b7280' : (TYPE_COLORS[ann.type] || TYPE_COLORS.info);
+                        return (
+                            <div key={ann.id} style={{ ...card, borderLeft: `4px solid ${borderColor}`, opacity: (isExpired || isDraft) ? 0.7 : 1 }}>
+                                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '8px' }}>
+                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px', flexWrap: 'wrap' }}>
+                                            <span style={{ fontSize: '11px', fontWeight: 600, color: TYPE_COLORS[ann.type] || TYPE_COLORS.info }}>
+                                                {TYPE_LABELS[ann.type] || ann.type}
+                                            </span>
+                                            <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>v{ann.version || 1}</span>
+                                            {isScheduled && (
+                                                <span style={{ fontSize: '10px', fontWeight: 700, background: 'rgba(139,92,246,0.15)', color: '#8b5cf6', padding: '1px 6px', borderRadius: '999px' }}>
+                                                    排程中
+                                                </span>
+                                            )}
+                                            {isExpired && (
+                                                <span style={{ fontSize: '10px', fontWeight: 700, background: 'rgba(107,114,128,0.15)', color: '#6b7280', padding: '1px 6px', borderRadius: '999px' }}>
+                                                    已過期
+                                                </span>
+                                            )}
+                                            {isDraft && (
+                                                <span style={{ fontSize: '10px', fontWeight: 700, background: 'rgba(107,114,128,0.12)', color: '#9ca3af', padding: '1px 6px', borderRadius: '999px' }}>
+                                                    草稿
+                                                </span>
+                                            )}
+                                        </div>
+                                        <p style={{ fontWeight: 600, color: 'var(--text)', fontSize: '14px', margin: '0 0 4px' }}>{ann.title}</p>
+                                        {ann.body && <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: '0 0 4px', whiteSpace: 'pre-line' }}>{ann.body}</p>}
+                                        <p style={{ fontSize: '11px', color: isScheduled ? '#8b5cf6' : 'var(--text-muted)', margin: 0 }}>
+                                            {ann.published_at ? new Date(ann.published_at).toLocaleString('zh-TW') : '（未設定發布時間）'}
+                                            {ann.expires_at && ` → ${new Date(ann.expires_at).toLocaleString('zh-TW')}`}
+                                        </p>
                                     </div>
-                                    <p style={{ fontWeight: 600, color: 'var(--text)', fontSize: '14px', margin: '0 0 4px' }}>{ann.title}</p>
-                                    {ann.body && <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: '0 0 4px', whiteSpace: 'pre-line' }}>{ann.body}</p>}
-                                    <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: 0 }}>
-                                        {new Date(ann.published_at).toLocaleString('zh-TW')}
-                                        {ann.expires_at && ` → ${new Date(ann.expires_at).toLocaleString('zh-TW')}`}
-                                    </p>
-                                </div>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flexShrink: 0 }}>
-                                    <button onClick={() => { setEditingId(ann.id); setShowCreateForm(false); }} style={btnGhost}>編輯</button>
-                                    <button onClick={() => handleDelete(ann.id, ann.title)} style={btnDanger}>刪除</button>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flexShrink: 0 }}>
+                                        <button onClick={() => { setEditingId(ann.id); setShowCreateForm(false); }} style={btnGhost}>編輯</button>
+                                        <button onClick={() => handleDelete(ann.id, ann.title)} style={btnDanger}>刪除</button>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    ))}
+                        );
+                    })}
                     {!loading && !showCreateForm && !editingId && announcements.length === 0 && (
                         <p style={{ color: 'var(--text-muted)', fontSize: '14px', textAlign: 'center', marginTop: '40px' }}>目前沒有公告</p>
                     )}
@@ -944,6 +982,32 @@ export default function Admin() {
                                     ))}
                                 </div>
                             </div>
+
+                            {/* 平台裝置分類 / Platform breakdown */}
+                            {analytics.platform_breakdown && (
+                                <div style={{ ...card, marginBottom: '12px' }}>
+                                    <p style={{ fontWeight: 600, fontSize: '14px', color: 'var(--text)', margin: '0 0 10px' }}>裝置平台分類（累計獨立裝置）</p>
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px' }}>
+                                        {[
+                                            { label: '手機', key: 'mobile', icon: '📱', color: '#10b981' },
+                                            { label: '平板', key: 'tablet', icon: '📊', color: '#3b82f6' },
+                                            { label: '電腦', key: 'desktop', icon: '💻', color: '#8b5cf6' },
+                                            { label: '未知', key: 'unknown', icon: '❓', color: '#6b7280' },
+                                        ].map(({ label, key, icon, color }) => (
+                                            <div key={key} style={{ textAlign: 'center', padding: '10px 4px', borderRadius: '10px', background: 'var(--bg-input)' }}>
+                                                <div style={{ fontSize: '16px', marginBottom: '2px' }}>{icon}</div>
+                                                <div style={{ fontSize: '18px', fontWeight: 700, color }}>{analytics.platform_breakdown[key] ?? 0}</div>
+                                                <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>{label}</div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    {(analytics.platform_breakdown.unknown ?? 0) > 0 && (
+                                        <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: '8px 0 0', textAlign: 'center' }}>
+                                            未知裝置為舊版資料（平台識別功能上線前已記錄）
+                                        </p>
+                                    )}
+                                </div>
+                            )}
 
                             {/* 摘要卡片 / Summary cards */}
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px', marginBottom: '16px' }}>
