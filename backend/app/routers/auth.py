@@ -19,7 +19,8 @@ from fastapi import APIRouter, HTTPException, Depends, Header, Request
 from typing import Optional
 from app.models.schemas import LoginRequest, LoginResponse
 from app.services.scraper import SchoolScraper
-from app.services.scraper_cache import cache_scraper_session
+from app.services.library_scraper import LibraryScraper
+from app.services.scraper_cache import cache_scraper_session, cache_library_session
 from app.middleware.security import sync_cooldown
 from app.services.demo import (
     is_demo_account, verify_demo_password,
@@ -161,8 +162,20 @@ async def login(request_body: LoginRequest, request: Request):
     # ── 記錄同步成功至冷卻追蹤器 / Record sync success in cooldown tracker ──
     sync_cooldown.record_success(device_id)
 
-    # ── 快取 scraper session（帳密已丟棄）/ Cache scraper session (credentials discarded) ──
+    # ── 快取校務 scraper session / Cache school scraper session ──
     cache_scraper_session(request_body.student_id, scraper)
+
+    # ── 順帶建立並快取圖書館 session（帳密仍在作用域內，用完即丟）──
+    # ── Also create and cache library session (credentials still in scope, discarded after) ──
+    try:
+        lib_scraper = LibraryScraper()
+        lib_ok = await asyncio.to_thread(
+            lib_scraper.login, request_body.student_id, request_body.password
+        )
+        if lib_ok:
+            cache_library_session(request_body.student_id, lib_scraper)
+    except Exception:
+        pass  # 圖書館登入失敗不阻斷主流程 / Library login failure does not block main flow
 
     # ── 簽發 JWT / Issue JWT ──
     payload = {

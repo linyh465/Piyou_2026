@@ -32,7 +32,7 @@ from app.models.schemas import (
 from app.services.scraper import SchoolScraper
 from app.services.tdx import TDXService
 from app.services.library_scraper import LibraryScraper
-from app.services.scraper_cache import get_cached_scraper, cache_scraper_session
+from app.services.scraper_cache import get_cached_scraper, cache_scraper_session, get_cached_library_scraper
 from app.routers.auth import get_current_user
 from app.services.storage.sheets_synclog import log_sync
 from app.services.demo import is_demo_account, get_demo_timetable, get_demo_grades, get_demo_library
@@ -536,26 +536,19 @@ async def get_grades(user: dict = Depends(get_current_user)):
 
 def _get_library_scraper(user: dict) -> LibraryScraper:
     """
-    取得已登入的圖書館爬蟲 / Get an authenticated library scraper
-    使用與校務系統相同的帳密（E校園服務網）
-    Uses same credentials as school portal (E-campus).
+    取得已登入的圖書館爬蟲 / Get an authenticated library scraper.
+    重用登入時建立並快取的圖書館 session（30 分鐘 TTL）。
+    Reuses the library session created and cached during /auth/login (30-min TTL).
+    帳密不以任何形式快取。/ Credentials are NEVER cached anywhere.
     """
     student_id = user.get("sub", "")
-    creds = get_cached_credentials(student_id)
-    if not creds:
+    cached = get_cached_library_scraper(student_id)
+    if not cached:
         raise HTTPException(
             status_code=401,
-            detail="請重新登入以取得圖書館資料 / Please re-login to fetch library data",
+            detail="登入已逾期，請重新同步以取得圖書館資料 / Session expired, please re-sync to fetch library data",
         )
-
-    lib_scraper = LibraryScraper()
-    success = lib_scraper.login(creds[0], creds[1])
-    if not success:
-        raise HTTPException(
-            status_code=502,
-            detail="圖書館系統登入失敗 / Library system login failed",
-        )
-    return lib_scraper
+    return cached
 
 
 def _calc_overdue(books: list[dict]) -> list[dict]:

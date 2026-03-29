@@ -45,17 +45,18 @@ from app.models.schemas import (
 
 class AdminAnnouncement(Announcement):
     """管理員公告（含排程/過期/草稿狀態）/ Admin announcement with status flags."""
-    _is_scheduled: bool = False
-    _is_expired: bool = False
-    _is_draft: bool = False
+    # 使用 alias 對應資料層的 _is_* 鍵；Pydantic v2 不允許底線開頭作為欄位名
+    # alias maps to _is_* keys from storage layer; Pydantic v2 forbids leading-underscore field names
+    is_scheduled: bool = Field(False, alias="_is_scheduled")
+    is_expired: bool = Field(False, alias="_is_expired")
+    is_draft: bool = Field(False, alias="_is_draft")
 
-    class Config:
-        populate_by_name = True
+    model_config = {"populate_by_name": True}
 
 
 class AdminAnnouncementsResponse(BaseModel):
     """管理員公告列表回應 / Admin announcements list response."""
-    announcements: list[dict] = Field(default_factory=list)
+    announcements: list[AdminAnnouncement] = Field(default_factory=list)
     fetched_at: str = Field(..., description="抓取時間 ISO 8601 / Fetched at")
 from app.services.storage.sheets_notify import (
     get_announcements,
@@ -425,15 +426,9 @@ async def admin_list_announcements(
     except RuntimeError as exc:
         raise HTTPException(status_code=503, detail=str(exc))
 
-    # 每筆附上管理員專用狀態欄位，前端用於顯示 badge
-    # Attach admin-only status fields for frontend badge display
-    result = []
-    for item in items:
-        ann_dict = {k: v for k, v in item.items() if not k.startswith("_")}
-        ann_dict["_is_scheduled"] = item.get("_is_scheduled", False)
-        ann_dict["_is_expired"] = item.get("_is_expired", False)
-        ann_dict["_is_draft"] = item.get("_is_draft", False)
-        result.append(ann_dict)
+    # 每筆轉換為 AdminAnnouncement（含 _is_* alias 欄位）
+    # Convert each item to AdminAnnouncement (with _is_* alias fields)
+    result = [AdminAnnouncement.model_validate(item) for item in items]
 
     return AdminAnnouncementsResponse(
         announcements=result,
