@@ -33,7 +33,7 @@ from app.services.scraper import SchoolScraper
 from app.services.tdx import TDXService
 from app.services.library_scraper import LibraryScraper
 from app.services.scraper_cache import get_cached_scraper, cache_scraper_session
-from app.routers.auth import get_current_user, get_cached_credentials
+from app.routers.auth import get_current_user
 from app.services.storage.sheets_synclog import log_sync
 from app.services.demo import is_demo_account, get_demo_timetable, get_demo_grades, get_demo_library
 
@@ -148,31 +148,23 @@ def _write_data_cache(student_id: str, data_type: str, data: dict):
 def _get_authenticated_scraper(user: dict) -> SchoolScraper:
     """
     取得已登入的爬蟲 / Get an authenticated scraper instance.
-    優先重用 auth login 端點快取的 session，避免重複登入校網
-    Prioritizes reuse of session cached by auth login endpoint to avoid double-login.
+    重用 auth login 端點快取的校園 session（30 分鐘 TTL）。
+    Session 過期後需重新登入；帳密不以任何形式快取。
+    Reuses the school session cached by the auth login endpoint (30-min TTL).
+    After expiry, re-login is required; credentials are NEVER cached anywhere.
     """
     student_id = user.get("sub", "")
 
-    # 檢查共用快取（含 auth login 快取的 session）/ Check shared cache
+    # 重用快取的校園 session / Reuse cached school session
     cached_scraper = get_cached_scraper(student_id)
     if cached_scraper:
         return cached_scraper
 
-    # 需要新登入 / Need fresh login
-    creds = get_cached_credentials(student_id)
-    if not creds:
-        raise HTTPException(
-            status_code=401,
-            detail="請重新登入以取得資料 / Please re-login to fetch data",
-        )
-
-    scraper = SchoolScraper()
-    scraper.login(creds[0], creds[1])
-
-    # 存入共用快取 / Store in shared cache
-    cache_scraper_session(student_id, scraper)
-    logger.info("Created new scraper session and cached it (30min TTL)")
-    return scraper
+    # Session 已過期，須重新登入 / Session expired — user must re-login
+    raise HTTPException(
+        status_code=401,
+        detail="登入已逾期，請重新同步 / Session expired, please re-sync to fetch data",
+    )
 
 
 # ══════════════════════════════════════════

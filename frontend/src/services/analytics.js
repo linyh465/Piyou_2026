@@ -26,14 +26,18 @@ function getDeviceId() {
 
 /**
  * 偵測裝置平台類型 / Detect device platform type.
- * 回傳 'mobile' | 'tablet' | 'desktop'
+ * 回傳 'mobile' | 'tablet' | 'desktop' | 'unknown'
  */
 function getPlatform() {
     try {
         const ua = navigator.userAgent || '';
         // 優先使用 userAgentData API（Chrome 89+, Edge 90+）
+        // userAgentData.mobile=false 無法區分桌機與平板，仍需 UA fallback
         if (navigator.userAgentData) {
-            return navigator.userAgentData.mobile ? 'mobile' : 'desktop';
+            if (navigator.userAgentData.mobile) return 'mobile';
+            // userAgentData.mobile=false — check UA string for tablet before assuming desktop
+            if (/iPad|Android(?!.*Mobile)|Tablet/i.test(ua)) return 'tablet';
+            return 'desktop';
         }
         // Fallback: User-Agent 字串解析
         if (/iPad|Android(?!.*Mobile)|Tablet/i.test(ua)) return 'tablet';
@@ -59,8 +63,8 @@ export function trackEvent(eventType, extra = {}, page = '') {
                 event_type: eventType,
                 page,
                 // platform 合入 extra，後端統一從 extra.platform 讀取
-                // platform merged into extra; backend reads from extra.platform
-                extra: { platform: getPlatform(), ...extra },
+                // platform placed last so it cannot be overridden by caller-supplied extra
+                extra: { ...extra, platform: getPlatform() },
             }),
         }).catch(() => {}); // 吞掉網路錯誤 / Swallow network errors
     } catch {

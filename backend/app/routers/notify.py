@@ -41,6 +41,22 @@ from app.models.schemas import (
     AnnouncementCreate,
     AnnouncementUpdate,
 )
+
+
+class AdminAnnouncement(Announcement):
+    """管理員公告（含排程/過期/草稿狀態）/ Admin announcement with status flags."""
+    _is_scheduled: bool = False
+    _is_expired: bool = False
+    _is_draft: bool = False
+
+    class Config:
+        populate_by_name = True
+
+
+class AdminAnnouncementsResponse(BaseModel):
+    """管理員公告列表回應 / Admin announcements list response."""
+    announcements: list[dict] = Field(default_factory=list)
+    fetched_at: str = Field(..., description="抓取時間 ISO 8601 / Fetched at")
 from app.services.storage.sheets_notify import (
     get_announcements,
     get_all_announcements_for_admin,
@@ -397,11 +413,11 @@ async def admin_login(body: AdminLoginRequest) -> AdminLoginResponse:
 #  管理員公告 CRUD / Admin Announcement CRUD
 # ══════════════════════════════════════════
 
-@router.get("/admin/announcements", summary="管理員列出公告 / Admin List Announcements")
+@router.get("/admin/announcements", response_model=AdminAnnouncementsResponse, summary="管理員列出公告 / Admin List Announcements")
 async def admin_list_announcements(
     x_admin_token: Optional[str] = Header(None, alias="X-Admin-Token"),
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(_bearer_scheme),
-) -> dict:
+) -> AdminAnnouncementsResponse:
     """列出所有公告，含排程（未來）、已過期、草稿 / List ALL announcements including scheduled, expired, draft."""
     _check_admin(x_admin_token, credentials)
     try:
@@ -419,10 +435,10 @@ async def admin_list_announcements(
         ann_dict["_is_draft"] = item.get("_is_draft", False)
         result.append(ann_dict)
 
-    return {
-        "announcements": result,
-        "fetched_at": datetime.now(timezone.utc).isoformat(),
-    }
+    return AdminAnnouncementsResponse(
+        announcements=result,
+        fetched_at=datetime.now(timezone.utc).isoformat(),
+    )
 
 
 @router.post("/admin/announcements", status_code=201, summary="管理員新增公告 / Admin Create Announcement")
