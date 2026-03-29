@@ -43,6 +43,7 @@ from app.models.schemas import (
 )
 from app.services.storage.sheets_notify import (
     get_announcements,
+    get_all_announcements_for_admin,
     write_feedback,
     get_feedback_by_id,
     update_feedback_contact,
@@ -400,16 +401,28 @@ async def admin_login(body: AdminLoginRequest) -> AdminLoginResponse:
 async def admin_list_announcements(
     x_admin_token: Optional[str] = Header(None, alias="X-Admin-Token"),
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(_bearer_scheme),
-) -> AnnouncementsResponse:
-    """列出所有公告（含草稿與過期）/ List all announcements including drafts and expired."""
+) -> dict:
+    """列出所有公告，含排程（未來）、已過期、草稿 / List ALL announcements including scheduled, expired, draft."""
     _check_admin(x_admin_token, credentials)
     try:
-        items = await get_announcements()
-        # Admin 可看到所有公告，不過濾 / Admin sees all, no filtering (already filtered in get_announcements)
-        announcements = [Announcement(**a) for a in items]
+        items = await get_all_announcements_for_admin()
     except RuntimeError as exc:
         raise HTTPException(status_code=503, detail=str(exc))
-    return AnnouncementsResponse(announcements=announcements, fetched_at=datetime.now(timezone.utc).isoformat())
+
+    # 每筆附上管理員專用狀態欄位，前端用於顯示 badge
+    # Attach admin-only status fields for frontend badge display
+    result = []
+    for item in items:
+        ann_dict = {k: v for k, v in item.items() if not k.startswith("_")}
+        ann_dict["_is_scheduled"] = item.get("_is_scheduled", False)
+        ann_dict["_is_expired"] = item.get("_is_expired", False)
+        ann_dict["_is_draft"] = item.get("_is_draft", False)
+        result.append(ann_dict)
+
+    return {
+        "announcements": result,
+        "fetched_at": datetime.now(timezone.utc).isoformat(),
+    }
 
 
 @router.post("/admin/announcements", status_code=201, summary="管理員新增公告 / Admin Create Announcement")

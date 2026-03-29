@@ -25,6 +25,26 @@ function getDeviceId() {
 }
 
 /**
+ * 偵測裝置平台類型 / Detect device platform type.
+ * 回傳 'mobile' | 'tablet' | 'desktop'
+ */
+function getPlatform() {
+    try {
+        const ua = navigator.userAgent || '';
+        // 優先使用 userAgentData API（Chrome 89+, Edge 90+）
+        if (navigator.userAgentData) {
+            return navigator.userAgentData.mobile ? 'mobile' : 'desktop';
+        }
+        // Fallback: User-Agent 字串解析
+        if (/iPad|Android(?!.*Mobile)|Tablet/i.test(ua)) return 'tablet';
+        if (/Mobile|Android|iPhone|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua)) return 'mobile';
+        return 'desktop';
+    } catch {
+        return 'unknown';
+    }
+}
+
+/**
  * @param {string} eventType - page_view | page_duration | sync | share_create | share_subscribe | feedback_submit | button_click | bus_fetch | error
  * @param {object} [extra]   - 額外資料（選填）
  * @param {string} [page]    - 頁面路徑，page_view 事件使用
@@ -38,7 +58,9 @@ export function trackEvent(eventType, extra = {}, page = '') {
                 device_id: getDeviceId(),
                 event_type: eventType,
                 page,
-                extra,
+                // platform 合入 extra，後端統一從 extra.platform 讀取
+                // platform merged into extra; backend reads from extra.platform
+                extra: { platform: getPlatform(), ...extra },
             }),
         }).catch(() => {}); // 吞掉網路錯誤 / Swallow network errors
     } catch {
@@ -62,7 +84,7 @@ if (typeof window !== 'undefined') {
                 device_id: getDeviceId(),
                 event_type: 'session_duration',
                 page: '',
-                extra: { duration_ms: duration },
+                extra: { platform: getPlatform(), duration_ms: duration },
             });
             if (navigator.sendBeacon) {
                 navigator.sendBeacon(`${API}/api/v1/analytics/event`, new Blob([payload], { type: 'application/json' }));

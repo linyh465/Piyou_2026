@@ -156,6 +156,89 @@ def _read_announcements_sync() -> list[dict]:
     return sorted(announcements, key=lambda x: (x["sort_order"], x["published_at"]), reverse=True)
 
 
+def _read_all_announcements_for_admin_sync() -> list[dict]:
+    """
+    管理員專用：讀取全部公告列（含未來排程、已過期），不做時間過濾。
+    Admin only: reads ALL announcement rows including future-scheduled and expired.
+    只跳過完全空白的列與缺少標題的列。
+    Only skips blank rows and rows without a title.
+    """
+    service = _build_service()
+    sheets_id = _get_sheets_id()
+
+    result = service.spreadsheets().values().get(
+        spreadsheetId=sheets_id,
+        range="announcements!A2:K",
+    ).execute()
+    rows: list[list[str]] = result.get("values", [])
+
+    now = datetime.now(timezone.utc)
+    announcements: list[dict] = []
+
+    for i, row in enumerate(rows):
+        row = row + [""] * (11 - len(row))
+        title = row[1].strip()
+        if not title:
+            continue  # 沒有標題視為空列 / skip rows without title
+
+        published_at = row[5].strip()
+        # 判斷排程狀態 / determine schedule status
+        is_scheduled = False
+        is_expired = False
+        if published_at:
+            try:
+                pub_dt = datetime.fromisoformat(published_at.replace("Z", "+00:00"))
+                if pub_dt > now:
+                    is_scheduled = True
+            except ValueError:
+                pass
+
+        expires_at = row[6].strip()
+        if expires_at:
+            try:
+                exp_dt = datetime.fromisoformat(expires_at.replace("Z", "+00:00"))
+                if exp_dt < now:
+                    is_expired = True
+            except ValueError:
+                pass
+
+        row_id = row[0].strip() if row[0].strip() else f"ann_{i + 2}"
+        try:
+            version = int(row[9].strip()) if row[9].strip() else 1
+        except ValueError:
+            version = 1
+        try:
+            sort_order = int(row[10].strip()) if row[10].strip() else 0
+        except ValueError:
+            sort_order = 0
+
+        announcements.append({
+            "id": row_id,
+            "title": title,
+            "body": row[2].strip(),
+            "type": row[3].strip() or "info",
+            "target": row[4].strip() or "all",
+            "published_at": published_at or None,
+            "expires_at": expires_at or None,
+            "link_url": row[7].strip() or None,
+            "link_label": row[8].strip() or None,
+            "version": version,
+            "sort_order": sort_order,
+            # 管理員專用附加欄位 / admin-only extra fields
+            "_is_scheduled": is_scheduled,
+            "_is_expired": is_expired,
+            "_is_draft": not published_at,
+        })
+
+    return sorted(announcements, key=lambda x: (x["sort_order"], x.get("published_at") or ""), reverse=True)
+
+
+async def get_all_announcements_for_admin() -> list[dict]:
+    """管理員專用：含排程、過期、草稿的完整公告列表（不使用快取）。
+    Admin only: full list including scheduled/expired/draft (no cache)."""
+    return await asyncio.to_thread(_read_all_announcements_for_admin_sync)
+
+
 async def get_announcements() -> list[dict]:
     """
     非同步取得公告列表（含 TTL 快取）。
