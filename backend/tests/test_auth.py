@@ -1,7 +1,7 @@
 """
 auth.py 並行登入邏輯測試 / Tests for parallel login logic in auth.py.
 """
-import asyncio
+import time
 import pytest
 from unittest.mock import patch, MagicMock
 from app.middleware.security import sync_cooldown
@@ -30,9 +30,10 @@ async def test_login_school_failure_returns_401(client):
         MockSchool.return_value = mock_school
 
         mock_lib = MagicMock()
-        # Library would hang, but should be cancelled immediately after school fails
-        async def slow_lib(*_):
-            await asyncio.sleep(30)
+        # Library would hang, but should be cancelled immediately after school fails.
+        # Must be a sync function — asyncio.to_thread expects a blocking callable.
+        def slow_lib(*_):
+            time.sleep(30)
         mock_lib.login.side_effect = slow_lib
         MockLib.return_value = mock_lib
 
@@ -84,3 +85,49 @@ async def test_login_slow_library_does_not_block(client):
     assert data["user"]["student_id"] == "S12345678"
     # Library session should NOT be cached when it timed out
     mock_cache_lib.assert_not_called()
+
+
+# ── _get_lib_timeout 單元測試 / Unit tests for _get_lib_timeout ──
+
+def test_lib_timeout_default():
+    """未設定環境變數時應回傳預設值 8 / Returns default 8 when env var is unset."""
+    from app.routers.auth import _get_lib_timeout
+    with patch.dict("os.environ", {}, clear=False):
+        import os
+        os.environ.pop("LIBRARY_LOGIN_TIMEOUT_SECONDS", None)
+        assert _get_lib_timeout() == 8
+
+
+def test_lib_timeout_valid():
+    """合法值應正確解析 / Valid value is parsed correctly."""
+    from app.routers.auth import _get_lib_timeout
+    with patch.dict("os.environ", {"LIBRARY_LOGIN_TIMEOUT_SECONDS": "15"}):
+        assert _get_lib_timeout() == 15
+
+
+def test_lib_timeout_invalid_string():
+    """非整數字串應回退為 8 / Non-integer string falls back to 8."""
+    from app.routers.auth import _get_lib_timeout
+    with patch.dict("os.environ", {"LIBRARY_LOGIN_TIMEOUT_SECONDS": "abc"}):
+        assert _get_lib_timeout() == 8
+
+
+def test_lib_timeout_empty_string():
+    """空字串應回退為 8 / Empty string falls back to 8."""
+    from app.routers.auth import _get_lib_timeout
+    with patch.dict("os.environ", {"LIBRARY_LOGIN_TIMEOUT_SECONDS": ""}):
+        assert _get_lib_timeout() == 8
+
+
+def test_lib_timeout_clamp_low():
+    """低於下限的值應被夾至 1 / Values below minimum are clamped to 1."""
+    from app.routers.auth import _get_lib_timeout
+    with patch.dict("os.environ", {"LIBRARY_LOGIN_TIMEOUT_SECONDS": "0"}):
+        assert _get_lib_timeout() == 1
+
+
+def test_lib_timeout_clamp_high():
+    """高於上限的值應被夾至 60 / Values above maximum are clamped to 60."""
+    from app.routers.auth import _get_lib_timeout
+    with patch.dict("os.environ", {"LIBRARY_LOGIN_TIMEOUT_SECONDS": "999"}):
+        assert _get_lib_timeout() == 60
