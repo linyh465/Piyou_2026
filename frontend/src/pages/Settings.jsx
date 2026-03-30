@@ -637,7 +637,7 @@ export default function Settings() {
                             {updateStatus === 'checking' ? '檢查中…' : updateStatus === 'updating' ? '正在更新…' : updateStatus === 'latest' ? '已是最新版本' : updateStatus === 'unavailable' ? '更新服務未就緒' : '檢查更新'}
                         </button>
                         <p style={{ fontSize: '11px', color: 'var(--text-muted)', textAlign: 'center', margin: '6px 0 0' }}>
-                            若有新版本，畫面會自動彈出更新通知
+                            若有新版本，APP會重新載入
                         </p>
                     </div>
 

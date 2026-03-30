@@ -188,18 +188,23 @@ def _read_all_announcements_for_admin_sync() -> list[dict]:
         if published_at:
             try:
                 pub_dt = datetime.fromisoformat(published_at.replace("Z", "+00:00"))
+                # naive datetime（無時區）視為 UTC / treat naive datetime as UTC
+                if pub_dt.tzinfo is None:
+                    pub_dt = pub_dt.replace(tzinfo=timezone.utc)
                 if pub_dt > now:
                     is_scheduled = True
-            except ValueError:
+            except (ValueError, TypeError):
                 pass
 
         expires_at = row[6].strip()
         if expires_at:
             try:
                 exp_dt = datetime.fromisoformat(expires_at.replace("Z", "+00:00"))
+                if exp_dt.tzinfo is None:
+                    exp_dt = exp_dt.replace(tzinfo=timezone.utc)
                 if exp_dt < now:
                     is_expired = True
-            except ValueError:
+            except (ValueError, TypeError):
                 pass
 
         row_id = row[0].strip() if row[0].strip() else f"ann_{i + 2}"

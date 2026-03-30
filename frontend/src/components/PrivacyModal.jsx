@@ -62,7 +62,7 @@ export default function PrivacyModal() {
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
 
                         <SECTION icon="🔐" title="帳號密碼安全">
-                            <p>您的 E校園服務網帳號與密碼<strong>僅在您主動點擊「同步」時</strong>，透過 HTTPS 加密連線傳送至伺服器進行一次性驗證，驗證完成後<strong>立即丟棄，不儲存於伺服器或本機裝置</strong>。伺服器日誌亦透過過濾機制確保密碼不會寫入任何記錄。</p>
+                            <p>您的 E校園服務網帳號與密碼<strong>僅在您主動點擊「同步」時</strong>，透過 HTTPS 加密連線傳送至伺服器進行一次性驗證，驗證完成後<strong>立即丟棄，不儲存於伺服器或本機裝置</strong></p>
                         </SECTION>
 
                         <SECTION icon="🔄" title="同步功能說明">

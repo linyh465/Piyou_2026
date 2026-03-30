@@ -41,6 +41,23 @@ from app.models.schemas import (
     AnnouncementCreate,
     AnnouncementUpdate,
 )
+
+
+class AdminAnnouncement(Announcement):
+    """管理員公告（含排程/過期/草稿狀態）/ Admin announcement with status flags."""
+    # 使用 alias 對應資料層的 _is_* 鍵；Pydantic v2 不允許底線開頭作為欄位名
+    # alias maps to _is_* keys from storage layer; Pydantic v2 forbids leading-underscore field names
+    is_scheduled: bool = Field(False, alias="_is_scheduled")
+    is_expired: bool = Field(False, alias="_is_expired")
+    is_draft: bool = Field(False, alias="_is_draft")
+
+    model_config = {"populate_by_name": True}
+
+
+class AdminAnnouncementsResponse(BaseModel):
+    """管理員公告列表回應 / Admin announcements list response."""
+    announcements: list[AdminAnnouncement] = Field(default_factory=list)
+    fetched_at: str = Field(..., description="抓取時間 ISO 8601 / Fetched at")
 from app.services.storage.sheets_notify import (
     get_announcements,
     get_all_announcements_for_admin,
@@ -397,11 +414,11 @@ async def admin_login(body: AdminLoginRequest) -> AdminLoginResponse:
 #  管理員公告 CRUD / Admin Announcement CRUD
 # ══════════════════════════════════════════
 
-@router.get("/admin/announcements", summary="管理員列出公告 / Admin List Announcements")
+@router.get("/admin/announcements", response_model=AdminAnnouncementsResponse, summary="管理員列出公告 / Admin List Announcements")
 async def admin_list_announcements(
     x_admin_token: Optional[str] = Header(None, alias="X-Admin-Token"),
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(_bearer_scheme),
-) -> dict:
+) -> AdminAnnouncementsResponse:
     """列出所有公告，含排程（未來）、已過期、草稿 / List ALL announcements including scheduled, expired, draft."""
     _check_admin(x_admin_token, credentials)
     try:
@@ -409,20 +426,14 @@ async def admin_list_announcements(
     except RuntimeError as exc:
         raise HTTPException(status_code=503, detail=str(exc))
 
-    # 每筆附上管理員專用狀態欄位，前端用於顯示 badge
-    # Attach admin-only status fields for frontend badge display
-    result = []
-    for item in items:
-        ann_dict = {k: v for k, v in item.items() if not k.startswith("_")}
-        ann_dict["_is_scheduled"] = item.get("_is_scheduled", False)
-        ann_dict["_is_expired"] = item.get("_is_expired", False)
-        ann_dict["_is_draft"] = item.get("_is_draft", False)
-        result.append(ann_dict)
+    # 每筆轉換為 AdminAnnouncement（含 _is_* alias 欄位）
+    # Convert each item to AdminAnnouncement (with _is_* alias fields)
+    result = [AdminAnnouncement.model_validate(item) for item in items]
 
-    return {
-        "announcements": result,
-        "fetched_at": datetime.now(timezone.utc).isoformat(),
-    }
+    return AdminAnnouncementsResponse(
+        announcements=result,
+        fetched_at=datetime.now(timezone.utc).isoformat(),
+    )
 
 
 @router.post("/admin/announcements", status_code=201, summary="管理員新增公告 / Admin Create Announcement")
