@@ -8,6 +8,7 @@ import { useTranslation } from 'react-i18next';
 import useAuthStore from '../stores/authStore';
 import useTimetableStore from '../stores/timetableStore';
 import useLibraryStore from '../stores/libraryStore';
+import { trackEvent } from '../services/analytics';
 
 export default function SyncLoginModal({ show, onClose }) {
     const { t } = useTranslation('common');
@@ -57,25 +58,25 @@ export default function SyncLoginModal({ show, onClose }) {
 
             const success = await login(studentId.trim(), password);
             if (success) {
-                // 登入成功 → 立即關閉 Modal，背景繼續同步（樂觀 UI）
+                // 登入成功 → 計入統計 → 立即關閉 Modal
+                trackEvent('sync', { status: 'success' });
                 onClose();
                 setPassword('');
                 setIsSyncing(false);
 
-                // 背景同步序列
-                setBgSyncStep('課表');
-                try {
-                    await fetchTimetable();
-                    setBgSyncStep('成績');
-                    await fetchGrades();
-                    setBgSyncStep('圖書館');
-                    await fetchLibrary();
-                    recordSyncSuccess();
-                    setBgSyncStep('done');
-                } catch {
-                    setBgSyncStep('error');
-                }
-                setTimeout(() => setBgSyncStep(null), 3000);
+                // 三項資料並行同步，不互相等待 / Fetch all data in parallel
+                setBgSyncStep('同步中');
+                Promise.allSettled([fetchTimetable(), fetchGrades(), fetchLibrary()])
+                    .then((results) => {
+                        const anyFailed = results.some(r => r.status === 'rejected');
+                        if (anyFailed) {
+                            setBgSyncStep('error');
+                        } else {
+                            recordSyncSuccess();
+                            setBgSyncStep('done');
+                        }
+                        setTimeout(() => setBgSyncStep(null), 3000);
+                    });
             } else {
                 recordSyncError();
                 setIsSyncing(false);
