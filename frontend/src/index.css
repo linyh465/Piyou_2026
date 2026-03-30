@@ -572,6 +572,7 @@ body {
 .sidebar-layout {
   display: flex;
   height: 100vh;
+  height: 100dvh; /* iOS PWA: dvh 正確對應動態視窗高度，修正 100vh 偏差 */
   background: var(--bg);
   color: var(--text-secondary);
   font-family: var(--font-sans);
@@ -727,6 +728,9 @@ body {
 .sidebar-main {
   flex: 1;
   overflow-y: auto;
+  /* iOS PWA：防止 rubber-band overscroll 導致 position:fixed 導航列位移 */
+  /* Prevents iOS overscroll from displacing the fixed bottom nav bar    */
+  overscroll-behavior-y: contain;
   padding: var(--space-page);
   background: var(--bg);
 }
@@ -746,7 +750,12 @@ body {
   -webkit-backdrop-filter: blur(40px) saturate(180%);
   z-index: 50;
   box-shadow: 0 -2px 16px rgba(0, 0, 0, 0.08);
+  /* iOS Home Indicator 安全區 / iOS safe area for home indicator */
   padding-bottom: env(safe-area-inset-bottom, 0px);
+  /* iOS PWA：強制 GPU 合成層，防止 backdrop-filter 元素在 WebKit 偶發位移 */
+  /* Force GPU compositing to prevent WebKit fixed-position glitch with backdrop-filter */
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
 }
 
 .mobile-nav-slider {
