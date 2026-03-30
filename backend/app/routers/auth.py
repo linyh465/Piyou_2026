@@ -59,6 +59,9 @@ if not JWT_SECRET:
 JWT_ALGORITHM = "HS256"
 JWT_EXPIRE_HOURS = 24
 
+# 圖書館登入逾時（秒）/ Library login timeout (seconds); tunable via env var
+_LIBRARY_LOGIN_TIMEOUT: int = int(os.getenv("LIBRARY_LOGIN_TIMEOUT_SECONDS", "8"))
+
 
 def decode_jwt(token: str) -> dict:
     """解碼 JWT / Decode JWT token"""
@@ -144,18 +147,23 @@ async def login(request_body: LoginRequest, request: Request):
     school_scraper = SchoolScraper()
     lib_scraper = LibraryScraper()
 
-    # 校務與圖書館 session 同時建立，縮短等待時間
-    # Create school + library sessions IN PARALLEL to minimize login latency.
-    # 圖書館登入設 8 秒上限，避免圖書館系統故障時拖慢整體登入速度
-    # Library login is capped at 8s so a library outage doesn't degrade login latency.
-    school_task = asyncio.to_thread(school_scraper.login, request_body.student_id, request_body.password)
-    lib_task = asyncio.wait_for(
-        asyncio.to_thread(lib_scraper.login, request_body.student_id, request_body.password),
-        timeout=8,
+    # 兩個 task 同時啟動以並行執行 / Start both tasks immediately for parallel execution.
+    # asyncio.shield 防止 wait_for timeout 取消底層執行緒——逾時後執行緒自行結束，不殘留
+    # asyncio.shield prevents wait_for from cancelling the underlying thread on timeout.
+    school_task = asyncio.create_task(
+        asyncio.to_thread(school_scraper.login, request_body.student_id, request_body.password)
     )
-    school_result, lib_result = await asyncio.gather(school_task, lib_task, return_exceptions=True)
+    _lib_thread = asyncio.to_thread(lib_scraper.login, request_body.student_id, request_body.password)
+    lib_task = asyncio.create_task(
+        asyncio.wait_for(asyncio.shield(_lib_thread), timeout=_LIBRARY_LOGIN_TIMEOUT)
+    )
 
-    if isinstance(school_result, Exception):
+    # 校務登入是必要路徑：先等待結果，失敗時立即取消圖書館 task（不再等待 timeout）
+    # School login is critical: await it first; on failure, cancel lib task immediately.
+    try:
+        user_info = await school_task
+    except Exception:
+        lib_task.cancel()  # 不等逾時，立即取消 / cancel immediately, don't wait for timeout
         # ⚠️ 不記錄詳細錯誤（可能洩漏帳密） / Don't log details (may leak credentials)
         logger.info("Login attempt failed for a user")  # 僅記錄失敗事件 / Log only the event
         sync_cooldown.record_error(device_id)
@@ -164,7 +172,12 @@ async def login(request_body: LoginRequest, request: Request):
             detail="登入失敗，請確認帳號密碼 / Login failed, please check credentials",
         )
 
-    user_info = school_result  # school scraper.login() returns user_info dict
+    # 校務成功；取得圖書館結果（逾時或失敗則為 exception，後續跳過快取）
+    # School succeeded; get library result (timeout/error → lib_result is exception, skip caching).
+    try:
+        lib_result = await lib_task
+    except Exception as exc:
+        lib_result = exc
 
     # ── 記錄同步成功至冷卻追蹤器 / Record sync success in cooldown tracker ──
     sync_cooldown.record_success(device_id)
