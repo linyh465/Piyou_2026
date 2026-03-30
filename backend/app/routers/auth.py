@@ -91,9 +91,9 @@ async def login(request_body: LoginRequest, request: Request):
     流程 / Flow:
     1. 檢查伺服器端同步冷卻（裝置獨立冷卻）/ Check server-side sync cooldown (per-device)
     2. 接收學號與密碼（不記錄） / Receive credentials (never logged)
-    3. 透過爬蟲代理校務系統驗證 / Proxy auth via school portal scraper
+    3. 校務與圖書館 scraper 並行驗證，縮短等待時間 / Parallel auth for school + library scrapers
     4. 成功後簽發 JWT / Issue JWT on success
-    5. 快取校園 Session（30 分鐘）/ Cache school session (30 min TTL)
+    5. 快取校園 Session（30 分鐘）/ Cache school + library sessions (30 min TTL)
     6. 記錄同步成功至冷卻追蹤器 / Record sync success in cooldown tracker
 
     ⚠️ 帳號密碼不以任何形式快取或持久化存放
@@ -141,41 +141,40 @@ async def login(request_body: LoginRequest, request: Request):
 
     # ── 驗證邏輯（帳密僅存在於此函數作用域）──
     # ── Auth logic (credentials exist ONLY in this function scope) ──
-    scraper = SchoolScraper()
+    school_scraper = SchoolScraper()
+    lib_scraper = LibraryScraper()
 
-    try:
-        # 嘗試登入校務系統（在執行緒池中執行，避免阻塞事件迴圈）
-        # Try logging into school portal (run in thread pool to avoid blocking event loop)
-        user_info = await asyncio.to_thread(
-            scraper.login, request_body.student_id, request_body.password
-        )
-    except Exception:
+    # 校務與圖書館 session 同時建立，縮短等待時間
+    # Create school + library sessions IN PARALLEL to minimize login latency.
+    # 圖書館登入設 8 秒上限，避免圖書館系統故障時拖慢整體登入速度
+    # Library login is capped at 8s so a library outage doesn't degrade login latency.
+    school_task = asyncio.to_thread(school_scraper.login, request_body.student_id, request_body.password)
+    lib_task = asyncio.wait_for(
+        asyncio.to_thread(lib_scraper.login, request_body.student_id, request_body.password),
+        timeout=8,
+    )
+    school_result, lib_result = await asyncio.gather(school_task, lib_task, return_exceptions=True)
+
+    if isinstance(school_result, Exception):
         # ⚠️ 不記錄詳細錯誤（可能洩漏帳密） / Don't log details (may leak credentials)
         logger.info("Login attempt failed for a user")  # 僅記錄失敗事件 / Log only the event
-        # 記錄同步錯誤至冷卻追蹤器 / Record sync error in cooldown tracker
         sync_cooldown.record_error(device_id)
         raise HTTPException(
             status_code=401,
             detail="登入失敗，請確認帳號密碼 / Login failed, please check credentials",
         )
 
+    user_info = school_result  # school scraper.login() returns user_info dict
+
     # ── 記錄同步成功至冷卻追蹤器 / Record sync success in cooldown tracker ──
     sync_cooldown.record_success(device_id)
 
     # ── 快取校務 scraper session / Cache school scraper session ──
-    cache_scraper_session(request_body.student_id, scraper)
+    cache_scraper_session(request_body.student_id, school_scraper)
 
-    # ── 順帶建立並快取圖書館 session（帳密仍在作用域內，用完即丟）──
-    # ── Also create and cache library session (credentials still in scope, discarded after) ──
-    try:
-        lib_scraper = LibraryScraper()
-        lib_ok = await asyncio.to_thread(
-            lib_scraper.login, request_body.student_id, request_body.password
-        )
-        if lib_ok:
-            cache_library_session(request_body.student_id, lib_scraper)
-    except Exception:
-        pass  # 圖書館登入失敗不阻斷主流程 / Library login failure does not block main flow
+    # ── 快取圖書館 session（已與校務同時完成）/ Cache library session (completed in parallel) ──
+    if not isinstance(lib_result, Exception) and lib_result:
+        cache_library_session(request_body.student_id, lib_scraper)
 
     # ── 簽發 JWT / Issue JWT ──
     payload = {
@@ -226,4 +225,3 @@ async def get_sync_cooldown(request: Request):
     device_id = _get_device_id(request)
     status = sync_cooldown.check_cooldown(device_id)
     return status
-
