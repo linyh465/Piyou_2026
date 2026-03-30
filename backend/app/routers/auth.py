@@ -60,7 +60,15 @@ JWT_ALGORITHM = "HS256"
 JWT_EXPIRE_HOURS = 24
 
 # 圖書館登入逾時（秒）/ Library login timeout (seconds); tunable via env var
-_LIBRARY_LOGIN_TIMEOUT: int = int(os.getenv("LIBRARY_LOGIN_TIMEOUT_SECONDS", "8"))
+def _get_lib_timeout() -> int:
+    """安全解析 LIBRARY_LOGIN_TIMEOUT_SECONDS，無效值時回退為預設值 8。
+    Safely parse LIBRARY_LOGIN_TIMEOUT_SECONDS; falls back to 8 on invalid input."""
+    try:
+        return max(1, min(60, int(os.getenv("LIBRARY_LOGIN_TIMEOUT_SECONDS", "8"))))
+    except (ValueError, TypeError):
+        return 8
+
+_LIBRARY_LOGIN_TIMEOUT: int = _get_lib_timeout()
 
 
 def decode_jwt(token: str) -> dict:
@@ -148,14 +156,14 @@ async def login(request_body: LoginRequest, request: Request):
     lib_scraper = LibraryScraper()
 
     # 兩個 task 同時啟動以並行執行 / Start both tasks immediately for parallel execution.
-    # asyncio.shield 防止 wait_for timeout 取消底層執行緒——逾時後執行緒自行結束，不殘留
-    # asyncio.shield prevents wait_for from cancelling the underlying thread on timeout.
     school_task = asyncio.create_task(
         asyncio.to_thread(school_scraper.login, request_body.student_id, request_body.password)
     )
-    _lib_thread = asyncio.to_thread(lib_scraper.login, request_body.student_id, request_body.password)
     lib_task = asyncio.create_task(
-        asyncio.wait_for(asyncio.shield(_lib_thread), timeout=_LIBRARY_LOGIN_TIMEOUT)
+        asyncio.wait_for(
+            asyncio.to_thread(lib_scraper.login, request_body.student_id, request_body.password),
+            timeout=_LIBRARY_LOGIN_TIMEOUT,
+        )
     )
 
     # 校務登入是必要路徑：先等待結果，失敗時立即取消圖書館 task（不再等待 timeout）
@@ -164,6 +172,8 @@ async def login(request_body: LoginRequest, request: Request):
         user_info = await school_task
     except Exception:
         lib_task.cancel()  # 不等逾時，立即取消 / cancel immediately, don't wait for timeout
+        # 避免「Task exception was never retrieved」警告 / suppress "never retrieved" warning
+        lib_task.add_done_callback(lambda t: t.exception() if not t.cancelled() else None)
         # ⚠️ 不記錄詳細錯誤（可能洩漏帳密） / Don't log details (may leak credentials)
         logger.info("Login attempt failed for a user")  # 僅記錄失敗事件 / Log only the event
         sync_cooldown.record_error(device_id)
