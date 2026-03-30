@@ -617,7 +617,7 @@ function SecurityPanel({ token, showMsg }) {
                         paddingLeft: '10px', marginBottom: '10px',
                         padding: '8px 10px',
                         borderRadius: '0 8px 8px 0',
-                        background: `${SEVERITY_COLORS[alert.severity]}10` || 'var(--bg-input)',
+                        background: SEVERITY_COLORS[alert.severity] ? `${SEVERITY_COLORS[alert.severity]}10` : 'var(--bg-input)',
                     }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px' }}>
                             <span style={{ fontSize: '13px' }}>{SEVERITY_ICONS[alert.severity] || '•'}</span>
