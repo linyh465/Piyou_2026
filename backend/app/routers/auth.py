@@ -146,8 +146,13 @@ async def login(request_body: LoginRequest, request: Request):
 
     # 校務與圖書館 session 同時建立，縮短等待時間
     # Create school + library sessions IN PARALLEL to minimize login latency.
+    # 圖書館登入設 8 秒上限，避免圖書館系統故障時拖慢整體登入速度
+    # Library login is capped at 8s so a library outage doesn't degrade login latency.
     school_task = asyncio.to_thread(school_scraper.login, request_body.student_id, request_body.password)
-    lib_task = asyncio.to_thread(lib_scraper.login, request_body.student_id, request_body.password)
+    lib_task = asyncio.wait_for(
+        asyncio.to_thread(lib_scraper.login, request_body.student_id, request_body.password),
+        timeout=8,
+    )
     school_result, lib_result = await asyncio.gather(school_task, lib_task, return_exceptions=True)
 
     if isinstance(school_result, Exception):

@@ -65,16 +65,13 @@ export default function SyncLoginModal({ show, onClose }) {
                 setIsSyncing(false);
 
                 // 三項資料並行同步，不互相等待 / Fetch all data in parallel
-                setBgSyncStep('同步中');
+                // 各 fetch 函式內部已處理錯誤，不會 reject；用 '課表' 作為初始步驟指示
+                // Each fetch catches errors internally; use '課表' as initial step indicator
+                setBgSyncStep('課表');
                 Promise.allSettled([fetchTimetable(), fetchGrades(), fetchLibrary()])
-                    .then((results) => {
-                        const anyFailed = results.some(r => r.status === 'rejected');
-                        if (anyFailed) {
-                            setBgSyncStep('error');
-                        } else {
-                            recordSyncSuccess();
-                            setBgSyncStep('done');
-                        }
+                    .then(() => {
+                        recordSyncSuccess();
+                        setBgSyncStep('done');
                         setTimeout(() => setBgSyncStep(null), 3000);
                     });
             } else {
