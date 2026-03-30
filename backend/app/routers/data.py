@@ -155,7 +155,6 @@ def _get_authenticated_scraper(user: dict) -> SchoolScraper:
     """
     student_id = user.get("sub", "")
 
-    # 重用快取的校園 session / Reuse cached school session
     cached_scraper = get_cached_scraper(student_id)
     if cached_scraper:
         return cached_scraper
