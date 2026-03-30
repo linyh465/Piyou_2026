@@ -438,13 +438,26 @@ const SEVERITY_COLORS = {
     low: 'var(--color-brand)',
 };
 
+const SEVERITY_ICONS = {
+    critical: '🚨',
+    high: '⚠️',
+    medium: '⚡',
+    low: 'ℹ️',
+};
+
 function SecurityPanel({ token, showMsg }) {
     const [alerts, setAlerts] = useState(null);
     const [alertsLoading, setAlertsLoading] = useState(false);
-    const [maintenance, setMaintenance] = useState(null); // {enabled, message}
+    const [maintenance, setMaintenance] = useState(null);
     const [maintMsg, setMaintMsg] = useState('');
     const [maintSaving, setMaintSaving] = useState(false);
-    const [clearing, setClearing] = useState(''); // which data_type is being cleared
+    const [clearing, setClearing] = useState('');
+    // IP 管理狀態 / IP management state
+    const [ips, setIps] = useState(null);
+    const [ipSummary, setIpSummary] = useState(null);
+    const [ipsLoading, setIpsLoading] = useState(false);
+    const [ipAction, setIpAction] = useState(''); // which IP is being acted on
+    const [ipFilter, setIpFilter] = useState('all'); // 'all' | 'blocked' | 'suspicious'
 
     const loadAnomalies = useCallback(async () => {
         setAlertsLoading(true);
@@ -455,6 +468,19 @@ function SecurityPanel({ token, showMsg }) {
             setAlerts([]);
         } finally {
             setAlertsLoading(false);
+        }
+    }, [token]);
+
+    const loadIPs = useCallback(async () => {
+        setIpsLoading(true);
+        try {
+            const res = await api.get('/notify/admin/security/ips', adminHeaders(token));
+            setIps(res.data.ips || []);
+            setIpSummary(res.data.summary || null);
+        } catch {
+            setIps([]);
+        } finally {
+            setIpsLoading(false);
         }
     }, [token]);
 
@@ -470,9 +496,10 @@ function SecurityPanel({ token, showMsg }) {
     useEffect(() => {
         loadAnomalies();
         loadMaintenanceState();
-        const timer = setInterval(loadAnomalies, 60_000);
+        loadIPs();
+        const timer = setInterval(() => { loadAnomalies(); loadIPs(); }, 60_000);
         return () => clearInterval(timer);
-    }, [loadAnomalies, loadMaintenanceState]);
+    }, [loadAnomalies, loadMaintenanceState, loadIPs]);
 
     const handleToggleMaintenance = async (enable) => {
         if (enable && !window.confirm(`確定開啟維護模式？前端所有使用者將看到維護頁面！`)) return;
@@ -502,8 +529,68 @@ function SecurityPanel({ token, showMsg }) {
         }
     };
 
+    const handleBlockIP = async (ip) => {
+        if (!window.confirm(`確定封鎖 IP ${ip}？`)) return;
+        setIpAction(ip);
+        try {
+            await api.post(`/notify/admin/security/ips/${encodeURIComponent(ip)}/block`, { reason: 'manual' }, adminHeaders(token));
+            showMsg(`已封鎖 IP: ${ip}`);
+            await loadIPs();
+        } catch (err) {
+            showMsg(err.response?.data?.detail || '封鎖失敗');
+        } finally {
+            setIpAction('');
+        }
+    };
+
+    const handleUnblockIP = async (ip) => {
+        setIpAction(ip);
+        try {
+            await api.post(`/notify/admin/security/ips/${encodeURIComponent(ip)}/unblock`, {}, adminHeaders(token));
+            showMsg(`已解除封鎖 IP: ${ip}`);
+            await loadIPs();
+        } catch (err) {
+            showMsg(err.response?.data?.detail || '解除失敗');
+        } finally {
+            setIpAction('');
+        }
+    };
+
+    const filteredIps = (ips || []).filter(ip => {
+        if (ipFilter === 'blocked') return ip.blocked;
+        if (ipFilter === 'suspicious') return !ip.blocked && (ip.waf_count + ip.bot_count + ip.path_count) >= 3;
+        return true;
+    });
+
+    const isSuspicious = (ip) => !ip.blocked && (ip.waf_count + ip.bot_count + ip.path_count) >= 3;
+
+    const formatTime = (iso) => {
+        if (!iso) return '—';
+        try { return new Date(iso).toLocaleString('zh-TW', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }); }
+        catch { return iso; }
+    };
+
     return (
         <>
+            {/* 安全統計概覽 / Security Stats Overview */}
+            {ipSummary && (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', marginBottom: '12px' }}>
+                    {[
+                        { label: '追蹤 IP', value: ipSummary.total_ips, color: 'var(--color-brand)' },
+                        { label: '已封鎖', value: ipSummary.blocked_count, color: 'var(--color-danger)' },
+                        { label: '可疑 IP', value: ipSummary.suspicious_count, color: '#f97316' },
+                        { label: 'WAF 攔截', value: ipSummary.total_waf_violations, color: '#eab308' },
+                        { label: 'Bot 封鎖', value: ipSummary.total_bot_blocks, color: '#f97316' },
+                        { label: '敏感路徑探測', value: ipSummary.total_sensitive_path_probes, color: '#eab308' },
+                    ].map(({ label, value, color }) => (
+                        <div key={label} style={{ background: 'var(--bg-card)', borderRadius: '10px', padding: '10px', textAlign: 'center', border: '1px solid var(--border)' }}>
+                            <div style={{ fontSize: '22px', fontWeight: 700, color }}>{value}</div>
+                            <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '2px' }}>{label}</div>
+                        </div>
+                    ))}
+                </div>
+            )}
+
             {/* AI 異常告警 */}
             <div style={card}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
@@ -512,7 +599,9 @@ function SecurityPanel({ token, showMsg }) {
                         {alertsLoading ? '偵測中…' : '重新偵測'}
                     </button>
                 </div>
-                <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: '0 0 12px' }}>每 60 秒自動更新 · 基於最近 1 小時事件</p>
+                <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: '0 0 12px' }}>
+                    每 60 秒自動更新 · 涵蓋前端事件 + WAF 違規 + Bot 偵測 + 速率限制
+                </p>
                 {alertsLoading && alerts === null && (
                     <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>偵測中…</p>
                 )}
@@ -526,16 +615,123 @@ function SecurityPanel({ token, showMsg }) {
                     <div key={i} style={{
                         borderLeft: `3px solid ${SEVERITY_COLORS[alert.severity] || 'var(--border)'}`,
                         paddingLeft: '10px', marginBottom: '10px',
+                        padding: '8px 10px',
+                        borderRadius: '0 8px 8px 0',
+                        background: `${SEVERITY_COLORS[alert.severity]}10` || 'var(--bg-input)',
                     }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px' }}>
+                            <span style={{ fontSize: '13px' }}>{SEVERITY_ICONS[alert.severity] || '•'}</span>
                             <span style={{ fontSize: '11px', fontWeight: 700, color: SEVERITY_COLORS[alert.severity], textTransform: 'uppercase' }}>
                                 {alert.severity}
                             </span>
                             <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text)' }}>{alert.title}</span>
                         </div>
-                        <p style={{ fontSize: '12px', color: 'var(--text-secondary)', margin: 0 }}>{alert.message}</p>
+                        <p style={{ fontSize: '12px', color: 'var(--text-secondary)', margin: 0, paddingLeft: '20px' }}>{alert.message}</p>
                     </div>
                 ))}
+            </div>
+
+            {/* IP 管理 / IP Management */}
+            <div style={card}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+                    <p style={{ fontWeight: 700, fontSize: '14px', color: 'var(--text)', margin: 0 }}>IP 管理</p>
+                    <button onClick={loadIPs} disabled={ipsLoading} style={{ ...btnGhost, fontSize: '12px', padding: '4px 10px' }}>
+                        {ipsLoading ? '載入中…' : '重新整理'}
+                    </button>
+                </div>
+                <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: '0 0 10px' }}>
+                    列出所有曾連線 IP · 可手動封鎖或開放 · 重啟後重置（記憶體儲存）
+                </p>
+
+                {/* 篩選器 / Filter */}
+                <div style={{ display: 'flex', gap: '6px', marginBottom: '10px', flexWrap: 'wrap' }}>
+                    {[
+                        { key: 'all', label: `全部 (${(ips || []).length})` },
+                        { key: 'suspicious', label: `可疑 (${(ips || []).filter(isSuspicious).length})`, color: '#f97316' },
+                        { key: 'blocked', label: `已封鎖 (${(ips || []).filter(i => i.blocked).length})`, color: 'var(--color-danger)' },
+                    ].map(({ key, label, color }) => (
+                        <button
+                            key={key}
+                            onClick={() => setIpFilter(key)}
+                            style={{
+                                padding: '4px 10px', borderRadius: '6px', border: `1px solid ${ipFilter === key ? (color || 'var(--color-brand)') : 'var(--border)'}`,
+                                background: ipFilter === key ? `${(color || 'var(--color-brand)')}22` : 'var(--bg-input)',
+                                color: ipFilter === key ? (color || 'var(--color-brand)') : 'var(--text-muted)',
+                                fontSize: '11px', fontWeight: 600, cursor: 'pointer',
+                            }}
+                        >{label}</button>
+                    ))}
+                </div>
+
+                {ipsLoading && ips === null && (
+                    <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>載入中…</p>
+                )}
+                {ips !== null && filteredIps.length === 0 && (
+                    <p style={{ fontSize: '13px', color: 'var(--text-muted)', textAlign: 'center', padding: '12px 0' }}>
+                        {ipFilter === 'all' ? '尚無連線記錄' : '此分類無資料'}
+                    </p>
+                )}
+                {filteredIps.map((ipRec) => {
+                    const threat = ipRec.waf_count + ipRec.bot_count + ipRec.path_count;
+                    const rowColor = ipRec.blocked
+                        ? 'rgba(239,68,68,0.06)'
+                        : threat >= 3 ? 'rgba(249,115,22,0.06)' : 'transparent';
+                    const borderColor = ipRec.blocked ? 'var(--color-danger)' : threat >= 3 ? '#f97316' : 'var(--border)';
+                    return (
+                        <div key={ipRec.ip} style={{
+                            border: `1px solid ${borderColor}`,
+                            borderRadius: '8px',
+                            padding: '10px 12px',
+                            marginBottom: '8px',
+                            background: rowColor,
+                        }}>
+                            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap' }}>
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', marginBottom: '4px' }}>
+                                        <span style={{ fontFamily: 'monospace', fontSize: '13px', fontWeight: 700, color: 'var(--text)' }}>{ipRec.ip}</span>
+                                        {ipRec.blocked && (
+                                            <span style={{ fontSize: '10px', padding: '1px 6px', borderRadius: '4px', background: 'rgba(239,68,68,0.15)', color: 'var(--color-danger)', fontWeight: 700 }}>
+                                                封鎖中 {ipRec.blocked_reason ? `(${ipRec.blocked_reason})` : ''}
+                                            </span>
+                                        )}
+                                        {!ipRec.blocked && threat >= 3 && (
+                                            <span style={{ fontSize: '10px', padding: '1px 6px', borderRadius: '4px', background: 'rgba(249,115,22,0.15)', color: '#f97316', fontWeight: 700 }}>
+                                                可疑
+                                            </span>
+                                        )}
+                                    </div>
+                                    <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                                        <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>請求: <b>{ipRec.request_count}</b></span>
+                                        {ipRec.waf_count > 0 && <span style={{ fontSize: '11px', color: '#eab308' }}>WAF: <b>{ipRec.waf_count}</b></span>}
+                                        {ipRec.bot_count > 0 && <span style={{ fontSize: '11px', color: '#f97316' }}>Bot: <b>{ipRec.bot_count}</b></span>}
+                                        {ipRec.path_count > 0 && <span style={{ fontSize: '11px', color: '#f97316' }}>路徑探測: <b>{ipRec.path_count}</b></span>}
+                                        {ipRec.rate_limit_hits > 0 && <span style={{ fontSize: '11px', color: 'var(--color-danger)' }}>速限: <b>{ipRec.rate_limit_hits}</b></span>}
+                                        <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>最後: {formatTime(ipRec.last_seen)}</span>
+                                    </div>
+                                </div>
+                                <div>
+                                    {ipRec.blocked ? (
+                                        <button
+                                            disabled={ipAction === ipRec.ip}
+                                            onClick={() => handleUnblockIP(ipRec.ip)}
+                                            style={{ ...btnGhost, fontSize: '11px', padding: '4px 10px', opacity: ipAction === ipRec.ip ? 0.5 : 1 }}
+                                        >
+                                            {ipAction === ipRec.ip ? '處理中…' : '解除封鎖'}
+                                        </button>
+                                    ) : (
+                                        <button
+                                            disabled={ipAction === ipRec.ip}
+                                            onClick={() => handleBlockIP(ipRec.ip)}
+                                            style={{ ...btnDanger, fontSize: '11px', padding: '4px 10px', opacity: ipAction === ipRec.ip ? 0.5 : 1 }}
+                                        >
+                                            {ipAction === ipRec.ip ? '處理中…' : '封鎖'}
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    );
+                })}
             </div>
 
             {/* 維護模式 */}

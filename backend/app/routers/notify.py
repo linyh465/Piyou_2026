@@ -662,6 +662,76 @@ async def admin_clear_data(
 
 
 # ══════════════════════════════════════════
+#  IP 管理 / IP Management
+# ══════════════════════════════════════════
+
+from app.middleware.security import ip_tracker as _ip_tracker
+
+
+@router.get("/admin/security/ips", summary="列出所有連線 IP / List All Connected IPs")
+async def admin_list_ips(
+    x_admin_token: Optional[str] = Header(None, alias="X-Admin-Token"),
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(_bearer_scheme),
+) -> dict:
+    """
+    取得所有曾連線的 IP 清單（含封鎖狀態與安全事件）。
+    Get all connected IPs with block status and security events.
+    """
+    _check_admin(x_admin_token, credentials)
+    ips = _ip_tracker.get_all_ips()
+    summary = _ip_tracker.get_security_summary()
+    return {"ips": ips, "total": len(ips), "summary": summary}
+
+
+class _IPBlockRequest(BaseModel):
+    reason: str = Field(default="manual", max_length=100)
+
+
+@router.post("/admin/security/ips/{ip}/block", summary="封鎖 IP / Block IP")
+async def admin_block_ip(
+    ip: str,
+    payload: _IPBlockRequest,
+    x_admin_token: Optional[str] = Header(None, alias="X-Admin-Token"),
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(_bearer_scheme),
+) -> dict:
+    """
+    封鎖指定 IP，後續連線將收到 403。
+    Block an IP; subsequent connections receive 403.
+    """
+    _check_admin(x_admin_token, credentials)
+    # 基本 IP 格式驗證 / Basic IP format validation
+    import ipaddress
+    try:
+        ipaddress.ip_address(ip)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid IP address format")
+    _ip_tracker.block_ip(ip, reason=payload.reason or "manual")
+    logger.warning(f"notify/admin: IP {ip} blocked (reason={payload.reason})")
+    return {"ok": True, "ip": ip, "blocked": True, "reason": payload.reason}
+
+
+@router.post("/admin/security/ips/{ip}/unblock", summary="解除封鎖 IP / Unblock IP")
+async def admin_unblock_ip(
+    ip: str,
+    x_admin_token: Optional[str] = Header(None, alias="X-Admin-Token"),
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(_bearer_scheme),
+) -> dict:
+    """
+    解除指定 IP 的封鎖。
+    Unblock a previously blocked IP.
+    """
+    _check_admin(x_admin_token, credentials)
+    import ipaddress
+    try:
+        ipaddress.ip_address(ip)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid IP address format")
+    _ip_tracker.unblock_ip(ip)
+    logger.info(f"notify/admin: IP {ip} unblocked")
+    return {"ok": True, "ip": ip, "blocked": False}
+
+
+# ══════════════════════════════════════════
 #  應用程式設定 / App Config
 # ══════════════════════════════════════════
 

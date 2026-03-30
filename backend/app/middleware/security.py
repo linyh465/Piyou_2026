@@ -138,7 +138,11 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         self._last_gc = now
 
     async def dispatch(self, request, call_next):
-        client_ip = request.client.host if request.client else "unknown"
+        # 優先使用 X-Forwarded-For（Railway / 反向代理環境）/ Prefer X-Forwarded-For for Railway
+        forwarded = request.headers.get("x-forwarded-for", "")
+        client_ip = forwarded.split(",")[0].strip() if forwarded else (
+            request.client.host if request.client else "unknown"
+        )
         now = time.time()
         path = request.url.path
 
@@ -154,6 +158,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             ]
             if len(self.strict_requests[client_ip]) >= self._STRICT_MAX:
                 retry_after = int(self._STRICT_WINDOW - (now - self.strict_requests[client_ip][0]))
+                ip_tracker.record_security_event(client_ip, path, request.headers.get("user-agent", ""), "rate_limited")
                 return JSONResponse(
                     status_code=429,
                     headers={"Retry-After": str(max(retry_after, 1))},
@@ -168,6 +173,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         ]
         if len(self.requests[client_ip]) >= self.max_requests:
             retry_after = int(self.window_seconds - (now - self.requests[client_ip][0]))
+            ip_tracker.record_security_event(client_ip, path, request.headers.get("user-agent", ""), "rate_limited")
             return JSONResponse(
                 status_code=429,
                 headers={"Retry-After": str(max(retry_after, 1))},
@@ -281,6 +287,343 @@ sync_cooldown = SyncCooldownTracker()
 
 
 # ══════════════════════════════════════════════
+#  IP 追蹤器 / IP Tracker
+#  記錄所有連線過的 IP、支援封鎖 / 解除封鎖
+#  Tracks all connected IPs; supports block/unblock.
+# ══════════════════════════════════════════════
+
+def _get_real_ip(request) -> str:
+    """
+    從 X-Forwarded-For 取得真實 IP（Railway / 反向代理環境）。
+    Get real client IP from X-Forwarded-For (Railway/reverse proxy).
+    """
+    forwarded = request.headers.get("x-forwarded-for", "")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return request.client.host if request.client else "unknown"
+
+
+class IPTracker:
+    """
+    全域 IP 追蹤器（單例）/ Global IP tracker (singleton).
+    - 記錄連線 IP 元資料（首次連線、最後連線、請求次數、安全事件）
+      Records IP metadata (first/last seen, request count, security events).
+    - 支援管理員手動封鎖 / 解除封鎖
+      Supports admin manual block/unblock.
+    - 自動記錄 WAF 違規、Bot 封鎖、敏感路徑探測
+      Auto-records WAF violations, bot blocks, sensitive path probes.
+    """
+
+    MAX_IPS = 2000             # 最多追蹤 2000 個 IP / Max 2000 tracked IPs
+    MAX_EVENTS_PER_IP = 20     # 每 IP 最多保留 20 筆安全事件 / Max 20 events per IP
+
+    def __init__(self):
+        self._lock = threading.Lock()
+        # key = ip → {"first_seen", "last_seen", "request_count", "events", "blocked", "blocked_reason", "blocked_at", "waf_count", "bot_count", "path_count"}
+        self._ips: dict[str, dict] = {}
+        self._rate_limit_hits: dict[str, int] = defaultdict(int)  # ip → 429 count
+
+    def _ensure_ip(self, ip: str) -> dict:
+        """確保 IP 記錄存在 / Ensure IP record exists."""
+        if ip not in self._ips:
+            # LRU 淘汰最舊 IP / LRU evict oldest IP
+            if len(self._ips) >= self.MAX_IPS:
+                oldest = min(
+                    (k for k in self._ips if not self._ips[k].get("blocked")),
+                    key=lambda k: self._ips[k]["last_seen"],
+                    default=None,
+                )
+                if oldest:
+                    del self._ips[oldest]
+            now = time.time()
+            self._ips[ip] = {
+                "first_seen": now,
+                "last_seen": now,
+                "request_count": 0,
+                "events": [],
+                "blocked": False,
+                "blocked_reason": "",
+                "blocked_at": None,
+                "waf_count": 0,
+                "bot_count": 0,
+                "path_count": 0,
+            }
+        return self._ips[ip]
+
+    def record_request(self, ip: str, path: str, ua: str) -> None:
+        """記錄正常請求 / Record a normal request."""
+        with self._lock:
+            rec = self._ensure_ip(ip)
+            rec["last_seen"] = time.time()
+            rec["request_count"] += 1
+
+    def record_security_event(self, ip: str, path: str, ua: str, event_type: str) -> None:
+        """
+        記錄安全事件 / Record a security event.
+        event_type: "waf_blocked" | "bot_blocked" | "sensitive_path" | "rate_limited"
+        """
+        with self._lock:
+            rec = self._ensure_ip(ip)
+            now = time.time()
+            rec["last_seen"] = now
+            rec["request_count"] += 1
+
+            # 計數 / Count by type
+            if event_type == "waf_blocked":
+                rec["waf_count"] += 1
+            elif event_type == "bot_blocked":
+                rec["bot_count"] += 1
+            elif event_type == "sensitive_path":
+                rec["path_count"] += 1
+            elif event_type == "rate_limited":
+                self._rate_limit_hits[ip] += 1
+
+            # 保留最近 N 筆安全事件 / Keep recent N security events
+            rec["events"].append({
+                "ts": now,
+                "type": event_type,
+                "path": path[:100],
+                "ua": (ua or "")[:80],
+            })
+            if len(rec["events"]) > self.MAX_EVENTS_PER_IP:
+                rec["events"] = rec["events"][-self.MAX_EVENTS_PER_IP:]
+
+    def block_ip(self, ip: str, reason: str = "manual") -> None:
+        """封鎖 IP / Block an IP."""
+        with self._lock:
+            rec = self._ensure_ip(ip)
+            rec["blocked"] = True
+            rec["blocked_reason"] = reason
+            rec["blocked_at"] = time.time()
+
+    def unblock_ip(self, ip: str) -> None:
+        """解除封鎖 IP / Unblock an IP."""
+        with self._lock:
+            if ip in self._ips:
+                self._ips[ip]["blocked"] = False
+                self._ips[ip]["blocked_reason"] = ""
+                self._ips[ip]["blocked_at"] = None
+
+    def is_blocked(self, ip: str) -> bool:
+        """檢查 IP 是否被封鎖 / Check if IP is blocked."""
+        with self._lock:
+            return self._ips.get(ip, {}).get("blocked", False)
+
+    def get_all_ips(self) -> list[dict]:
+        """
+        取得所有追蹤 IP 清單（依最後連線時間排序）。
+        Get all tracked IPs sorted by last seen (newest first).
+        """
+        from datetime import datetime, timezone
+        with self._lock:
+            result = []
+            for ip, rec in self._ips.items():
+                result.append({
+                    "ip": ip,
+                    "first_seen": datetime.fromtimestamp(rec["first_seen"], tz=timezone.utc).isoformat(),
+                    "last_seen": datetime.fromtimestamp(rec["last_seen"], tz=timezone.utc).isoformat(),
+                    "request_count": rec["request_count"],
+                    "waf_count": rec["waf_count"],
+                    "bot_count": rec["bot_count"],
+                    "path_count": rec["path_count"],
+                    "rate_limit_hits": self._rate_limit_hits.get(ip, 0),
+                    "blocked": rec["blocked"],
+                    "blocked_reason": rec["blocked_reason"],
+                    "blocked_at": (
+                        datetime.fromtimestamp(rec["blocked_at"], tz=timezone.utc).isoformat()
+                        if rec["blocked_at"] else None
+                    ),
+                    "recent_events": rec["events"][-5:],  # 只回傳最近 5 筆 / Only return last 5
+                })
+            result.sort(key=lambda x: x["last_seen"], reverse=True)
+            return result
+
+    def get_security_summary(self) -> dict:
+        """取得安全統計摘要 / Get security stats summary."""
+        with self._lock:
+            total_ips = len(self._ips)
+            blocked_count = sum(1 for r in self._ips.values() if r.get("blocked"))
+            total_waf = sum(r["waf_count"] for r in self._ips.values())
+            total_bot = sum(r["bot_count"] for r in self._ips.values())
+            total_path = sum(r["path_count"] for r in self._ips.values())
+            total_rate = sum(self._rate_limit_hits.values())
+            # 自動封鎖警告：高違規 IP / Auto-block warning: high violation IPs
+            suspicious = sum(
+                1 for r in self._ips.values()
+                if not r.get("blocked") and (r["waf_count"] + r["bot_count"] + r["path_count"]) >= 3
+            )
+            return {
+                "total_ips": total_ips,
+                "blocked_count": blocked_count,
+                "suspicious_count": suspicious,
+                "total_waf_violations": total_waf,
+                "total_bot_blocks": total_bot,
+                "total_sensitive_path_probes": total_path,
+                "total_rate_limit_hits": total_rate,
+            }
+
+
+# 全域 IP 追蹤器單例 / Global IP tracker singleton
+ip_tracker = IPTracker()
+
+
+# ══════════════════════════════════════════════
+#  IP 封鎖中介層 / IP Block Middleware
+# ══════════════════════════════════════════════
+
+class IPBlockMiddleware(BaseHTTPMiddleware):
+    """
+    封鎖黑名單 IP，並記錄所有連線 IP。
+    Blocks blacklisted IPs and tracks all connections.
+    健康檢查路徑不封鎖，避免 Railway 探測失敗。
+    Health-check paths bypass blocking for Railway probes.
+    """
+    _SKIP_PATHS = frozenset({"/", "/health"})
+
+    async def dispatch(self, request, call_next):
+        path = request.url.path
+        ip = _get_real_ip(request)
+
+        if path not in self._SKIP_PATHS:
+            # 記錄請求 / Record request
+            ip_tracker.record_request(ip, path, request.headers.get("user-agent", ""))
+            # 封鎖已黑名單 IP / Block blacklisted IP
+            if ip_tracker.is_blocked(ip):
+                return JSONResponse(
+                    status_code=403,
+                    content={"detail": "Access denied / 存取遭拒"},
+                )
+
+        return await call_next(request)
+
+
+# ══════════════════════════════════════════════
+#  Bot 過濾中介層 / Bot Filter Middleware
+# ══════════════════════════════════════════════
+
+# 已知惡意掃描工具 User-Agent 特徵
+# Known malicious scanner User-Agent signatures
+_MALICIOUS_UA_PATTERN = re.compile(
+    r"(sqlmap|nikto|nmap|masscan|nuclei|zgrab|dirbuster|gobuster|wfuzz|"
+    r"hydra|acunetix|nessus|openvas|w3af|havij|pangolin|appscan|"
+    r"webinspect|burpsuite|metasploit|qualysguard|nexpose|zap|"
+    r"python-requests/[01]\.|libwww-perl|lwp-trivial|java/[0-6]\.|"
+    r"wget/1\.[0-9]\b|curl/[0-6]\.|go-http-client/1\.0)",
+    re.IGNORECASE,
+)
+
+
+class BotFilterMiddleware(BaseHTTPMiddleware):
+    """
+    封鎖已知惡意掃描工具的 User-Agent。
+    Blocks requests from known malicious scanner User-Agents.
+    """
+
+    async def dispatch(self, request, call_next):
+        ua = request.headers.get("user-agent", "")
+        if _MALICIOUS_UA_PATTERN.search(ua):
+            ip = _get_real_ip(request)
+            ip_tracker.record_security_event(ip, request.url.path, ua, "bot_blocked")
+            return JSONResponse(
+                status_code=403,
+                content={"detail": "Forbidden / 存取遭拒"},
+            )
+        return await call_next(request)
+
+
+# ══════════════════════════════════════════════
+#  敏感路徑保護中介層 / Sensitive Path Middleware
+# ══════════════════════════════════════════════
+
+# 攻擊者常探測的敏感路徑
+# Sensitive paths commonly probed by attackers
+_SENSITIVE_PATH_PATTERN = re.compile(
+    r"^(/\.env|/\.git|/\.htaccess|/\.htpasswd|/\.ssh|/\.DS_Store|"
+    r"/wp-config\.php|/wp-admin|/wp-login\.php|/xmlrpc\.php|"
+    r"/phpmyadmin|/pma|/adminer|/admin\.php|/config\.php|"
+    r"/backup|/dump\.sql|/database\.sql|/db\.sql|"
+    r"/etc/passwd|/proc/|/server-status|/server-info|"
+    r"/web\.config|/appsettings\.json|/\.well-known/private|"
+    r"/actuator|/metrics|/env|/trace|/heapdump)",
+    re.IGNORECASE,
+)
+
+
+class SensitivePathMiddleware(BaseHTTPMiddleware):
+    """
+    對已知敏感路徑回傳 404，並記錄探測行為。
+    Returns 404 for known sensitive paths and records probe events.
+    """
+
+    async def dispatch(self, request, call_next):
+        path = request.url.path
+        if _SENSITIVE_PATH_PATTERN.match(path):
+            ip = _get_real_ip(request)
+            ip_tracker.record_security_event(
+                ip, path, request.headers.get("user-agent", ""), "sensitive_path"
+            )
+            return JSONResponse(
+                status_code=404,
+                content={"detail": "Not found"},
+            )
+        return await call_next(request)
+
+
+# ══════════════════════════════════════════════
+#  WAF 中介層（基本 SQL Injection / XSS 偵測）
+#  WAF Middleware (basic SQL injection / XSS detection)
+# ══════════════════════════════════════════════
+
+# SQL Injection 特徵（僅掃描 Query String）
+# SQL injection signatures (query string only)
+_SQL_INJECTION_PATTERN = re.compile(
+    r"(\bunion\b.*\bselect\b|\bselect\b.*\bfrom\b|\bdrop\b.*\btable\b|"
+    r"\binsert\b.*\binto\b|\bdelete\b.*\bfrom\b|\bupdate\b.*\bset\b|"
+    r"--\s|;\s*(drop|select|insert|update|delete)\b|"
+    r"'\s*(or|and)\s*'?\d|1\s*=\s*1|0x[0-9a-f]{4,}|"
+    r"sleep\s*\(|waitfor\s+delay|benchmark\s*\(|"
+    r"information_schema|sys\.tables|xp_cmdshell)",
+    re.IGNORECASE,
+)
+
+# XSS 特徵（僅掃描 Query String）
+# XSS signatures (query string only)
+_XSS_PATTERN = re.compile(
+    r"(<\s*script[\s>]|javascript\s*:|on\w+\s*=\s*[\"']|"
+    r"<\s*iframe[\s>]|<\s*object[\s>]|<\s*embed[\s>]|"
+    r"<\s*svg.*on\w+=|expression\s*\(|vbscript\s*:)",
+    re.IGNORECASE,
+)
+
+
+class WAFMiddleware(BaseHTTPMiddleware):
+    """
+    基本 WAF：偵測 Query String 中的 SQL Injection 與 XSS Payload。
+    Basic WAF: detects SQL injection and XSS payloads in query strings.
+    僅掃描 Query String，不讀取 Body，避免影響效能。
+    Scans query string only; does not read body to avoid performance impact.
+    """
+
+    async def dispatch(self, request, call_next):
+        query = str(request.url.query)
+        path = request.url.path
+
+        if query and (
+            _SQL_INJECTION_PATTERN.search(query) or _XSS_PATTERN.search(query)
+        ):
+            ip = _get_real_ip(request)
+            ip_tracker.record_security_event(
+                ip, path, request.headers.get("user-agent", ""), "waf_blocked"
+            )
+            return JSONResponse(
+                status_code=403,
+                content={"detail": "Forbidden: Malicious input detected / 偵測到惡意輸入"},
+            )
+
+        return await call_next(request)
+
+
+# ══════════════════════════════════════════════
 #  機器人與爬蟲封鎖 / Bot & Crawler Blocker
 # ══════════════════════════════════════════════
 
@@ -290,9 +633,10 @@ class BotBlockerMiddleware(BaseHTTPMiddleware):
     Block known malicious bots, AI scrapers, and security scanners by User-Agent.
     允許合法搜尋引擎爬蟲正常通過健康檢查路徑。
     Legitimate search engine crawlers are allowed only on health-check paths.
+    同時記錄封鎖事件到 IPTracker。
+    Records block events to IPTracker.
     """
 
-    # 明確封鎖的 User-Agent 關鍵字（正規表達式）
     _BLOCKED_UA = re.compile(
         r'(scrapy|python-requests|curl/|wget/|libwww-perl|'
         r'go-http-client|java/|okhttp|axios|node-fetch|'
@@ -305,7 +649,6 @@ class BotBlockerMiddleware(BaseHTTPMiddleware):
         re.IGNORECASE,
     )
 
-    # 允許通過的路徑（不論 UA）
     _ALLOW_PATHS = frozenset({"/", "/health"})
 
     async def dispatch(self, request, call_next):
@@ -314,13 +657,16 @@ class BotBlockerMiddleware(BaseHTTPMiddleware):
 
         ua = request.headers.get("user-agent", "")
         if not ua:
-            # 無 User-Agent 的請求視為可疑，封鎖 API 存取
+            ip = _get_real_ip(request)
+            ip_tracker.record_security_event(ip, request.url.path, "", "bot_blocked")
             return JSONResponse(
                 status_code=403,
                 content={"detail": "存取被拒 / Access denied"},
             )
 
         if self._BLOCKED_UA.search(ua):
+            ip = _get_real_ip(request)
+            ip_tracker.record_security_event(ip, request.url.path, ua, "bot_blocked")
             return JSONResponse(
                 status_code=403,
                 content={"detail": "自動化存取被拒 / Automated access denied"},
@@ -338,15 +684,17 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     為所有回應加入安全標頭，防禦點擊劫持、MIME 嗅探、XSS 等攻擊。
     Adds security headers to all responses to defend against
     clickjacking, MIME sniffing, XSS, and information leakage.
+    包含 HSTS 強制 HTTPS / Includes HSTS to enforce HTTPS.
     """
 
     async def dispatch(self, request, call_next):
         response = await call_next(request)
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["X-XSS-Protection"] = "1; mode=block"
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
-        response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()"
-        # 移除伺服器版本資訊 / Strip server version info
-        response.headers["Server"] = "Piyou"
+        response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+        # 隱藏平台資訊 / Hide platform info
+        response.headers["Server"] = "piyou"
         return response

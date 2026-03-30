@@ -325,7 +325,7 @@ def invalidate_stats_cache() -> None:
 async def get_anomalies() -> list[dict]:
     """
     分析近期事件，依規則回傳異常告警清單。
-    Rule-based anomaly detection using recent analytics data.
+    Rule-based anomaly detection using recent analytics data + security events from IPTracker.
     """
     stats = await get_stats()
     alerts: list[dict] = []
@@ -404,6 +404,75 @@ async def get_anomalies() -> list[dict]:
                 "value": error_pct,
                 "threshold": 15,
             })
+
+    # ── 從 IP 追蹤器取得安全事件（即時，不依賴 Sheets）──
+    # ── Pull security events from IPTracker (real-time, no Sheets dependency) ──
+    try:
+        from app.middleware.security import ip_tracker
+        sec = ip_tracker.get_security_summary()
+
+        # 規則 5：WAF 違規（SQL Injection / XSS 嘗試）
+        waf_total = sec.get("total_waf_violations", 0)
+        if waf_total >= 3:
+            alerts.append({
+                "severity": "critical" if waf_total >= 20 else "high" if waf_total >= 10 else "medium",
+                "type": "waf_violations",
+                "title": "偵測到 SQL Injection / XSS 攻擊嘗試",
+                "message": f"已攔截 {waf_total} 次惡意 Payload（SQL Injection / XSS）",
+                "value": waf_total,
+                "threshold": 3,
+            })
+
+        # 規則 6：惡意掃描 Bot（sqlmap、Nikto 等）
+        bot_total = sec.get("total_bot_blocks", 0)
+        if bot_total >= 2:
+            alerts.append({
+                "severity": "high" if bot_total >= 10 else "medium",
+                "type": "bot_detected",
+                "title": "偵測到惡意掃描工具",
+                "message": f"已封鎖 {bot_total} 次惡意 Bot（sqlmap / Nikto / Nmap 等）",
+                "value": bot_total,
+                "threshold": 2,
+            })
+
+        # 規則 7：敏感路徑探測（/.env、/.git 等）
+        path_total = sec.get("total_sensitive_path_probes", 0)
+        if path_total >= 3:
+            alerts.append({
+                "severity": "high" if path_total >= 15 else "medium",
+                "type": "sensitive_path_probe",
+                "title": "偵測到敏感路徑掃描",
+                "message": f"已攔截 {path_total} 次敏感路徑探測（/.env、/.git 等）",
+                "value": path_total,
+                "threshold": 3,
+            })
+
+        # 規則 8：速率限制連續觸發（暴力破解/DDoS 跡象）
+        rate_total = sec.get("total_rate_limit_hits", 0)
+        if rate_total >= 10:
+            alerts.append({
+                "severity": "critical" if rate_total >= 100 else "high" if rate_total >= 30 else "medium",
+                "type": "rate_limit_burst",
+                "title": "速率限制大量觸發（疑似 DDoS / 暴力破解）",
+                "message": f"共觸發速率限制 {rate_total} 次，請確認是否遭受攻擊",
+                "value": rate_total,
+                "threshold": 10,
+            })
+
+        # 規則 9：高風險可疑 IP（多種違規且未封鎖）
+        suspicious = sec.get("suspicious_count", 0)
+        if suspicious >= 1:
+            alerts.append({
+                "severity": "high" if suspicious >= 3 else "medium",
+                "type": "suspicious_ips",
+                "title": f"發現 {suspicious} 個高風險可疑 IP",
+                "message": f"有 {suspicious} 個 IP 觸發多項安全規則但尚未封鎖，建議在 IP 管理中審查並封鎖",
+                "value": suspicious,
+                "threshold": 1,
+            })
+
+    except Exception as exc:
+        logger.warning(f"get_anomalies: ip_tracker unavailable ({exc})")
 
     return alerts
 

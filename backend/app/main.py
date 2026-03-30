@@ -21,6 +21,9 @@ from app.middleware.security import (
     HTTPSRedirectMiddleware,
     RateLimitMiddleware,
     BotBlockerMiddleware,
+    IPBlockMiddleware,
+    SensitivePathMiddleware,
+    WAFMiddleware,
     SecurityHeadersMiddleware,
 )
 install_credential_filter()
@@ -80,13 +83,16 @@ app.add_middleware(
     allow_headers=["Content-Type", "Authorization", "X-Device-Id", "X-Admin-Token"],
 )
 
-# ── 安全中介層 / Security Middleware ──
+# ── 安全中介層（由內到外依序疊加）/ Security Middleware (innermost first) ──
 # 注意：Starlette 中介層以 LIFO 順序執行（後加的先執行）
-# Note: Starlette middleware executes in LIFO order (last added runs first)
-app.add_middleware(SecurityHeadersMiddleware)
-app.add_middleware(BotBlockerMiddleware)
-app.add_middleware(RateLimitMiddleware, max_requests=60, window_seconds=60)
+# 請求進入方向：SecurityHeaders → IPBlock → BotBlocker → SensitivePath → WAF → RateLimit → HTTPSRedirect → app
 app.add_middleware(HTTPSRedirectMiddleware)
+app.add_middleware(RateLimitMiddleware, max_requests=60, window_seconds=60)
+app.add_middleware(WAFMiddleware)
+app.add_middleware(SensitivePathMiddleware)
+app.add_middleware(BotBlockerMiddleware)
+app.add_middleware(IPBlockMiddleware)
+app.add_middleware(SecurityHeadersMiddleware)
 
 # ── 註冊路由 / Register Routes ──
 # 所有業務路由統一掛載在 /api/v1 前綴下
