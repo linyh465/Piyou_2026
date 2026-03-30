@@ -59,6 +59,17 @@ if not JWT_SECRET:
 JWT_ALGORITHM = "HS256"
 JWT_EXPIRE_HOURS = 24
 
+# 圖書館登入逾時（秒）/ Library login timeout (seconds); tunable via env var
+def _get_lib_timeout() -> int:
+    """安全解析 LIBRARY_LOGIN_TIMEOUT_SECONDS，無效值時回退為預設值 8。
+    Safely parse LIBRARY_LOGIN_TIMEOUT_SECONDS; falls back to 8 on invalid input."""
+    try:
+        return max(1, min(60, int(os.getenv("LIBRARY_LOGIN_TIMEOUT_SECONDS", "8"))))
+    except (ValueError, TypeError):
+        return 8
+
+_LIBRARY_LOGIN_TIMEOUT: int = _get_lib_timeout()
+
 
 def decode_jwt(token: str) -> dict:
     """解碼 JWT / Decode JWT token"""
@@ -91,9 +102,9 @@ async def login(request_body: LoginRequest, request: Request):
     流程 / Flow:
     1. 檢查伺服器端同步冷卻（裝置獨立冷卻）/ Check server-side sync cooldown (per-device)
     2. 接收學號與密碼（不記錄） / Receive credentials (never logged)
-    3. 透過爬蟲代理校務系統驗證 / Proxy auth via school portal scraper
+    3. 校務與圖書館 scraper 並行驗證，縮短等待時間 / Parallel auth for school + library scrapers
     4. 成功後簽發 JWT / Issue JWT on success
-    5. 快取校園 Session（30 分鐘）/ Cache school session (30 min TTL)
+    5. 快取校園 Session（30 分鐘）/ Cache school + library sessions (30 min TTL)
     6. 記錄同步成功至冷卻追蹤器 / Record sync success in cooldown tracker
 
     ⚠️ 帳號密碼不以任何形式快取或持久化存放
@@ -141,41 +152,52 @@ async def login(request_body: LoginRequest, request: Request):
 
     # ── 驗證邏輯（帳密僅存在於此函數作用域）──
     # ── Auth logic (credentials exist ONLY in this function scope) ──
-    scraper = SchoolScraper()
+    school_scraper = SchoolScraper()
+    lib_scraper = LibraryScraper()
 
-    try:
-        # 嘗試登入校務系統（在執行緒池中執行，避免阻塞事件迴圈）
-        # Try logging into school portal (run in thread pool to avoid blocking event loop)
-        user_info = await asyncio.to_thread(
-            scraper.login, request_body.student_id, request_body.password
+    # 兩個 task 同時啟動以並行執行 / Start both tasks immediately for parallel execution.
+    school_task = asyncio.create_task(
+        asyncio.to_thread(school_scraper.login, request_body.student_id, request_body.password)
+    )
+    lib_task = asyncio.create_task(
+        asyncio.wait_for(
+            asyncio.to_thread(lib_scraper.login, request_body.student_id, request_body.password),
+            timeout=_LIBRARY_LOGIN_TIMEOUT,
         )
+    )
+
+    # 校務登入是必要路徑：先等待結果，失敗時立即取消圖書館 task（不再等待 timeout）
+    # School login is critical: await it first; on failure, cancel lib task immediately.
+    try:
+        user_info = await school_task
     except Exception:
+        lib_task.cancel()  # 不等逾時，立即取消 / cancel immediately, don't wait for timeout
+        # 避免「Task exception was never retrieved」警告 / suppress "never retrieved" warning
+        lib_task.add_done_callback(lambda t: t.exception() if not t.cancelled() else None)
         # ⚠️ 不記錄詳細錯誤（可能洩漏帳密） / Don't log details (may leak credentials)
         logger.info("Login attempt failed for a user")  # 僅記錄失敗事件 / Log only the event
-        # 記錄同步錯誤至冷卻追蹤器 / Record sync error in cooldown tracker
         sync_cooldown.record_error(device_id)
         raise HTTPException(
             status_code=401,
             detail="登入失敗，請確認帳號密碼 / Login failed, please check credentials",
         )
 
+    # 校務成功；取得圖書館結果（逾時或失敗則為 exception，後續跳過快取）
+    # School succeeded; get library result (timeout/error → lib_result is exception, skip caching).
+    try:
+        lib_result = await lib_task
+    except Exception as exc:
+        lib_result = exc
+
     # ── 記錄同步成功至冷卻追蹤器 / Record sync success in cooldown tracker ──
     sync_cooldown.record_success(device_id)
 
     # ── 快取校務 scraper session / Cache school scraper session ──
-    cache_scraper_session(request_body.student_id, scraper)
+    cache_scraper_session(request_body.student_id, school_scraper)
 
-    # ── 順帶建立並快取圖書館 session（帳密仍在作用域內，用完即丟）──
-    # ── Also create and cache library session (credentials still in scope, discarded after) ──
-    try:
-        lib_scraper = LibraryScraper()
-        lib_ok = await asyncio.to_thread(
-            lib_scraper.login, request_body.student_id, request_body.password
-        )
-        if lib_ok:
-            cache_library_session(request_body.student_id, lib_scraper)
-    except Exception:
-        pass  # 圖書館登入失敗不阻斷主流程 / Library login failure does not block main flow
+    # ── 快取圖書館 session（已與校務同時完成）/ Cache library session (completed in parallel) ──
+    if not isinstance(lib_result, Exception) and lib_result:
+        cache_library_session(request_body.student_id, lib_scraper)
 
     # ── 簽發 JWT / Issue JWT ──
     payload = {
@@ -226,4 +248,3 @@ async def get_sync_cooldown(request: Request):
     device_id = _get_device_id(request)
     status = sync_cooldown.check_cooldown(device_id)
     return status
-
