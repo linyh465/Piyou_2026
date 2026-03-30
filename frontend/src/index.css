@@ -729,7 +729,7 @@ body {
   flex: 1;
   overflow-y: auto;
   /* iOS PWA：防止 rubber-band overscroll 導致 position:fixed 導航列位移 */
-  /* Prevents iOS overscroll from displacing the fixed bottom nav bar    */
+  /* Prevents iOS overscroll from displacing the fixed bottom nav bar */
   overscroll-behavior-y: contain;
   padding: var(--space-page);
   background: var(--bg);
@@ -755,7 +755,6 @@ body {
   /* iOS PWA：強制 GPU 合成層，防止 backdrop-filter 元素在 WebKit 偶發位移 */
   /* Force GPU compositing to prevent WebKit fixed-position glitch with backdrop-filter */
   transform: translateZ(0);
-  -webkit-transform: translateZ(0);
 }
 
 .mobile-nav-slider {
