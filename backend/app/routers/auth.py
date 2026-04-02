@@ -136,11 +136,13 @@ async def login(request_body: LoginRequest, request: Request):
     if is_demo_account(request_body.student_id):
         if not await verify_demo_password(request_body.password):
             sync_cooldown.record_error(client_ip)
+            sync_cooldown.record_error(device_id)
             raise HTTPException(
                 status_code=401,
                 detail="展示帳號密碼錯誤 / Demo account password incorrect",
             )
         sync_cooldown.record_success(client_ip)
+        sync_cooldown.record_success(device_id)
         payload = {
             "sub": DEMO_STUDENT_ID,
             "name": DEMO_NAME,
@@ -180,6 +182,7 @@ async def login(request_body: LoginRequest, request: Request):
         lib_task.add_done_callback(lambda t: t.exception() if not t.cancelled() else None)
         logger.info("Login attempt failed for a user")
         sync_cooldown.record_error(client_ip)
+        sync_cooldown.record_error(device_id)
         raise HTTPException(
             status_code=401,
             detail="登入失敗，請確認帳號密碼 / Login failed, please check credentials",
@@ -191,8 +194,10 @@ async def login(request_body: LoginRequest, request: Request):
     except Exception as exc:
         lib_result = exc
 
-    # ── 記錄同步成功至冷卻追蹤器 / Record sync success in cooldown tracker ──
+    # ── 記錄同步成功至冷卻追蹤器（IP + device_id 雙記錄）──
+    # ── Record sync success: both IP (security) and device_id (UX) ──
     sync_cooldown.record_success(client_ip)
+    sync_cooldown.record_success(device_id)
 
     # ── 快取校務 scraper session / Cache school scraper session ──
     cache_scraper_session(request_body.student_id, school_scraper)
@@ -237,8 +242,9 @@ async def logout(current_user: dict = Depends(get_current_user)):
 @router.get("/sync-cooldown")
 async def get_sync_cooldown(request: Request):
     """
-    查詢同步冷卻狀態 / Check sync cooldown status
+    查詢同步冷卻狀態（以 device_id 為 key，供前端 UX 使用）
+    Check sync cooldown status (keyed on device_id for frontend UX).
     """
-    client_ip = _get_client_ip(request)
-    status = sync_cooldown.check_cooldown(client_ip)
+    device_id = _get_device_id(request)
+    status = sync_cooldown.check_cooldown(device_id)
     return status

@@ -329,14 +329,13 @@ async def update_feedback_contact_endpoint(feedback_id: str, body: FeedbackConta
 
 @router.post("/admin/announcements/invalidate", summary="清除公告快取 / Invalidate Announcement Cache")
 async def admin_invalidate_cache(
-    x_admin_token: Optional[str] = Header(None, alias="X-Admin-Token"),
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(_bearer_scheme),
 ) -> dict:
     """
     管理員在 Sheets 新增/修改公告後，可主動清除快取使前端立即看到最新公告。
     After admin adds/edits announcements in Sheets, call this to clear cache immediately.
     """
-    _check_admin(x_admin_token, credentials)
+    _check_admin(credentials)
     invalidate_announcements_cache()
     logger.info("notify/admin: announcement cache invalidated by admin")
     return {"ok": True, "message": "公告快取已清除 / Announcement cache cleared"}
@@ -398,11 +397,10 @@ async def admin_login(body: AdminLoginRequest) -> AdminLoginResponse:
 
 @router.get("/admin/announcements", response_model=AdminAnnouncementsResponse, summary="管理員列出公告 / Admin List Announcements")
 async def admin_list_announcements(
-    x_admin_token: Optional[str] = Header(None, alias="X-Admin-Token"),
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(_bearer_scheme),
 ) -> AdminAnnouncementsResponse:
     """列出所有公告，含排程（未來）、已過期、草稿 / List ALL announcements including scheduled, expired, draft."""
-    _check_admin(x_admin_token, credentials)
+    _check_admin(credentials)
     try:
         items = await get_all_announcements_for_admin()
     except RuntimeError as exc:
@@ -421,11 +419,10 @@ async def admin_list_announcements(
 @router.post("/admin/announcements", status_code=201, summary="管理員新增公告 / Admin Create Announcement")
 async def admin_create_announcement(
     body: AnnouncementCreate,
-    x_admin_token: Optional[str] = Header(None, alias="X-Admin-Token"),
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(_bearer_scheme),
 ) -> dict:
     """新增公告至 Google Sheets / Create announcement in Google Sheets."""
-    _check_admin(x_admin_token, credentials)
+    _check_admin(credentials)
     try:
         ann = await create_announcement(body.model_dump())
         invalidate_announcements_cache()
@@ -439,14 +436,13 @@ async def admin_create_announcement(
 async def admin_update_announcement(
     ann_id: str,
     body: AnnouncementUpdate,
-    x_admin_token: Optional[str] = Header(None, alias="X-Admin-Token"),
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(_bearer_scheme),
 ) -> dict:
     """
     更新公告內容。republish=true 時版本號遞增，所有使用者重新彈窗。
     Update announcement. republish=true increments version, causing re-popup for all users.
     """
-    _check_admin(x_admin_token, credentials)
+    _check_admin(credentials)
     updates = {k: v for k, v in body.model_dump().items() if k != "republish" and v is not None}
     try:
         ann = await update_announcement(ann_id, updates, body.republish)
@@ -462,11 +458,10 @@ async def admin_update_announcement(
 @router.delete("/admin/announcements/{ann_id}", summary="管理員刪除公告 / Admin Delete Announcement")
 async def admin_delete_announcement(
     ann_id: str,
-    x_admin_token: Optional[str] = Header(None, alias="X-Admin-Token"),
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(_bearer_scheme),
 ) -> dict:
     """刪除公告（清空 Sheets 對應列）/ Delete announcement (clear row in Sheets)."""
-    _check_admin(x_admin_token, credentials)
+    _check_admin(credentials)
     try:
         ok = await delete_announcement(ann_id)
         if not ok:
@@ -484,11 +479,10 @@ async def admin_delete_announcement(
 
 @router.get("/admin/feedback", summary="管理員列出回饋 / Admin List Feedback")
 async def admin_list_feedback(
-    x_admin_token: Optional[str] = Header(None, alias="X-Admin-Token"),
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(_bearer_scheme),
 ) -> dict:
     """列出所有意見回饋 / List all feedback."""
-    _check_admin(x_admin_token, credentials)
+    _check_admin(credentials)
     try:
         items = await list_feedback()
         return {"feedback": items, "total": len(items)}
@@ -500,11 +494,10 @@ async def admin_list_feedback(
 async def admin_reply_feedback(
     feedback_id: str,
     request: Request,
-    x_admin_token: Optional[str] = Header(None, alias="X-Admin-Token"),
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(_bearer_scheme),
 ) -> dict:
     """回覆使用者意見回饋 / Reply to user feedback."""
-    _check_admin(x_admin_token, credentials)
+    _check_admin(credentials)
     try:
         body = await request.json()
         reply_text = str(body.get("reply", "")).strip()
@@ -528,11 +521,10 @@ async def admin_reply_feedback(
 
 @router.get("/admin/analytics", summary="管理員查看分析統計 / Admin View Analytics")
 async def admin_get_analytics(
-    x_admin_token: Optional[str] = Header(None, alias="X-Admin-Token"),
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(_bearer_scheme),
 ) -> dict:
     """取得使用分析統計（5 分鐘快取）/ Get usage analytics with 5-min cache."""
-    _check_admin(x_admin_token, credentials)
+    _check_admin(credentials)
     try:
         data = await sheets_analytics.get_stats()
     except RuntimeError as exc:
@@ -542,11 +534,10 @@ async def admin_get_analytics(
 
 @router.get("/admin/shares", summary="管理員列出共享平台資料 / Admin List Shares")
 async def admin_list_shares(
-    x_admin_token: Optional[str] = Header(None, alias="X-Admin-Token"),
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(_bearer_scheme),
 ) -> dict:
     """列出所有共享貼文（含已刪除）/ List all share items including deleted."""
-    _check_admin(x_admin_token, credentials)
+    _check_admin(credentials)
     try:
         items = await sheets_share.list_all_shares()
     except RuntimeError as exc:
@@ -573,11 +564,10 @@ async def admin_list_shares(
 
 @router.get("/admin/security/anomalies", summary="AI 異常告警 / AI Anomaly Alerts")
 async def admin_get_anomalies(
-    x_admin_token: Optional[str] = Header(None, alias="X-Admin-Token"),
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(_bearer_scheme),
 ) -> dict:
     """取得 AI 規則式異常告警清單 / Get rule-based AI anomaly alerts."""
-    _check_admin(x_admin_token, credentials)
+    _check_admin(credentials)
     try:
         alerts = await sheets_analytics.get_anomalies()
     except Exception as exc:
@@ -593,14 +583,13 @@ class _MaintenanceUpdate(BaseModel):
 @router.post("/admin/maintenance", summary="設定維護模式 / Set Maintenance Mode")
 async def admin_set_maintenance(
     payload: _MaintenanceUpdate,
-    x_admin_token: Optional[str] = Header(None, alias="X-Admin-Token"),
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(_bearer_scheme),
 ) -> dict:
     """
     緊急開啟/關閉維護模式，前端將顯示維護頁面。
     Emergency toggle maintenance mode; frontend will show maintenance screen.
     """
-    _check_admin(x_admin_token, credentials)
+    _check_admin(credentials)
     try:
         await sheets_config.set_config("maintenance_mode", "true" if payload.enabled else "false")
         await sheets_config.set_config("maintenance_message", (payload.message or "").strip()[:200])
@@ -617,7 +606,6 @@ _VALID_DATA_TYPES = {"analytics", "shares", "usersync", "feedback"}
 @router.delete("/admin/data/{data_type}", summary="清除系統資料 / Clear System Data")
 async def admin_clear_data(
     data_type: str,
-    x_admin_token: Optional[str] = Header(None, alias="X-Admin-Token"),
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(_bearer_scheme),
 ) -> dict:
     """
@@ -625,7 +613,7 @@ async def admin_clear_data(
     data_type: analytics | shares | usersync | feedback
     Clear specified data type (keeps Sheets header row).
     """
-    _check_admin(x_admin_token, credentials)
+    _check_admin(credentials)
     if data_type not in _VALID_DATA_TYPES:
         raise HTTPException(status_code=400, detail=f"無效的資料類型 / Invalid data_type. Valid: {', '.join(sorted(_VALID_DATA_TYPES))}")
     try:
@@ -652,14 +640,13 @@ from app.middleware.security import ip_tracker as _ip_tracker
 
 @router.get("/admin/security/ips", summary="列出所有連線 IP / List All Connected IPs")
 async def admin_list_ips(
-    x_admin_token: Optional[str] = Header(None, alias="X-Admin-Token"),
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(_bearer_scheme),
 ) -> dict:
     """
     取得所有曾連線的 IP 清單（含封鎖狀態與安全事件）。
     Get all connected IPs with block status and security events.
     """
-    _check_admin(x_admin_token, credentials)
+    _check_admin(credentials)
     ips = _ip_tracker.get_all_ips()
     summary = _ip_tracker.get_security_summary()
     return {"ips": ips, "total": len(ips), "summary": summary}
@@ -673,14 +660,13 @@ class _IPBlockRequest(BaseModel):
 async def admin_block_ip(
     ip: str,
     payload: _IPBlockRequest,
-    x_admin_token: Optional[str] = Header(None, alias="X-Admin-Token"),
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(_bearer_scheme),
 ) -> dict:
     """
     封鎖指定 IP，後續連線將收到 403。
     Block an IP; subsequent connections receive 403.
     """
-    _check_admin(x_admin_token, credentials)
+    _check_admin(credentials)
     # 基本 IP 格式驗證 / Basic IP format validation
     import ipaddress
     try:
@@ -695,14 +681,13 @@ async def admin_block_ip(
 @router.post("/admin/security/ips/{ip}/unblock", summary="解除封鎖 IP / Unblock IP")
 async def admin_unblock_ip(
     ip: str,
-    x_admin_token: Optional[str] = Header(None, alias="X-Admin-Token"),
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(_bearer_scheme),
 ) -> dict:
     """
     解除指定 IP 的封鎖。
     Unblock a previously blocked IP.
     """
-    _check_admin(x_admin_token, credentials)
+    _check_admin(credentials)
     import ipaddress
     try:
         ipaddress.ip_address(ip)
@@ -730,11 +715,10 @@ async def get_app_config() -> dict:
 
 @router.get("/admin/config", summary="管理員取得完整設定 / Admin Get All Config")
 async def admin_get_config(
-    x_admin_token: Optional[str] = Header(None, alias="X-Admin-Token"),
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(_bearer_scheme),
 ) -> dict:
     """取得所有設定值 / Get all config values."""
-    _check_admin(x_admin_token, credentials)
+    _check_admin(credentials)
     config = await sheets_config.get_all_config()
     return {"config": config}
 
@@ -747,11 +731,10 @@ class _ConfigUpdate(BaseModel):
 @router.put("/admin/config", summary="管理員更新設定 / Admin Update Config")
 async def admin_update_config(
     payload: _ConfigUpdate,
-    x_admin_token: Optional[str] = Header(None, alias="X-Admin-Token"),
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(_bearer_scheme),
 ) -> dict:
     """更新單一設定值 / Update a single config value."""
-    _check_admin(x_admin_token, credentials)
+    _check_admin(credentials)
     if not payload.key.strip():
         raise HTTPException(status_code=400, detail="key 不可為空 / key cannot be empty")
     if len(payload.value) > 100:
@@ -832,14 +815,13 @@ async def push_unsubscribe(body: _PushSubscription) -> dict:
 @router.post("/admin/push/broadcast", summary="管理員廣播推播 / Admin Broadcast Push")
 async def admin_push_broadcast(
     body: _BroadcastBody,
-    x_admin_token: Optional[str] = Header(None, alias="X-Admin-Token"),
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(_bearer_scheme),
 ) -> dict:
     """
     向所有訂閱者發送推播通知 / Send push notification to all subscribers.
     需要管理員身份 / Requires admin auth.
     """
-    _check_admin(x_admin_token, credentials)
+    _check_admin(credentials)
 
     if not _VAPID_PRIVATE_KEY or not _VAPID_PUBLIC_KEY or not _VAPID_EMAIL:
         raise HTTPException(status_code=503, detail="VAPID keys not configured")
