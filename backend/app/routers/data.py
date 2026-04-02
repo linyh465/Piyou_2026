@@ -35,7 +35,7 @@ from app.services.library_scraper import LibraryScraper
 from app.services.scraper_cache import get_cached_scraper, cache_scraper_session, get_cached_library_scraper
 from app.routers.auth import get_current_user
 from app.services.storage.sheets_synclog import log_sync
-from app.services.demo import is_demo_account, get_demo_timetable, get_demo_grades, get_demo_library
+from app.services.demo import is_demo_account, get_demo_timetable, get_demo_grades, get_demo_library, get_demo_tasks, set_demo_tasks
 
 router = APIRouter(prefix="/data", tags=["資料 / Data"])
 logger = logging.getLogger(__name__)
@@ -692,6 +692,13 @@ async def get_tasks(user: dict = Depends(get_current_user)):
     回傳儲存在伺服器端的任務 JSON，若無資料回傳 404。
     Returns server-stored tasks JSON; 404 if no data exists.
     """
+    # ── 展示帳號：從 Google Sheets 讀取 / Demo account: read from Google Sheets ──
+    if user.get("is_demo"):
+        demo_data = await get_demo_tasks()
+        if demo_data:
+            return demo_data
+        raise HTTPException(status_code=404, detail="尚無任務資料 / No task data found")
+
     student_id = user.get("sub", "")
     path = _get_tasks_path(student_id)
     if not path.exists():
@@ -711,7 +718,6 @@ async def put_tasks(request: Request, user: dict = Depends(get_current_user)):
     前端上傳完整任務 JSON，伺服器端直接覆寫。
     Frontend uploads full task JSON; server overwrites entirely.
     """
-    student_id = user.get("sub", "")
     try:
         body = await request.json()
     except Exception:
@@ -723,6 +729,17 @@ async def put_tasks(request: Request, user: dict = Depends(get_current_user)):
     if len(tasks) > MAX_TASKS:
         raise HTTPException(status_code=400, detail=f"任務數量超過上限 {MAX_TASKS} / Too many tasks (max {MAX_TASKS})")
 
+    # ── 展示帳號：儲存至 Google Sheets / Demo account: save to Google Sheets ──
+    if user.get("is_demo"):
+        try:
+            data = {"tasks": tasks, "updated_at": datetime.now(timezone.utc).isoformat()}
+            await set_demo_tasks(data)
+            return {"status": "ok", "count": len(tasks)}
+        except Exception as e:
+            logger.warning(f"Demo task write error: {e}")
+            raise HTTPException(status_code=500, detail="儲存展示任務失敗 / Failed to save demo tasks")
+
+    student_id = user.get("sub", "")
     path = _get_tasks_path(student_id)
     try:
         data = {"tasks": tasks, "updated_at": datetime.now(timezone.utc).isoformat()}

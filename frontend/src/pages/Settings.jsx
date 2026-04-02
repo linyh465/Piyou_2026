@@ -102,7 +102,7 @@ export default function Settings() {
     const { theme, setTheme, colorTheme, setColorTheme } = useThemeStore();
     const { user, isAuthenticated, login, logout, error, clearError } = useAuthStore();
     const { fetchTimetable, fetchGrades, canSync, recordSyncSuccess, recordSyncError, hasCachedData, lastSyncTime, clearSchoolData, serverCooldown } = useTimetableStore();
-    const { clearLibraryData } = useLibraryStore();
+    const { fetchLibrary, clearLibraryData } = useLibraryStore();
 
     const { requestNotificationPermission } = useNotifyStore();
 
@@ -223,6 +223,7 @@ export default function Settings() {
                 // 背景非同步執行，不阻擋 UI / Background fetch, non-blocking
                 fetchTimetable();
                 fetchGrades();
+                fetchLibrary();
             } else {
                 // 登入失敗計入同步錯誤，並解鎖讓使用者可重試
                 // Login failure counts as sync error; unlock so user can retry
