@@ -957,7 +957,7 @@ export default function Admin() {
             )}
 
             {/* Tabs */}
-            <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', flexWrap: 'wrap', alignItems: 'center' }}>
                 {['announcements', 'feedback', 'shares', 'analytics', 'config', 'security', 'demo'].map((t) => (
                     <button key={t} onClick={() => setTab(t)} style={{
                         padding: '8px 16px', borderRadius: '10px', border: 'none', cursor: 'pointer',
@@ -968,6 +968,21 @@ export default function Admin() {
                         {t === 'announcements' ? '公告管理' : t === 'feedback' ? '意見回饋' : t === 'shares' ? '共享平台' : t === 'analytics' ? '使用統計' : t === 'config' ? '系統設定' : t === 'security' ? '資安面板' : '展示帳號'}
                     </button>
                 ))}
+                {/* Claude Agent Dashboard shortcut */}
+                <a
+                    href={import.meta.env.VITE_CLAUDE_DASHBOARD_URL || 'http://127.0.0.1:8080'}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                        padding: '8px 16px', borderRadius: '10px', border: 'none', cursor: 'pointer',
+                        background: 'linear-gradient(135deg,#312e81,#4f46e5)',
+                        color: 'white', fontWeight: 600, fontSize: '14px',
+                        textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '6px',
+                        marginLeft: 'auto',
+                    }}
+                >
+                    🤖 Claude 管理儀表板 ↗
+                </a>
             </div>
 
             {/* Announcements Tab */}
