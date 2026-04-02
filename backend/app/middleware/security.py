@@ -76,9 +76,9 @@ class HTTPSRedirectMiddleware(BaseHTTPMiddleware):
     Skips health-check paths so Railway / load-balancer HTTP probes are not blocked.
     """
 
-    # 不需要 HTTPS 的路徑（健康檢查、根路由）
-    # Paths exempt from HTTPS redirect (health checks, root)
-    _SKIP_PATHS = frozenset({"/", "/health"})
+    # 不需要 HTTPS 的路徑（僅健康檢查，供負載均衡器使用）
+    # Paths exempt from HTTPS redirect (health check only, for load balancer probes)
+    _SKIP_PATHS = frozenset({"/health"})
 
     async def dispatch(self, request, call_next):
         # 健康檢查路徑直接放行 / Let health-check paths pass through

@@ -30,16 +30,19 @@ from app.services.demo import (
 router = APIRouter(prefix="/auth", tags=["認證 / Auth"])
 logger = logging.getLogger(__name__)
 
+_BEHIND_PROXY = os.getenv("ENVIRONMENT", "").lower() == "production" or bool(os.getenv("RAILWAY_PUBLIC_DOMAIN"))
+
 
 def _get_client_ip(request: Request) -> str:
     """
     取得真實客戶端 IP / Get real client IP.
-    優先讀取 X-Forwarded-For（反向代理環境），否則取 request.client.host。
-    Prefers X-Forwarded-For (reverse proxy), falls back to request.client.host.
+    只在生產/代理環境信任 X-Forwarded-For，避免開發環境 IP 偽造。
+    Only trusts X-Forwarded-For in production/proxy env to prevent spoofing in dev.
     """
-    forwarded = request.headers.get("x-forwarded-for")
-    if forwarded:
-        return forwarded.split(",")[0].strip()
+    if _BEHIND_PROXY:
+        forwarded = request.headers.get("x-forwarded-for")
+        if forwarded:
+            return forwarded.split(",")[0].strip()
     return request.client.host if request.client else "unknown"
 
 
@@ -100,7 +103,8 @@ async def login(request_body: LoginRequest, request: Request):
     登入端點 / Login Endpoint
 
     流程 / Flow:
-    1. 檢查伺服器端同步冷卻（裝置獨立冷卻）/ Check server-side sync cooldown (per-device)
+    1. 檢查伺服器端冷卻（以 IP 為 key，防止更換 Device-Id 繞過）
+       Server-side cooldown check (keyed on IP, prevents Device-Id rotation bypass)
     2. 接收學號與密碼（不記錄） / Receive credentials (never logged)
     3. 校務與圖書館 scraper 並行驗證，縮短等待時間 / Parallel auth for school + library scrapers
     4. 成功後簽發 JWT / Issue JWT on success
@@ -113,10 +117,11 @@ async def login(request_body: LoginRequest, request: Request):
        DO NOT use logger to record any variable containing credentials
     """
 
-    # ── 伺服器端冷卻檢查（裝置獨立冷卻）──
-    # ── Server-side cooldown check (per-device via X-Device-Id) ──
+    # ── 伺服器端冷卻檢查（以 IP 為 key，防止更換 Device-Id 繞過）──
+    # ── Server-side cooldown check (keyed on IP, prevents Device-Id rotation bypass) ──
     device_id = _get_device_id(request)
-    cooldown_status = sync_cooldown.check_cooldown(device_id)
+    client_ip = _get_client_ip(request)
+    cooldown_status = sync_cooldown.check_cooldown(client_ip)
     if not cooldown_status["allowed"]:
         remaining = cooldown_status.get("remaining_seconds", 0)
         reason = cooldown_status.get("reason", "cooldown")
@@ -130,12 +135,12 @@ async def login(request_body: LoginRequest, request: Request):
     # ── Demo account fast path (no school portal scraper) ──
     if is_demo_account(request_body.student_id):
         if not await verify_demo_password(request_body.password):
-            sync_cooldown.record_error(device_id)
+            sync_cooldown.record_error(client_ip)
             raise HTTPException(
                 status_code=401,
                 detail="展示帳號密碼錯誤 / Demo account password incorrect",
             )
-        sync_cooldown.record_success(device_id)
+        sync_cooldown.record_success(client_ip)
         payload = {
             "sub": DEMO_STUDENT_ID,
             "name": DEMO_NAME,
@@ -171,26 +176,23 @@ async def login(request_body: LoginRequest, request: Request):
     try:
         user_info = await school_task
     except Exception:
-        lib_task.cancel()  # 不等逾時，立即取消 / cancel immediately, don't wait for timeout
-        # 避免「Task exception was never retrieved」警告 / suppress "never retrieved" warning
+        lib_task.cancel()
         lib_task.add_done_callback(lambda t: t.exception() if not t.cancelled() else None)
-        # ⚠️ 不記錄詳細錯誤（可能洩漏帳密） / Don't log details (may leak credentials)
-        logger.info("Login attempt failed for a user")  # 僅記錄失敗事件 / Log only the event
-        sync_cooldown.record_error(device_id)
+        logger.info("Login attempt failed for a user")
+        sync_cooldown.record_error(client_ip)
         raise HTTPException(
             status_code=401,
             detail="登入失敗，請確認帳號密碼 / Login failed, please check credentials",
         )
 
     # 校務成功；取得圖書館結果（逾時或失敗則為 exception，後續跳過快取）
-    # School succeeded; get library result (timeout/error → lib_result is exception, skip caching).
     try:
         lib_result = await lib_task
     except Exception as exc:
         lib_result = exc
 
     # ── 記錄同步成功至冷卻追蹤器 / Record sync success in cooldown tracker ──
-    sync_cooldown.record_success(device_id)
+    sync_cooldown.record_success(client_ip)
 
     # ── 快取校務 scraper session / Cache school scraper session ──
     cache_scraper_session(request_body.student_id, school_scraper)
@@ -209,7 +211,7 @@ async def login(request_body: LoginRequest, request: Request):
 
     token = jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
 
-    logger.info("Login successful")  # ⚠️ 不記錄學號 / Do NOT log student ID
+    logger.info("Login successful")
 
     return LoginResponse(
         token=token,
@@ -236,15 +238,7 @@ async def logout(current_user: dict = Depends(get_current_user)):
 async def get_sync_cooldown(request: Request):
     """
     查詢同步冷卻狀態 / Check sync cooldown status
-
-    基於裝置 UUID (X-Device-Id header) 追蹤。
-    Tracked via device UUID from X-Device-Id header.
-
-    回傳 / Returns:
-    - allowed: 是否可以同步 / Whether sync is allowed
-    - reason: 被阻擋的原因 / Block reason (cooldown|locked)
-    - remaining_seconds: 剩餘秒數 / Remaining seconds
     """
-    device_id = _get_device_id(request)
-    status = sync_cooldown.check_cooldown(device_id)
+    client_ip = _get_client_ip(request)
+    status = sync_cooldown.check_cooldown(client_ip)
     return status

@@ -19,6 +19,7 @@
 import asyncio
 import os
 import re
+import uuid
 import jwt
 import bcrypt
 import logging
@@ -167,23 +168,12 @@ _bearer_scheme = HTTPBearer(auto_error=False)
 # ══════════════════════════════════════════
 
 def _check_admin(
-    x_admin_token: Optional[str] = Header(None, alias="X-Admin-Token"),
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(_bearer_scheme),
 ) -> None:
     """
-    驗證管理員身份。支援兩種方式：
-    1. X-Admin-Token header（舊版，向後相容）
-    2. Authorization: Bearer <JWT>（新版，JWT 內含 role=admin）
-    Verify admin identity. Supports two methods:
-    1. X-Admin-Token header (legacy, backward compat)
-    2. Authorization: Bearer <JWT> (new, JWT with role=admin)
+    驗證管理員身份：Authorization: Bearer <JWT>（JWT 內含 role=admin）
+    Verify admin identity via Authorization: Bearer <JWT> (JWT must contain role=admin).
     """
-    # 方式 1：X-Admin-Token / Method 1: X-Admin-Token
-    legacy_token = os.getenv("ADMIN_TOKEN", "")
-    if legacy_token and x_admin_token == legacy_token:
-        return
-
-    # 方式 2：Bearer JWT / Method 2: Bearer JWT
     if credentials and credentials.credentials:
         try:
             payload = jwt.decode(credentials.credentials, _JWT_SECRET, algorithms=[_JWT_ALGORITHM])
@@ -227,20 +217,12 @@ async def submit_feedback(request: Request, body: FeedbackRequest, background_ta
     """
     device_id: str = request.headers.get("X-Device-Id", "unknown")
 
-    # 檢查 ID 是否已存在（防止自訂 ID 重複）
-    # Check for duplicate ID (prevents custom ID conflicts)
-    try:
-        existing = await get_feedback_by_id(body.id)
-        if existing is not None:
-            raise HTTPException(status_code=409, detail="此回饋 ID 已被使用，請換一個不同的 ID / This feedback ID is already taken, please choose a different one")
-    except HTTPException:
-        raise
-    except RuntimeError as exc:
-        logger.warning(f"notify/feedback: Sheets not available ({exc})")
-        raise HTTPException(status_code=503, detail="儲存服務暫時無法使用 / Storage temporarily unavailable")
+    # 伺服器端生成 UUID，忽略 client 提供的 id（防止可預測 ID 枚舉）
+    # Server-generated UUID — ignore client-provided id to prevent enumeration
+    server_id = str(uuid.uuid4())
 
     data = {
-        "id": body.id,
+        "id": server_id,
         "submitted_at": datetime.now(timezone.utc).isoformat(),
         "category": body.category,
         "content": body.content,
@@ -254,9 +236,9 @@ async def submit_feedback(request: Request, body: FeedbackRequest, background_ta
         logger.warning(f"notify/feedback: Sheets not available ({exc})")
         raise HTTPException(status_code=503, detail="儲存服務暫時無法使用 / Storage temporarily unavailable")
 
-    logger.info(f"notify/feedback: submitted id={body.id} category={body.category}")
+    logger.info(f"notify/feedback: submitted id={server_id} category={body.category}")
     background_tasks.add_task(asyncio.to_thread, _send_feedback_email_sync, data)
-    return {"ok": True, "id": body.id}
+    return {"ok": True, "id": server_id}
 
 
 @router.get("/feedback/{feedback_id}", response_model=FeedbackResponse, summary="查詢回饋狀態 / Get Feedback Status")

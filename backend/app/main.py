@@ -80,7 +80,7 @@ app.add_middleware(
     allow_origin_regex=_cors_origin_regex,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-    allow_headers=["Content-Type", "Authorization", "X-Device-Id", "X-Admin-Token"],
+    allow_headers=["Content-Type", "Authorization", "X-Device-Id"],
 )
 
 # ── 安全中介層（由內到外依序疊加）/ Security Middleware (innermost first) ──
@@ -110,12 +110,14 @@ app.include_router(analytics.router, prefix="/api/v1")
 # ── 健康檢查 / Health Check ──
 @app.get("/", tags=["系統 / System"])
 async def root():
-    return {
+    response = {
         "app": "披呦 Piyou",
         "version": "1.0.0",
         "status": "running / 運行中",
-        "docs": "/docs",
     }
+    if not _is_production:
+        response["docs"] = "/docs"
+    return response
 
 
 @app.get("/health", tags=["系統 / System"])

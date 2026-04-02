@@ -3,7 +3,7 @@ Pydantic 資料模型 / Pydantic Data Models
 定義 API 請求與回應的資料結構
 Defines data structures for API requests and responses.
 """
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from typing import Optional
 
 
@@ -212,6 +212,19 @@ class AnnouncementCreate(BaseModel):
     link_label: Optional[str] = Field(None, max_length=100, description="連結文字 / Link label")
     sort_order: Optional[int] = Field(0, description="排序順序 / Sort order (higher = shown first)")
 
+    @field_validator("link_url")
+    @classmethod
+    def validate_link_url(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return v
+        v = v.strip()
+        lower = v.lower()
+        if lower.startswith("javascript:") or lower.startswith("data:") or lower.startswith("vbscript:"):
+            raise ValueError("Unsafe URL scheme")
+        if not (lower.startswith("http://") or lower.startswith("https://")):
+            raise ValueError("link_url must start with http:// or https://")
+        return v
+
 
 class AnnouncementUpdate(BaseModel):
     """更新公告 / Update Announcement"""
@@ -225,6 +238,19 @@ class AnnouncementUpdate(BaseModel):
     link_label: Optional[str] = Field(None, max_length=100)
     sort_order: Optional[int] = Field(None, description="排序順序 / Sort order")
     republish: bool = Field(False, description="是否重置為未讀（version 遞增）/ Re-popup for all users")
+
+    @field_validator("link_url")
+    @classmethod
+    def validate_link_url(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return v
+        v = v.strip()
+        lower = v.lower()
+        if lower.startswith("javascript:") or lower.startswith("data:") or lower.startswith("vbscript:"):
+            raise ValueError("Unsafe URL scheme")
+        if not (lower.startswith("http://") or lower.startswith("https://")):
+            raise ValueError("link_url must start with http:// or https://")
+        return v
 
 
 class AnnouncementsResponse(BaseModel):
@@ -276,6 +302,20 @@ class ShareCreate(BaseModel):
     body: Optional[str] = Field(None, max_length=2000, description="內文 / Body")
     link_urls: list[str] = Field(default_factory=list, max_length=10,
                                  description="連結清單（最多 10 個）/ Link URLs (max 10)")
+
+    @field_validator("link_urls")
+    @classmethod
+    def validate_link_urls(cls, urls: list[str]) -> list[str]:
+        validated = []
+        for url in urls:
+            url = url.strip()
+            lower = url.lower()
+            if lower.startswith("javascript:") or lower.startswith("data:") or lower.startswith("vbscript:"):
+                raise ValueError(f"Unsafe URL scheme: {url}")
+            if not (lower.startswith("http://") or lower.startswith("https://")):
+                raise ValueError(f"Each link_url must start with http:// or https://")
+            validated.append(url)
+        return validated
     device_id: str = Field(..., min_length=1, max_length=64, description="裝置 ID / Device ID")
     password: Optional[str] = Field(None, max_length=100, description="訂閱密碼（選填）/ Subscription password (optional)")
     edit_password: str = Field(..., min_length=1, max_length=100, description="編輯密碼（必填）/ Edit password (required)")
