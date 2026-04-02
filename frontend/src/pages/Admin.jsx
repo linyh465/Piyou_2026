@@ -970,7 +970,7 @@ export default function Admin() {
                 ))}
                 {/* Claude Agent Dashboard shortcut */}
                 <a
-                    href={import.meta.env.VITE_CLAUDE_DASHBOARD_URL || 'http://127.0.0.1:8080'}
+                    href={import.meta.env.VITE_CLAUDE_DASHBOARD_URL || 'https://dashboard.piyou.me'}
                     target="_blank"
                     rel="noopener noreferrer"
                     style={{
