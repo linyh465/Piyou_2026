@@ -282,6 +282,6 @@ This project is licensed under the [MIT License](LICENSE).
 ---
 
 <div align="center">
-  Made with 🐾 by the Piyou Team<br>
-  <sub>靜宜大學 Providence University</sub>
+  Made with 🐾 by the Yuhao<br>
+  <sub>LIN, YU-HAO in Providence University</sub>
 </div>
