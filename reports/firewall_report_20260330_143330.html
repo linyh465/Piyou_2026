@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>防火牆測試報告 - piyou.me</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface2: #22263a;
+    --border: #2e3250;
+    --green: #22c55e;
+    --green-dim: #16a34a22;
+    --red: #ef4444;
+    --red-dim: #ef444422;
+    --yellow: #f59e0b;
+    --yellow-dim: #f59e0b22;
+    --blue: #3b82f6;
+    --blue-dim: #3b82f622;
+    --text: #e2e8f0;
+    --muted: #64748b;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; font-size: 14px; line-height: 1.6; }
+
+  .header {
+    background: linear-gradient(135deg, #1e2240 0%, #0f1117 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 32px 40px;
+  }
+  .header-top { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 16px; }
+  .header h1 { font-size: 24px; font-weight: 700; letter-spacing: -0.5px; }
+  .header h1 span { color: var(--blue); }
+  .meta { display: flex; gap: 24px; margin-top: 8px; flex-wrap: wrap; }
+  .meta-item { color: var(--muted); font-size: 13px; }
+  .meta-item strong { color: var(--text); }
+  .badge { display: inline-block; padding: 4px 12px; border-radius: 999px; font-size: 12px; font-weight: 600; }
+  .badge-warn { background: #78350f; color: #fcd34d; }
+
+  .container { max-width: 1100px; margin: 0 auto; padding: 32px 24px; }
+
+  /* Summary Cards */
+  .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 32px; }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px 24px;
+    position: relative;
+    overflow: hidden;
+  }
+  .card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; }
+  .card-total::before { background: var(--blue); }
+  .card-blocked::before { background: var(--green); }
+  .card-passed::before { background: var(--red); }
+  .card-info::before { background: var(--yellow); }
+  .card-label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+  .card-value { font-size: 36px; font-weight: 700; }
+  .card-total .card-value { color: var(--blue); }
+  .card-blocked .card-value { color: var(--green); }
+  .card-passed .card-value { color: var(--red); }
+  .card-info .card-value { color: var(--yellow); }
+  .card-sub { font-size: 12px; color: var(--muted); margin-top: 4px; }
+
+  /* Score Ring */
+  .score-section { display: flex; gap: 24px; margin-bottom: 32px; flex-wrap: wrap; }
+  .score-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 24px; flex: 0 0 auto; text-align: center; min-width: 180px; }
+  .score-ring-wrap { position: relative; width: 120px; height: 120px; margin: 0 auto 12px; }
+  .score-ring-wrap svg { transform: rotate(-90deg); }
+  .score-ring-bg { fill: none; stroke: var(--surface2); stroke-width: 10; }
+  .score-ring-fg { fill: none; stroke-width: 10; stroke-linecap: round; transition: stroke-dashoffset 1s ease; }
+  .score-num { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 28px; font-weight: 700; }
+  .score-label { font-size: 12px; color: var(--muted); }
+  .score-grade { font-size: 14px; font-weight: 600; margin-top: 4px; }
+
+  .chart-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 24px; flex: 1; min-width: 280px; }
+  .chart-title { font-size: 13px; font-weight: 600; color: var(--muted); margin-bottom: 16px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .bar-chart { display: flex; flex-direction: column; gap: 12px; }
+  .bar-row { display: flex; align-items: center; gap: 12px; }
+  .bar-name { width: 110px; font-size: 13px; color: var(--muted); text-align: right; flex-shrink: 0; }
+  .bar-track { flex: 1; background: var(--surface2); border-radius: 4px; height: 20px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 4px; display: flex; align-items: center; justify-content: flex-end; padding-right: 8px; font-size: 11px; font-weight: 600; color: #fff; min-width: 24px; transition: width 0.8s ease; }
+  .bar-count { width: 30px; font-size: 13px; font-weight: 600; }
+
+  /* Alerts */
+  .alert-section { margin-bottom: 32px; }
+  .section-title { font-size: 16px; font-weight: 700; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+  .section-title .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .alert-list { display: flex; flex-direction: column; gap: 10px; }
+  .alert-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--red);
+    border-radius: 8px;
+    padding: 14px 18px;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  .alert-item.warn { border-left-color: var(--yellow); }
+  .alert-icon { font-size: 18px; flex-shrink: 0; margin-top: 2px; }
+  .alert-title { font-weight: 600; font-size: 14px; }
+  .alert-desc { color: var(--muted); font-size: 13px; margin-top: 2px; }
+  .alert-fix { margin-top: 8px; font-size: 12px; background: var(--surface2); border-radius: 6px; padding: 8px 12px; color: #94a3b8; border: 1px solid var(--border); }
+  .alert-fix strong { color: var(--text); }
+
+  /* Results Table */
+  .results-section { margin-bottom: 32px; }
+  .filter-bar { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+  .filter-btn {
+    padding: 6px 14px; border-radius: 6px; border: 1px solid var(--border);
+    background: var(--surface); color: var(--muted); cursor: pointer; font-size: 12px; font-weight: 500;
+    transition: all 0.15s;
+  }
+  .filter-btn:hover, .filter-btn.active { border-color: var(--blue); color: var(--text); background: var(--blue-dim); }
+  .filter-btn.f-blocked.active { border-color: var(--green); background: var(--green-dim); color: var(--green); }
+  .filter-btn.f-passed.active { border-color: var(--red); background: var(--red-dim); color: var(--red); }
+  .filter-btn.f-info.active { border-color: var(--yellow); background: var(--yellow-dim); color: var(--yellow); }
+
+  table { width: 100%; border-collapse: collapse; }
+  .table-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+  thead th { background: var(--surface2); padding: 12px 16px; text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); font-weight: 600; white-space: nowrap; }
+  tbody tr { border-top: 1px solid var(--border); transition: background 0.1s; }
+  tbody tr:hover { background: var(--surface2); }
+  tbody tr.hidden { display: none; }
+  td { padding: 11px 16px; vertical-align: middle; }
+  td.time { color: var(--muted); font-size: 12px; font-family: monospace; white-space: nowrap; }
+  td.category { white-space: nowrap; }
+  .cat-badge {
+    display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600;
+    background: var(--surface2); color: var(--muted); border: 1px solid var(--border);
+  }
+  td.details { color: var(--muted); font-size: 12px; max-width: 320px; }
+  .status-pill {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 3px 10px; border-radius: 999px; font-size: 11px; font-weight: 700; white-space: nowrap;
+  }
+  .status-pill.BLOCKED { background: var(--green-dim); color: var(--green); border: 1px solid #16a34a55; }
+  .status-pill.PASSED  { background: var(--red-dim);   color: var(--red);   border: 1px solid #ef444455; }
+  .status-pill.INFO    { background: var(--yellow-dim); color: var(--yellow); border: 1px solid #f59e0b55; }
+  .dot-status { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+
+  footer { text-align: center; padding: 24px; color: var(--muted); font-size: 12px; border-top: 1px solid var(--border); }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-top">
+    <div>
+      <h1>防火牆安全測試報告 &mdash; <span>piyou.me</span></h1>
+      <div class="meta">
+        <span class="meta-item">測試時間：<strong>2026-03-30 14:32 ~ 14:33</strong></span>
+        <span class="meta-item">平台：<strong>Railway Edge</strong></span>
+        <span class="meta-item">測試項目：<strong>61 項</strong></span>
+      </div>
+    </div>
+    <span class="badge badge-warn">需要改善</span>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- Summary Cards -->
+  <div class="summary-grid">
+    <div class="card card-total">
+      <div class="card-label">總測試數</div>
+      <div class="card-value">61</div>
+      <div class="card-sub">涵蓋 8 個攻擊類別</div>
+    </div>
+    <div class="card card-blocked">
+      <div class="card-label">已攔截 (防護有效)</div>
+      <div class="card-value">10</div>
+      <div class="card-sub">佔 16.4%</div>
+    </div>
+    <div class="card card-passed">
+      <div class="card-label">未被攔截 (需改善)</div>
+      <div class="card-value">29</div>
+      <div class="card-sub">佔 47.5% ⚠</div>
+    </div>
+    <div class="card card-info">
+      <div class="card-label">中性 / 資訊</div>
+      <div class="card-value">22</div>
+      <div class="card-sub">佔 36.1%</div>
+    </div>
+  </div>
+
+  <!-- Score + Bar Chart -->
+  <div class="score-section">
+    <div class="score-card">
+      <div class="score-ring-wrap">
+        <svg viewBox="0 0 120 120" width="120" height="120">
+          <circle class="score-ring-bg" cx="60" cy="60" r="50"/>
+          <!-- score = blocked/(blocked+passed) = 10/39 = 25.6% → ring = 25.6% of circumference=314 → 80.4 -->
+          <circle class="score-ring-fg" cx="60" cy="60" r="50"
+            stroke="#f59e0b"
+            stroke-dasharray="314"
+            stroke-dashoffset="233"/>
+        </svg>
+        <div class="score-num" style="color:#f59e0b">26%</div>
+      </div>
+      <div class="score-label">防護覆蓋率</div>
+      <div class="score-grade" style="color:#f59e0b">D 級 — 待加強</div>
+    </div>
+
+    <div class="chart-card">
+      <div class="chart-title">各類別攔截率</div>
+      <div class="bar-chart">
+        <div class="bar-row">
+          <div class="bar-name">Security Headers</div>
+          <div class="bar-track"><div class="bar-fill" style="width:43%;background:#3b82f6">3/7</div></div>
+        </div>
+        <div class="bar-row">
+          <div class="bar-name">SQL Injection</div>
+          <div class="bar-track"><div class="bar-fill" style="width:0%;background:#ef4444;min-width:36px">0/12</div></div>
+        </div>
+        <div class="bar-row">
+          <div class="bar-name">XSS</div>
+          <div class="bar-track"><div class="bar-fill" style="width:0%;background:#ef4444;min-width:36px">0/6</div></div>
+        </div>
+        <div class="bar-row">
+          <div class="bar-name">路徑遍歷</div>
+          <div class="bar-track"><div class="bar-fill" style="width:0%;background:#ef4444;min-width:36px">0/5</div></div>
+        </div>
+        <div class="bar-row">
+          <div class="bar-name">速率限制</div>
+          <div class="bar-track"><div class="bar-fill" style="width:0%;background:#ef4444;min-width:36px">0/1</div></div>
+        </div>
+        <div class="bar-row">
+          <div class="bar-name">敏感檔案</div>
+          <div class="bar-track"><div class="bar-fill" style="width:6%;background:#f59e0b">1/16</div></div>
+        </div>
+        <div class="bar-row">
+          <div class="bar-name">HTTP 方法</div>
+          <div class="bar-track"><div class="bar-fill" style="width:83%;background:#22c55e">5/6</div></div>
+        </div>
+        <div class="bar-row">
+          <div class="bar-name">User-Agent</div>
+          <div class="bar-track"><div class="bar-fill" style="width:0%;background:#ef4444;min-width:36px">0/7</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Critical Alerts -->
+  <div class="alert-section">
+    <div class="section-title"><div class="dot" style="background:var(--red)"></div> 高風險問題（需立即處理）</div>
+    <div class="alert-list">
+
+      <div class="alert-item">
+        <div class="alert-icon">🚨</div>
+        <div>
+          <div class="alert-title">SQL Injection 完全未防護（12/12 未攔截）</div>
+          <div class="alert-desc">OR 注入、Union、Time-based Blind、Error-based 等所有 Payload 均回傳 HTTP 200，WAF 未偵測到任何 SQL 注入特徵。</div>
+          <div class="alert-fix"><strong>建議：</strong>啟用 WAF 的 SQL Injection 規則集（如 ModSecurity CRS）；後端使用 Prepared Statement；輸入端加強 allowlist 過濾。</div>
+        </div>
+      </div>
+
+      <div class="alert-item">
+        <div class="alert-icon">🚨</div>
+        <div>
+          <div class="alert-title">速率限制未啟用（50 次並發請求全部通過）</div>
+          <div class="alert-desc">50 個並發 GET 請求全部回傳 HTTP 200，無任何限速保護，暴力破解與 DDoS 風險高。</div>
+          <div class="alert-fix"><strong>建議：</strong>在 Railway 或 Nginx/Caddy 設定速率限制（如每 IP 每分鐘最多 60 請求），並回傳 HTTP 429；考慮接入 Cloudflare。</div>
+        </div>
+      </div>
+
+      <div class="alert-item">
+        <div class="alert-icon">🚨</div>
+        <div>
+          <div class="alert-title">敏感路徑回傳 HTTP 200（/.env、/.git/config、/admin/ 等）</div>
+          <div class="alert-desc">共 9 個高危路徑（/.env、/.git/config、/wp-config.php、/admin/、/backup.zip 等）均回傳 HTTP 200 + 1794 bytes。推測為 SPA fallback 回傳 index.html，但需確認內容不含機敏資訊。</div>
+          <div class="alert-fix"><strong>建議：</strong>確認這些路徑的實際回應內容；對敏感路徑明確設定 HTTP 404 或 403 規則，而非依賴 SPA fallback。</div>
+        </div>
+      </div>
+
+      <div class="alert-item">
+        <div class="alert-icon">🚨</div>
+        <div>
+          <div class="alert-title">惡意掃描器 User-Agent 未被封鎖（sqlmap、Nikto、Nmap）</div>
+          <div class="alert-desc">sqlmap、Nikto、Nmap 等知名攻擊工具的 UA 字串均可正常存取，代表 WAF 未設定 Bot 特徵過濾。</div>
+          <div class="alert-fix"><strong>建議：</strong>在 WAF 或反向代理設定已知惡意 UA 的封鎖規則；使用 Cloudflare Bot Management 或 fail2ban。</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Warning Alerts -->
+  <div class="alert-section">
+    <div class="section-title"><div class="dot" style="background:var(--yellow)"></div> 中風險問題（建議改善）</div>
+    <div class="alert-list">
+
+      <div class="alert-item warn">
+        <div class="alert-icon">⚠️</div>
+        <div>
+          <div class="alert-title">缺少 HSTS Header（Strict-Transport-Security）</div>
+          <div class="alert-desc">未設定 HSTS，瀏覽器不會強制使用 HTTPS，存在 SSL Stripping 降級攻擊風險。</div>
+          <div class="alert-fix"><strong>建議：</strong>加入 <code>Strict-Transport-Security: max-age=31536000; includeSubDomains</code></div>
+        </div>
+      </div>
+
+      <div class="alert-item warn">
+        <div class="alert-icon">⚠️</div>
+        <div>
+          <div class="alert-title">缺少 Permissions-Policy Header</div>
+          <div class="alert-desc">未限制瀏覽器功能（camera、microphone、geolocation 等），可能遭濫用。</div>
+          <div class="alert-fix"><strong>建議：</strong>加入 <code>Permissions-Policy: camera=(), microphone=(), geolocation=()</code></div>
+        </div>
+      </div>
+
+      <div class="alert-item warn">
+        <div class="alert-icon">⚠️</div>
+        <div>
+          <div class="alert-title">Server Header 洩漏平台資訊（railway-edge）</div>
+          <div class="alert-desc">攻擊者可得知您使用 Railway 部署，可針對性尋找 Railway 平台已知漏洞。</div>
+          <div class="alert-fix"><strong>建議：</strong>在反向代理層隱藏或覆蓋 Server Header，回傳空值或偽裝值。</div>
+        </div>
+      </div>
+
+      <div class="alert-item warn">
+        <div class="alert-icon">⚠️</div>
+        <div>
+          <div class="alert-title">CONNECT 方法未明確封鎖（回傳 HTTP 400）</div>
+          <div class="alert-desc">CONNECT 方法回傳 400 而非 405，代表方法本身有被處理，可能被用於代理穿透攻擊。</div>
+          <div class="alert-fix"><strong>建議：</strong>在 WAF 規則明確回傳 HTTP 405 並封鎖 CONNECT 方法。</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Full Results Table -->
+  <div class="results-section">
+    <div class="section-title"><div class="dot" style="background:var(--blue)"></div> 完整測試結果</div>
+    <div class="filter-bar">
+      <button class="filter-btn active" onclick="filterTable('ALL', this)">全部 (61)</button>
+      <button class="filter-btn f-blocked" onclick="filterTable('BLOCKED', this)">已攔截 (10)</button>
+      <button class="filter-btn f-passed" onclick="filterTable('PASSED', this)">未攔截 (29)</button>
+      <button class="filter-btn f-info" onclick="filterTable('INFO', this)">資訊 (22)</button>
+    </div>
+    <div class="table-wrap">
+      <table id="resultsTable">
+        <thead>
+          <tr>
+            <th>時間</th>
+            <th>類別</th>
+            <th>測試項目</th>
+            <th>狀態</th>
+            <th>詳細資訊</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr data-status="BLOCKED"><td class="time">14:32:41</td><td class="category"><span class="cat-badge">Headers</span></td><td>X-Frame-Options (防止 Clickjacking)</td><td><span class="status-pill BLOCKED"><span class="dot-status"></span>BLOCKED</span></td><td class="details">值: DENY</td></tr>
+          <tr data-status="BLOCKED"><td class="time">14:32:41</td><td class="category"><span class="cat-badge">Headers</span></td><td>X-Content-Type-Options (防止 MIME Sniffing)</td><td><span class="status-pill BLOCKED"><span class="dot-status"></span>BLOCKED</span></td><td class="details">值: nosniff</td></tr>
+          <tr data-status="PASSED"><td class="time">14:32:41</td><td class="category"><span class="cat-badge">Headers</span></td><td>X-XSS-Protection (XSS 保護)</td><td><span class="status-pill PASSED"><span class="dot-status"></span>PASSED</span></td><td class="details">Header 不存在</td></tr>
+          <tr data-status="BLOCKED"><td class="time">14:32:41</td><td class="category"><span class="cat-badge">Headers</span></td><td>Content-Security-Policy (CSP 政策)</td><td><span class="status-pill BLOCKED"><span class="dot-status"></span>BLOCKED</span></td><td class="details">值: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src…</td></tr>
+          <tr data-status="PASSED"><td class="time">14:32:41</td><td class="category"><span class="cat-badge">Headers</span></td><td>Strict-Transport-Security (HSTS 強制 HTTPS)</td><td><span class="status-pill PASSED"><span class="dot-status"></span>PASSED</span></td><td class="details">Header 不存在</td></tr>
+          <tr data-status="BLOCKED"><td class="time">14:32:41</td><td class="category"><span class="cat-badge">Headers</span></td><td>Referrer-Policy (Referrer 控制)</td><td><span class="status-pill BLOCKED"><span class="dot-status"></span>BLOCKED</span></td><td class="details">值: strict-origin-when-cross-origin</td></tr>
+          <tr data-status="PASSED"><td class="time">14:32:41</td><td class="category"><span class="cat-badge">Headers</span></td><td>Permissions-Policy (功能權限控制)</td><td><span class="status-pill PASSED"><span class="dot-status"></span>PASSED</span></td><td class="details">Header 不存在</td></tr>
+          <tr data-status="INFO"><td class="time">14:32:41</td><td class="category"><span class="cat-badge">Headers</span></td><td>Server (Server 資訊洩漏)</td><td><span class="status-pill INFO"><span class="dot-status"></span>INFO</span></td><td class="details">洩漏值: railway-edge</td></tr>
+          <tr data-status="PASSED"><td class="time">14:32:42</td><td class="category"><span class="cat-badge">SQLi</span></td><td>基本 OR 注入</td><td><span class="status-pill PASSED"><span class="dot-status"></span>PASSED</span></td><td class="details">狀態碼: 200 — 未被攔截 (?id=)</td></tr>
+          <tr data-status="PASSED"><td class="time">14:32:43</td><td class="category"><span class="cat-badge">SQLi</span></td><td>Union 注入</td><td><span class="status-pill PASSED"><span class="dot-status"></span>PASSED</span></td><td class="details">狀態碼: 200 — 未被攔截 (?id=)</td></tr>
+          <tr data-status="PASSED"><td class="time">14:32:44</td><td class="category"><span class="cat-badge">SQLi</span></td><td>Stacked Query</td><td><span class="status-pill PASSED"><span class="dot-status"></span>PASSED</span></td><td class="details">狀態碼: 200 — 未被攔截 (?id=)</td></tr>
+          <tr data-status="PASSED"><td class="time">14:32:45</td><td class="category"><span class="cat-badge">SQLi</span></td><td>Time-based Blind</td><td><span class="status-pill PASSED"><span class="dot-status"></span>PASSED</span></td><td class="details">狀態碼: 200 — 未被攔截 (?id=)</td></tr>
+          <tr data-status="PASSED"><td class="time">14:32:45</td><td class="category"><span class="cat-badge">SQLi</span></td><td>Error-based</td><td><span class="status-pill PASSED"><span class="dot-status"></span>PASSED</span></td><td class="details">狀態碼: 200 — 未被攔截 (?id=)</td></tr>
+          <tr data-status="PASSED"><td class="time">14:32:46</td><td class="category"><span class="cat-badge">SQLi</span></td><td>Boolean Blind</td><td><span class="status-pill PASSED"><span class="dot-status"></span>PASSED</span></td><td class="details">狀態碼: 200 — 未被攔截 (?id=)</td></tr>
+          <tr data-status="PASSED"><td class="time">14:32:47</td><td class="category"><span class="cat-badge">SQLi</span></td><td>基本 OR 注入</td><td><span class="status-pill PASSED"><span class="dot-status"></span>PASSED</span></td><td class="details">狀態碼: 200 — 未被攔截 (?search=)</td></tr>
+          <tr data-status="PASSED"><td class="time">14:32:48</td><td class="category"><span class="cat-badge">SQLi</span></td><td>Union 注入</td><td><span class="status-pill PASSED"><span class="dot-status"></span>PASSED</span></td><td class="details">狀態碼: 200 — 未被攔截 (?search=)</td></tr>
+          <tr data-status="PASSED"><td class="time">14:32:49</td><td class="category"><span class="cat-badge">SQLi</span></td><td>Stacked Query</td><td><span class="status-pill PASSED"><span class="dot-status"></span>PASSED</span></td><td class="details">狀態碼: 200 — 未被攔截 (?search=)</td></tr>
+          <tr data-status="PASSED"><td class="time">14:32:50</td><td class="category"><span class="cat-badge">SQLi</span></td><td>Time-based Blind</td><td><span class="status-pill PASSED"><span class="dot-status"></span>PASSED</span></td><td class="details">狀態碼: 200 — 未被攔截 (?search=)</td></tr>
+          <tr data-status="PASSED"><td class="time">14:32:51</td><td class="category"><span class="cat-badge">SQLi</span></td><td>Error-based</td><td><span class="status-pill PASSED"><span class="dot-status"></span>PASSED</span></td><td class="details">狀態碼: 200 — 未被攔截 (?search=)</td></tr>
+          <tr data-status="PASSED"><td class="time">14:32:52</td><td class="category"><span class="cat-badge">SQLi</span></td><td>Boolean Blind</td><td><span class="status-pill PASSED"><span class="dot-status"></span>PASSED</span></td><td class="details">狀態碼: 200 — 未被攔截 (?search=)</td></tr>
+          <tr data-status="INFO"><td class="time">14:32:53</td><td class="category"><span class="cat-badge">XSS</span></td><td>Script 標籤</td><td><span class="status-pill INFO"><span class="dot-status"></span>INFO</span></td><td class="details">狀態碼: 200，Payload 未反射（可能為 SPA）</td></tr>
+          <tr data-status="INFO"><td class="time">14:32:53</td><td class="category"><span class="cat-badge">XSS</span></td><td>事件處理器</td><td><span class="status-pill INFO"><span class="dot-status"></span>INFO</span></td><td class="details">狀態碼: 200，Payload 未反射</td></tr>
+          <tr data-status="INFO"><td class="time">14:32:54</td><td class="category"><span class="cat-badge">XSS</span></td><td>JavaScript URI</td><td><span class="status-pill INFO"><span class="dot-status"></span>INFO</span></td><td class="details">狀態碼: 200，Payload 未反射</td></tr>
+          <tr data-status="INFO"><td class="time">14:32:55</td><td class="category"><span class="cat-badge">XSS</span></td><td>SVG XSS</td><td><span class="status-pill INFO"><span class="dot-status"></span>INFO</span></td><td class="details">狀態碼: 200，Payload 未反射</td></tr>
+          <tr data-status="INFO"><td class="time">14:32:56</td><td class="category"><span class="cat-badge">XSS</span></td><td>雙重編碼</td><td><span class="status-pill INFO"><span class="dot-status"></span>INFO</span></td><td class="details">狀態碼: 200，Payload 未反射</td></tr>
+          <tr data-status="INFO"><td class="time">14:32:57</td><td class="category"><span class="cat-badge">XSS</span></td><td>DOM XSS</td><td><span class="status-pill INFO"><span class="dot-status"></span>INFO</span></td><td class="details">狀態碼: 200，Payload 未反射</td></tr>
+          <tr data-status="INFO"><td class="time">14:32:58</td><td class="category"><span class="cat-badge">PathTraversal</span></td><td>Linux passwd</td><td><span class="status-pill INFO"><span class="dot-status"></span>INFO</span></td><td class="details">狀態碼: 200（需確認回應內容）</td></tr>
+          <tr data-status="INFO"><td class="time">14:32:59</td><td class="category"><span class="cat-badge">PathTraversal</span></td><td>Windows system</td><td><span class="status-pill INFO"><span class="dot-status"></span>INFO</span></td><td class="details">狀態碼: 200（需確認回應內容）</td></tr>
+          <tr data-status="INFO"><td class="time">14:33:00</td><td class="category"><span class="cat-badge">PathTraversal</span></td><td>雙重編碼</td><td><span class="status-pill INFO"><span class="dot-status"></span>INFO</span></td><td class="details">狀態碼: 200（需確認回應內容）</td></tr>
+          <tr data-status="INFO"><td class="time">14:33:01</td><td class="category"><span class="cat-badge">PathTraversal</span></td><td>URL 編碼</td><td><span class="status-pill INFO"><span class="dot-status"></span>INFO</span></td><td class="details">狀態碼: 200（需確認回應內容）</td></tr>
+          <tr data-status="INFO"><td class="time">14:33:01</td><td class="category"><span class="cat-badge">PathTraversal</span></td><td>Null Byte</td><td><span class="status-pill INFO"><span class="dot-status"></span>INFO</span></td><td class="details">狀態碼: 200（需確認回應內容）</td></tr>
+          <tr data-status="PASSED"><td class="time">14:33:07</td><td class="category"><span class="cat-badge">RateLimit</span></td><td>速率限制 (50 並發)</td><td><span class="status-pill PASSED"><span class="dot-status"></span>PASSED</span></td><td class="details">50 次請求全部 HTTP 200，無任何限速</td></tr>
+          <tr data-status="PASSED"><td class="time">14:33:08</td><td class="category"><span class="cat-badge">SensitiveFiles</span></td><td>/.env</td><td><span class="status-pill PASSED"><span class="dot-status"></span>PASSED</span></td><td class="details">HTTP 200 | 1794 bytes（需確認實際內容）</td></tr>
+          <tr data-status="PASSED"><td class="time">14:33:09</td><td class="category"><span class="cat-badge">SensitiveFiles</span></td><td>/.git/config</td><td><span class="status-pill PASSED"><span class="dot-status"></span>PASSED</span></td><td class="details">HTTP 200 | 1794 bytes（需確認實際內容）</td></tr>
+          <tr data-status="PASSED"><td class="time">14:33:09</td><td class="category"><span class="cat-badge">SensitiveFiles</span></td><td>/wp-config.php</td><td><span class="status-pill PASSED"><span class="dot-status"></span>PASSED</span></td><td class="details">HTTP 200 | 1794 bytes（需確認實際內容）</td></tr>
+          <tr data-status="PASSED"><td class="time">14:33:10</td><td class="category"><span class="cat-badge">SensitiveFiles</span></td><td>/config.php</td><td><span class="status-pill PASSED"><span class="dot-status"></span>PASSED</span></td><td class="details">HTTP 200 | 1794 bytes（需確認實際內容）</td></tr>
+          <tr data-status="PASSED"><td class="time">14:33:11</td><td class="category"><span class="cat-badge">SensitiveFiles</span></td><td>/admin/</td><td><span class="status-pill PASSED"><span class="dot-status"></span>PASSED</span></td><td class="details">HTTP 200 | 1794 bytes（需確認實際內容）</td></tr>
+          <tr data-status="PASSED"><td class="time">14:33:12</td><td class="category"><span class="cat-badge">SensitiveFiles</span></td><td>/phpinfo.php</td><td><span class="status-pill PASSED"><span class="dot-status"></span>PASSED</span></td><td class="details">HTTP 200 | 1794 bytes（需確認實際內容）</td></tr>
+          <tr data-status="PASSED"><td class="time">14:33:12</td><td class="category"><span class="cat-badge">SensitiveFiles</span></td><td>/.htaccess</td><td><span class="status-pill PASSED"><span class="dot-status"></span>PASSED</span></td><td class="details">HTTP 200 | 1794 bytes（需確認實際內容）</td></tr>
+          <tr data-status="PASSED"><td class="time">14:33:13</td><td class="category"><span class="cat-badge">SensitiveFiles</span></td><td>/backup.zip</td><td><span class="status-pill PASSED"><span class="dot-status"></span>PASSED</span></td><td class="details">HTTP 200 | 1794 bytes（需確認實際內容）</td></tr>
+          <tr data-status="PASSED"><td class="time">14:33:14</td><td class="category"><span class="cat-badge">SensitiveFiles</span></td><td>/database.sql</td><td><span class="status-pill PASSED"><span class="dot-status"></span>PASSED</span></td><td class="details">HTTP 200 | 1794 bytes（需確認實際內容）</td></tr>
+          <tr data-status="INFO"><td class="time">14:33:15</td><td class="category"><span class="cat-badge">SensitiveFiles</span></td><td>/robots.txt</td><td><span class="status-pill INFO"><span class="dot-status"></span>INFO</span></td><td class="details">HTTP 200 | 552 bytes（正常公開檔案）</td></tr>
+          <tr data-status="INFO"><td class="time">14:33:16</td><td class="category"><span class="cat-badge">SensitiveFiles</span></td><td>/sitemap.xml</td><td><span class="status-pill INFO"><span class="dot-status"></span>INFO</span></td><td class="details">HTTP 200 | 1794 bytes</td></tr>
+          <tr data-status="INFO"><td class="time">14:33:17</td><td class="category"><span class="cat-badge">SensitiveFiles</span></td><td>/.well-known/security.txt</td><td><span class="status-pill INFO"><span class="dot-status"></span>INFO</span></td><td class="details">HTTP 200 | 1794 bytes</td></tr>
+          <tr data-status="BLOCKED"><td class="time">14:33:17</td><td class="category"><span class="cat-badge">SensitiveFiles</span></td><td>/api/v1/</td><td><span class="status-pill BLOCKED"><span class="dot-status"></span>BLOCKED</span></td><td class="details">HTTP 403 Forbidden</td></tr>
+          <tr data-status="PASSED"><td class="time">14:33:18</td><td class="category"><span class="cat-badge">SensitiveFiles</span></td><td>/graphql</td><td><span class="status-pill PASSED"><span class="dot-status"></span>PASSED</span></td><td class="details">HTTP 200 | 1794 bytes（需確認 GraphQL 端點存取控制）</td></tr>
+          <tr data-status="PASSED"><td class="time">14:33:19</td><td class="category"><span class="cat-badge">SensitiveFiles</span></td><td>/swagger.json</td><td><span class="status-pill PASSED"><span class="dot-status"></span>PASSED</span></td><td class="details">HTTP 200 | 1794 bytes（需確認實際內容）</td></tr>
+          <tr data-status="PASSED"><td class="time">14:33:20</td><td class="category"><span class="cat-badge">SensitiveFiles</span></td><td>/openapi.json</td><td><span class="status-pill PASSED"><span class="dot-status"></span>PASSED</span></td><td class="details">HTTP 200 | 1794 bytes（需確認實際內容）</td></tr>
+          <tr data-status="BLOCKED"><td class="time">14:33:21</td><td class="category"><span class="cat-badge">HTTPMethods</span></td><td>PUT</td><td><span class="status-pill BLOCKED"><span class="dot-status"></span>BLOCKED</span></td><td class="details">HTTP 405 Method Not Allowed</td></tr>
+          <tr data-status="BLOCKED"><td class="time">14:33:22</td><td class="category"><span class="cat-badge">HTTPMethods</span></td><td>DELETE</td><td><span class="status-pill BLOCKED"><span class="dot-status"></span>BLOCKED</span></td><td class="details">HTTP 405 Method Not Allowed</td></tr>
+          <tr data-status="BLOCKED"><td class="time">14:33:23</td><td class="category"><span class="cat-badge">HTTPMethods</span></td><td>TRACE</td><td><span class="status-pill BLOCKED"><span class="dot-status"></span>BLOCKED</span></td><td class="details">HTTP 405 Method Not Allowed</td></tr>
+          <tr data-status="PASSED"><td class="time">14:33:23</td><td class="category"><span class="cat-badge">HTTPMethods</span></td><td>CONNECT</td><td><span class="status-pill PASSED"><span class="dot-status"></span>PASSED</span></td><td class="details">HTTP 400（未明確封鎖，僅回 Bad Request）</td></tr>
+          <tr data-status="BLOCKED"><td class="time">14:33:24</td><td class="category"><span class="cat-badge">HTTPMethods</span></td><td>OPTIONS</td><td><span class="status-pill BLOCKED"><span class="dot-status"></span>BLOCKED</span></td><td class="details">HTTP 405 Method Not Allowed</td></tr>
+          <tr data-status="BLOCKED"><td class="time">14:33:25</td><td class="category"><span class="cat-badge">HTTPMethods</span></td><td>PATCH</td><td><span class="status-pill BLOCKED"><span class="dot-status"></span>BLOCKED</span></td><td class="details">HTTP 405 Method Not Allowed</td></tr>
+          <tr data-status="INFO"><td class="time">14:33:25</td><td class="category"><span class="cat-badge">UserAgent</span></td><td>正常瀏覽器</td><td><span class="status-pill INFO"><span class="dot-status"></span>INFO</span></td><td class="details">HTTP 200 — 允許通過（正常）</td></tr>
+          <tr data-status="INFO"><td class="time">14:33:26</td><td class="category"><span class="cat-badge">UserAgent</span></td><td>Sqlmap</td><td><span class="status-pill INFO"><span class="dot-status"></span>INFO</span></td><td class="details">HTTP 200 — 未封鎖攻擊工具 UA</td></tr>
+          <tr data-status="INFO"><td class="time">14:33:27</td><td class="category"><span class="cat-badge">UserAgent</span></td><td>Nikto 掃描器</td><td><span class="status-pill INFO"><span class="dot-status"></span>INFO</span></td><td class="details">HTTP 200 — 未封鎖掃描器 UA</td></tr>
+          <tr data-status="INFO"><td class="time">14:33:28</td><td class="category"><span class="cat-badge">UserAgent</span></td><td>Nmap 掃描器</td><td><span class="status-pill INFO"><span class="dot-status"></span>INFO</span></td><td class="details">HTTP 200 — 未封鎖掃描器 UA</td></tr>
+          <tr data-status="INFO"><td class="time">14:33:29</td><td class="category"><span class="cat-badge">UserAgent</span></td><td>空白 UA</td><td><span class="status-pill INFO"><span class="dot-status"></span>INFO</span></td><td class="details">HTTP 200 — 允許通過（建議封鎖）</td></tr>
+          <tr data-status="INFO"><td class="time">14:33:30</td><td class="category"><span class="cat-badge">UserAgent</span></td><td>curl</td><td><span class="status-pill INFO"><span class="dot-status"></span>INFO</span></td><td class="details">HTTP 200 — 允許通過</td></tr>
+          <tr data-status="INFO"><td class="time">14:33:30</td><td class="category"><span class="cat-badge">UserAgent</span></td><td>Python requests</td><td><span class="status-pill INFO"><span class="dot-status"></span>INFO</span></td><td class="details">HTTP 200 — 允許通過</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<footer>
+  防火牆安全測試報告 &mdash; piyou.me &mdash; 2026-03-30 &mdash; 僅限授權測試用途
+</footer>
+
+<script>
+function filterTable(status, btn) {
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('#resultsTable tbody tr').forEach(row => {
+    if (status === 'ALL' || row.dataset.status === status) {
+      row.classList.remove('hidden');
+    } else {
+      row.classList.add('hidden');
+    }
+  });
+}
+</script>
+</body>
+</html>
