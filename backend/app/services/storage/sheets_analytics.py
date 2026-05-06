@@ -78,23 +78,38 @@ def _get_sheets_id() -> str:
     return sid
 
 
+import threading
+
+_SERVICE_CACHE = None
+_EVENT_QUEUE: list[list] = []
+_QUEUE_LOCK = threading.Lock()
+
+def _get_service() -> Any:
+    global _SERVICE_CACHE
+    if _SERVICE_CACHE is None:
+        _SERVICE_CACHE = _build_service()
+    return _SERVICE_CACHE
+
+
 # ══════════════════════════════════════════
 #  寫入 / Write
 # ══════════════════════════════════════════
 
-def _write_event_sync(device_id_hash: str, event_type: str, page: str, extra: dict) -> None:
-    service = _build_service()
+def _flush_events_sync(rows: list[list]) -> None:
+    if not rows:
+        return
+    service = _get_service()
     sheets_id = _get_sheets_id()
-    now = datetime.now(timezone.utc).isoformat()
-    extra_str = json.dumps(extra, ensure_ascii=False) if extra else ""
-    row = [now, device_id_hash, event_type, page, extra_str]
-    service.spreadsheets().values().append(
-        spreadsheetId=sheets_id,
-        range="analytics_events!A1",
-        valueInputOption="RAW",
-        insertDataOption="INSERT_ROWS",
-        body={"values": [row]},
-    ).execute()
+    try:
+        service.spreadsheets().values().append(
+            spreadsheetId=sheets_id,
+            range="analytics_events!A1",
+            valueInputOption="RAW",
+            insertDataOption="INSERT_ROWS",
+            body={"values": rows},
+        ).execute()
+    except Exception as exc:
+        logger.warning(f"analytics flush failed (non-fatal): {exc}")
 
 
 async def write_event(
@@ -105,13 +120,27 @@ async def write_event(
 ) -> None:
     """
     非同步寫入分析事件（fire-and-forget，失敗時僅記錄 warning）。
-    device_id 在後端雜湊，保護隱私。
+    使用批次寫入（每 10 筆或觸發）大幅降低 Google API 頻率與後端資源消耗。
     """
     device_id_hash = _hash_device_id(device_id) if device_id else "unknown"
-    try:
-        await asyncio.to_thread(_write_event_sync, device_id_hash, event_type, page, extra or {})
-    except Exception as exc:
-        logger.warning(f"analytics write_event failed (non-fatal): {exc}")
+    now = datetime.now(timezone.utc).isoformat()
+    extra_str = json.dumps(extra, ensure_ascii=False) if extra else ""
+    row = [now, device_id_hash, event_type, page, extra_str]
+
+    global _EVENT_QUEUE
+    with _QUEUE_LOCK:
+        _EVENT_QUEUE.append(row)
+        if len(_EVENT_QUEUE) >= 10:
+            rows_to_flush = _EVENT_QUEUE[:]
+            _EVENT_QUEUE.clear()
+        else:
+            rows_to_flush = None
+
+    if rows_to_flush:
+        try:
+            await asyncio.to_thread(_flush_events_sync, rows_to_flush)
+        except Exception as exc:
+            logger.warning(f"analytics write_event trigger failed: {exc}")
 
 
 # ══════════════════════════════════════════
@@ -119,7 +148,7 @@ async def write_event(
 # ══════════════════════════════════════════
 
 def _get_stats_sync() -> dict:
-    service = _build_service()
+    service = _get_service()
     sheets_id = _get_sheets_id()
     result = service.spreadsheets().values().get(
         spreadsheetId=sheets_id,
@@ -491,7 +520,7 @@ def _is_within_hours_str(ts_str: str, hours: int, now_utc: datetime) -> bool:
 
 def _clear_events_sync() -> int:
     """清除所有分析事件列（保留標題列）/ Clear all event rows (keep header)."""
-    service = _build_service()
+    service = _get_service()
     sheets_id = _get_sheets_id()
     # 先計算現有列數
     result = service.spreadsheets().values().get(
