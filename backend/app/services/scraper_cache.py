@@ -17,8 +17,8 @@ logger = logging.getLogger(__name__)
 _scraper_cache: dict[str, dict] = {}
 # { student_id: { "scraper": LibraryScraper, "login_time": float } }
 _library_cache: dict[str, dict] = {}
-SCRAPER_SESSION_TTL = 30 * 60  # 30 分鐘 / 30 minutes
-_SCRAPER_CACHE_MAX = 100  # 最多快取 100 個 session / Max 100 cached sessions
+SCRAPER_SESSION_TTL = 15 * 60  # 15 分鐘 / 15 minutes
+_SCRAPER_CACHE_MAX = 30  # 最多快取 30 個 session / Max 30 cached sessions
 
 
 def _evict_expired_scrapers():

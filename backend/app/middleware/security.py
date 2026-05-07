@@ -127,7 +127,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         self.requests: dict[str, list[float]] = defaultdict(list)
         self.strict_requests: dict[str, list[float]] = defaultdict(list)
         self._last_gc = time.time()
-        self._gc_interval = 300  # 每 5 分鐘全面清理一次 / Full GC every 5 min
+        self._gc_interval = 120  # 每 2 分鐘全面清理一次 / Full GC every 2 min
 
     def _gc_stale_ips(self, now: float):
         """回收已無任何記錄的 IP / Reclaim IPs with no remaining records."""
@@ -314,7 +314,7 @@ class IPTracker:
       Auto-records WAF violations, bot blocks, sensitive path probes.
     """
 
-    MAX_IPS = 2000             # 最多追蹤 2000 個 IP / Max 2000 tracked IPs
+    MAX_IPS = 500              # 最多追蹤 500 個 IP / Max 500 tracked IPs
     MAX_EVENTS_PER_IP = 20     # 每 IP 最多保留 20 筆安全事件 / Max 20 events per IP
 
     def __init__(self):
@@ -688,6 +688,13 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     """
 
     async def dispatch(self, request, call_next):
+        # 記錄活動時間（休眠偵測用）/ Record activity for hibernate detection
+        try:
+            from app.services.hibernate import hibernate_manager
+            hibernate_manager.touch()
+        except Exception:
+            pass
+
         response = await call_next(request)
         response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
         response.headers["X-Content-Type-Options"] = "nosniff"

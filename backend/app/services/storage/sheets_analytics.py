@@ -130,7 +130,7 @@ async def write_event(
     global _EVENT_QUEUE
     with _QUEUE_LOCK:
         _EVENT_QUEUE.append(row)
-        if len(_EVENT_QUEUE) >= 10:
+        if len(_EVENT_QUEUE) >= 20:
             rows_to_flush = _EVENT_QUEUE[:]
             _EVENT_QUEUE.clear()
         else:
@@ -277,7 +277,7 @@ def _get_stats_sync() -> dict:
     recent_errors = sorted(recent_errors, key=lambda x: x["ts"], reverse=True)[:30]
 
     # Recent events (last 100, newest first)
-    recent_events = sorted(recent_events, key=lambda x: x["ts"], reverse=True)[:100]
+    recent_events = sorted(recent_events, key=lambda x: x["ts"], reverse=True)[:50]
 
     # Week trend (last 7 days, sorted)
     week_trend = [

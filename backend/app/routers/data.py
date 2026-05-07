@@ -103,7 +103,7 @@ def _lookup_teacher_1142(code: str, course_name: str) -> str | None:
 # ── 本地資料快取目錄 / Local Data Cache Directory ──
 CACHE_DIR = Path(__file__).resolve().parent.parent.parent / "cache"
 CACHE_DIR.mkdir(exist_ok=True)
-DATA_CACHE_TTL = 30 * 60  # 30 分鐘 / 30 minutes
+DATA_CACHE_TTL = 15 * 60  # 15 分鐘 / 15 minutes
 
 
 def _get_cache_path(student_id: str, data_type: str) -> Path:
@@ -828,7 +828,7 @@ async def get_user_sync(user: dict = Depends(get_current_user)):
 # ── 記憶體內 TDX 節流 / In-memory TDX throttle ──
 _bus_mem_cache: dict | None = None
 _bus_mem_cache_at: float = 0
-BUS_THROTTLE_SECONDS = 60  # 最少 60 秒才呼叫一次 TDX（基礎會員每日限額有限）
+BUS_THROTTLE_SECONDS = 90  # 最少 90 秒才呼叫一次 TDX（降低 API 呼叫頻率）
 
 
 @router.get("/bus", response_model=BusResponse)

@@ -38,10 +38,74 @@ logger = logging.getLogger(__name__)
 async def lifespan(application: FastAPI):
     """啟動 / 關閉事件 — 取代已棄用的 on_event"""
     from app.services.storage.sheets_setup import ensure_sheets_exist
+    from app.services.hibernate import hibernate_manager, cleanup_disk_cache
+    from pathlib import Path
     logger.info("🐾 Piyou API starting up / 披呦 API 啟動中...")
     logger.info("Zero-log credential filter installed / 零日誌憑證過濾器已安裝")
+
+    # ── 啟動時清理磁碟暫存 / Clean up stale disk caches on startup ──
+    cache_dir = Path(__file__).resolve().parent.parent / "cache"
+    cleanup_disk_cache(cache_dir)
+
     await ensure_sheets_exist()
+
+    # ── 啟動休眠偵測排程 / Start hibernate idle-detection scheduler ──
+    hibernate_manager.start()
+    logger.info("🕰️ Hibernate scheduler registered")
+
     yield
+    # ── 停止休眠排程 / Stop hibernate scheduler ──
+    hibernate_manager.stop()
+
+    # ── 關閉時清理所有記憶體快取（釋放 CPU/RAM 至零）──
+    # ── Flush ALL in-memory caches on shutdown (release CPU/RAM to zero) ──
+    logger.info("🧹 Flushing all in-memory caches / 清理所有記憶體快取...")
+    try:
+        # 1. 刷出未寫入的 Analytics 事件佇列 / Flush pending analytics event queue
+        from app.services.storage.sheets_analytics import (
+            _EVENT_QUEUE, _QUEUE_LOCK, _flush_events_sync,
+            _STATS_CACHE, invalidate_stats_cache,
+        )
+        with _QUEUE_LOCK:
+            if _EVENT_QUEUE:
+                pending = _EVENT_QUEUE[:]
+                _EVENT_QUEUE.clear()
+            else:
+                pending = []
+        if pending:
+            import asyncio
+            try:
+                await asyncio.to_thread(_flush_events_sync, pending)
+                logger.info(f"Flushed {len(pending)} pending analytics events")
+            except Exception as exc:
+                logger.warning(f"Analytics flush on shutdown failed: {exc}")
+        invalidate_stats_cache()
+
+        # 2. 清理 Scraper session 快取 / Clear scraper session caches
+        from app.services.scraper_cache import _scraper_cache, _library_cache
+        _scraper_cache.clear()
+        _library_cache.clear()
+
+        # 3. 清理公告快取 / Clear announcements cache
+        from app.services.storage.sheets_notify import (
+            invalidate_announcements_cache, _fb_cache,
+        )
+        invalidate_announcements_cache()
+        _fb_cache.clear()
+
+        # 4. 清理 IP 追蹤器與速率限制器 / Clear IP tracker & rate limiter
+        from app.middleware.security import ip_tracker, sync_cooldown
+        ip_tracker._ips.clear()
+        ip_tracker._rate_limit_hits.clear()
+        sync_cooldown._records.clear()
+
+        # 5. 清理 Google Sheets API service 快取 / Clear Sheets API service cache
+        import app.services.storage.sheets_analytics as sa
+        sa._SERVICE_CACHE = None
+
+        logger.info("✅ All caches flushed / 所有快取已清理")
+    except Exception as exc:
+        logger.warning(f"Cache cleanup error (non-fatal): {exc}")
     logger.info("🐾 Piyou API shutting down / 披呦 API 關閉中...")
 
 
