@@ -52,7 +52,7 @@ function CurrentClassCard() {
     }, [fetchTimetable]);
 
     useEffect(() => {
-        const timer = setInterval(() => setNow(new Date()), 30000);
+        const timer = setInterval(() => setNow(new Date()), 60000);
         return () => clearInterval(timer);
     }, []);
 

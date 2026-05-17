@@ -25,7 +25,6 @@ export default defineConfig({
         'pwa-192x192.svg',
         'pwa-512x512.svg',
         'apple-touch-icon.svg',
-        'sql-wasm.wasm',
       ],
       manifest: {
         name: '披呦 Piyou — 校園智慧助理',
@@ -52,8 +51,10 @@ export default defineConfig({
         ],
       },
       injectManifest: {
-        // 預快取所有靜態資源 / Precache all static assets
-        globPatterns: ['**/*.{js,css,html,svg,wasm,json}'],
+        // 預快取核心靜態資源，排除 wasm（未使用）與大型 json 資料檔
+        // Precache core assets; exclude wasm (unused) and large data json files
+        globPatterns: ['**/*.{js,css,html,svg}', 'locales/**/*.json'],
+        globIgnores: ['**/sql-wasm*', '**/workbox-*'],
       },
     }),
   ],
@@ -70,13 +71,7 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: './src/test/setup.js',
     css: true,
-    server: {
-      deps: {
-        inline: ['sql.js'],
-      },
-    },
     onConsoleLog(log) {
-      // 過濾 sql.js WASM 相關 stderr 雜訊
       if (log.includes('sql-wasm.wasm')) return false;
     },
   },

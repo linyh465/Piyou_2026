@@ -119,6 +119,8 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
     _STRICT_MAX = 10   # 敏感端點：每分鐘 10 次 / 10 req/min for sensitive
     _STRICT_WINDOW = 60
 
+    _MAX_TRACKED_IPS = 2000  # 最多追蹤 2000 個 IP，防 DDoS 時 RAM 無限增長
+
     def __init__(self, app, max_requests: int = 60, window_seconds: int = 60):
         super().__init__(app)
         self.max_requests = max_requests
@@ -149,6 +151,17 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         # 定期全面清理 / Periodic full GC
         if now - self._last_gc >= self._gc_interval:
             self._gc_stale_ips(now)
+
+        # DDoS 防護：IP 字典超過上限時淘汰最舊的非嚴格路徑 IP
+        # DDoS guard: evict oldest non-strict IP when dict exceeds cap
+        if len(self.requests) >= self._MAX_TRACKED_IPS:
+            oldest = min(
+                (ip for ip in self.requests if ip not in self.strict_requests),
+                key=lambda ip: self.requests[ip][-1] if self.requests[ip] else 0,
+                default=None,
+            )
+            if oldest:
+                del self.requests[oldest]
 
         # ── 嚴格端點限制 / Strict endpoint limit ──
         if path in self._STRICT_PATHS:

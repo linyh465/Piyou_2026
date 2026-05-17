@@ -14,7 +14,7 @@ import { trackEvent } from '../services/analytics';
 
 // ── 全域節流常數（TDX 基礎會員每日請求量有限，需保守控制）──
 const MANUAL_COOLDOWN_SECONDS = 10;
-const AUTO_POLL_INTERVAL = 30_000;  // 自動輪詢 30 秒
+const AUTO_POLL_INTERVAL = 60_000;  // 自動輪詢 60 秒（節省 50% TDX 配額）
 const MAX_CALLS_PER_MINUTE = 6;
 
 const useBusStore = create((set, get) => ({
@@ -33,6 +33,9 @@ const useBusStore = create((set, get) => ({
 
     // 自動輪詢 timer
     _autoInterval: null,
+
+    // Page Visibility change handler reference (for cleanup)
+    _visibilityHandler: null,
 
     // 倒數 timer
     _cooldownTimer: null,
@@ -145,28 +148,28 @@ const useBusStore = create((set, get) => ({
         const state = get();
         if (state.manualCooldown > 0) return;
 
-        // 開始冷卻倒數
+        // 開始冷卻倒數（用遞迴 setTimeout 取代 setInterval，節省 CPU）
         set({ manualCooldown: MANUAL_COOLDOWN_SECONDS });
 
-        // 清除舊 timer
-        if (state._cooldownTimer) clearInterval(state._cooldownTimer);
+        if (state._cooldownTimer) clearTimeout(state._cooldownTimer);
 
-        const timer = setInterval(() => {
+        const _tick = () => {
             const cd = get().manualCooldown;
             if (cd <= 1) {
-                clearInterval(timer);
                 set({ manualCooldown: 0, _cooldownTimer: null });
             } else {
-                set({ manualCooldown: cd - 1 });
+                set({ manualCooldown: cd - 1, _cooldownTimer: setTimeout(_tick, 1000) });
             }
-        }, 1000);
-        set({ _cooldownTimer: timer });
+        };
+        set({ _cooldownTimer: setTimeout(_tick, 1000) });
 
         get().fetchBus(true);
     },
 
     /**
      * 啟動自動輪詢 / Start auto polling
+     * 頁面隱藏時自動暫停，可見時恢復，節省 TDX 配額
+     * Pauses when page is hidden via Page Visibility API to conserve TDX quota.
      */
     startAutoRefresh: () => {
         const state = get();
@@ -174,9 +177,21 @@ const useBusStore = create((set, get) => ({
 
         // 同時取得路線站牌資料
         get().fetchRouteStops();
-        get().fetchBus();
-        const interval = setInterval(() => get().fetchBus(), AUTO_POLL_INTERVAL);
-        set({ _autoInterval: interval });
+
+        const _tick = () => {
+            if (document.visibilityState !== 'hidden') get().fetchBus();
+        };
+
+        _tick(); // 立即執行第一次
+        const interval = setInterval(_tick, AUTO_POLL_INTERVAL);
+
+        // Page Visibility：頁面回到前景時立即補一次請求
+        const _onVisibility = () => {
+            if (document.visibilityState === 'visible') get().fetchBus();
+        };
+        document.addEventListener('visibilitychange', _onVisibility);
+
+        set({ _autoInterval: interval, _visibilityHandler: _onVisibility });
     },
 
     /**
@@ -184,10 +199,11 @@ const useBusStore = create((set, get) => ({
      * 同時重設冷卻計時，避免跳頁後倒數繼續 / Reset cooldown to avoid stale timer on navigation
      */
     stopAutoRefresh: () => {
-        const { _autoInterval, _cooldownTimer } = get();
+        const { _autoInterval, _cooldownTimer, _visibilityHandler } = get();
         if (_autoInterval) clearInterval(_autoInterval);
         if (_cooldownTimer) clearInterval(_cooldownTimer);
-        set({ _autoInterval: null, _cooldownTimer: null, manualCooldown: 0 });
+        if (_visibilityHandler) document.removeEventListener('visibilitychange', _visibilityHandler);
+        set({ _autoInterval: null, _cooldownTimer: null, manualCooldown: 0, _visibilityHandler: null });
     },
 }));
 

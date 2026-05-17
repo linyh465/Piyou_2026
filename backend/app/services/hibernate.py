@@ -23,7 +23,8 @@ logger = logging.getLogger(__name__)
 IDLE_THRESHOLD_SECONDS = 5 * 60    # 5 分鐘無請求即進入休眠 / 5 min idle → hibernate
 CHECK_INTERVAL_SECONDS = 60         # 每 60 秒檢查一次 / Check every 60s
 DISK_CACHE_MAX_AGE = 3600           # 磁碟快取超過 1 小時即刪除 / Delete disk cache > 1h
-TASK_FILE_MAX_AGE = 30 * 86400      # 任務檔案超過 30 天即刪除 / Delete task files > 30d
+TASK_FILE_MAX_AGE = 7 * 86400       # 任務檔案超過 7 天即刪除（原 30 天，節省 Volume）
+DISK_CLEANUP_INTERVAL = 6 * 3600    # 每 6 小時背景清理一次磁碟 / Background disk cleanup every 6h
 
 
 class HibernateManager:
@@ -39,6 +40,7 @@ class HibernateManager:
         self._lock = threading.Lock()
         self._task: asyncio.Task | None = None
         self._stopping: bool = False
+        self._last_disk_cleanup: float = 0.0  # 背景磁碟清理時間戳
 
     def touch(self) -> None:
         """
@@ -160,6 +162,17 @@ class HibernateManager:
 
             if self._stopping:
                 break
+
+            # ── 背景磁碟清理（每 6 小時）/ Background disk cleanup every 6h ──
+            now_ts = time.time()
+            if now_ts - self._last_disk_cleanup >= DISK_CLEANUP_INTERVAL:
+                self._last_disk_cleanup = now_ts
+                try:
+                    from pathlib import Path
+                    cache_dir = Path(__file__).resolve().parent.parent.parent / "cache"
+                    await asyncio.to_thread(cleanup_disk_cache, cache_dir)
+                except Exception as exc:
+                    logger.debug(f"Background disk cleanup failed (non-fatal): {exc}")
 
             idle = self.idle_seconds
             if idle >= IDLE_THRESHOLD_SECONDS and not self._is_hibernating:

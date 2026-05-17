@@ -10,6 +10,7 @@ from contextlib import asynccontextmanager
 from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 
 # 載入環境變數 / Load environment variables
 load_dotenv()
@@ -147,9 +148,13 @@ app.add_middleware(
     allow_headers=["Content-Type", "Authorization", "X-Device-Id"],
 )
 
+# ── GZip 壓縮（最外層，所有回應 ≥ 1KB 自動壓縮，節省 30–50% Egress）
+# GZip compression (outermost): responses ≥ 1KB are auto-compressed, saving 30-50% egress.
+app.add_middleware(GZipMiddleware, minimum_size=1000)
+
 # ── 安全中介層（由內到外依序疊加）/ Security Middleware (innermost first) ──
 # 注意：Starlette 中介層以 LIFO 順序執行（後加的先執行）
-# 請求進入方向：SecurityHeaders → IPBlock → BotBlocker → SensitivePath → WAF → RateLimit → HTTPSRedirect → app
+# 請求進入方向：GZip → SecurityHeaders → IPBlock → BotBlocker → SensitivePath → WAF → RateLimit → HTTPSRedirect → app
 app.add_middleware(HTTPSRedirectMiddleware)
 app.add_middleware(RateLimitMiddleware, max_requests=60, window_seconds=60)
 app.add_middleware(WAFMiddleware)
